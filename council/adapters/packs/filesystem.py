@@ -18,7 +18,7 @@ class FilesystemPackLoader:
 
     def load(self, pack_name_or_path: str) -> CouncilPack:
         p = Path(pack_name_or_path)
-        if p.is_absolute() or p.exists():
+        if p.is_absolute():
             pack_dir = p
             name = pack_dir.name
         else:

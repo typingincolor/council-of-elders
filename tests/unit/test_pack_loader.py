@@ -71,3 +71,17 @@ def test_missing_pack_raises(packs_root: Path):
     loader = FilesystemPackLoader(root=packs_root)
     with pytest.raises(FileNotFoundError):
         loader.load("nope")
+
+
+def test_bare_name_is_resolved_under_root_even_if_cwd_has_same_name(
+    packs_root: Path, tmp_path: Path, monkeypatch
+):
+    # A colliding entry exists in CWD but NOT under root
+    (tmp_path / "decoy").mkdir()
+    (tmp_path / "decoy" / "shared.md").write_text("from decoy")
+    monkeypatch.chdir(tmp_path)
+
+    loader = FilesystemPackLoader(root=packs_root)
+    # Bare name "decoy" should resolve to packs_root/"decoy", which doesn't exist
+    with pytest.raises(FileNotFoundError):
+        loader.load("decoy")
