@@ -1,0 +1,122 @@
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+from council.domain.models import (
+    CouncilPack,
+    Debate,
+    ElderAnswer,
+    ElderError,
+    ElderId,
+    Round,
+    Turn,
+)
+
+
+@dataclass
+class JsonFileStore:
+    root: Path
+
+    def save(self, debate: Debate) -> None:
+        self.root.mkdir(parents=True, exist_ok=True)
+        path = self.root / f"{debate.id}.json"
+        path.write_text(
+            json.dumps(_serialize_debate(debate), indent=2), encoding="utf-8"
+        )
+
+    def load(self, debate_id: str) -> Debate:
+        path = self.root / f"{debate_id}.json"
+        if not path.is_file():
+            raise FileNotFoundError(f"No debate with id {debate_id} at {path}")
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return _deserialize_debate(data)
+
+
+def _serialize_debate(d: Debate) -> dict[str, Any]:
+    return {
+        "id": d.id,
+        "prompt": d.prompt,
+        "pack": _serialize_pack(d.pack),
+        "rounds": [_serialize_round(r) for r in d.rounds],
+        "status": d.status,
+        "synthesis": _serialize_answer(d.synthesis) if d.synthesis else None,
+    }
+
+
+def _serialize_pack(p: CouncilPack) -> dict[str, Any]:
+    return {
+        "name": p.name,
+        "shared_context": p.shared_context,
+        "personas": dict(p.personas),
+    }
+
+
+def _serialize_round(r: Round) -> dict[str, Any]:
+    return {
+        "number": r.number,
+        "turns": [
+            {"elder": t.elder, "answer": _serialize_answer(t.answer)} for t in r.turns
+        ],
+    }
+
+
+def _serialize_answer(a: ElderAnswer) -> dict[str, Any]:
+    return {
+        "elder": a.elder,
+        "text": a.text,
+        "error": (
+            None
+            if a.error is None
+            else {"elder": a.error.elder, "kind": a.error.kind, "detail": a.error.detail}
+        ),
+        "agreed": a.agreed,
+        "created_at": a.created_at.isoformat(),
+    }
+
+
+def _deserialize_debate(d: dict[str, Any]) -> Debate:
+    return Debate(
+        id=d["id"],
+        prompt=d["prompt"],
+        pack=_deserialize_pack(d["pack"]),
+        rounds=[_deserialize_round(r) for r in d["rounds"]],
+        status=d["status"],
+        synthesis=_deserialize_answer(d["synthesis"]) if d["synthesis"] else None,
+    )
+
+
+def _deserialize_pack(p: dict[str, Any]) -> CouncilPack:
+    return CouncilPack(
+        name=p["name"],
+        shared_context=p["shared_context"],
+        personas={k: v for k, v in p["personas"].items()},
+    )
+
+
+def _deserialize_round(r: dict[str, Any]) -> Round:
+    return Round(
+        number=r["number"],
+        turns=[
+            Turn(elder=t["elder"], answer=_deserialize_answer(t["answer"]))
+            for t in r["turns"]
+        ],
+    )
+
+
+def _deserialize_answer(a: dict[str, Any]) -> ElderAnswer:
+    err = a["error"]
+    return ElderAnswer(
+        elder=a["elder"],
+        text=a["text"],
+        error=(
+            None
+            if err is None
+            else ElderError(elder=err["elder"], kind=err["kind"], detail=err["detail"])
+        ),
+        agreed=a["agreed"],
+        created_at=datetime.fromisoformat(a["created_at"]),
+    )
