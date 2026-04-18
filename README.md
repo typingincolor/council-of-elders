@@ -1,66 +1,69 @@
 # Council of Elders
 
-A terminal UI that sends one prompt to Claude Code, Gemini CLI, and Codex CLI concurrently, runs a user-controlled convergence-based debate, and produces a single synthesized answer — all using your existing paid subscriptions (no API charges).
+Send one prompt to Claude, Gemini, and ChatGPT simultaneously, watch them debate, and get one synthesised answer — all using your existing paid subscriptions (no API charges).
 
-## Requirements
+> **Full user guide:** [`docs/USAGE.md`](docs/USAGE.md) — covers what the tool is for, how the debate mechanic works, writing council packs, model selection, troubleshooting, and how to get real value from it.
 
-- Python 3.12+
-- Claude Code CLI (`claude`), logged in via `claude login`
-- Gemini CLI (`gemini`), logged in via `gemini auth login`
-- Codex CLI (`codex`), logged in via `codex login`
-
-## Install
+## Quick start
 
 ```bash
+# One-time setup
+uv venv && source .venv/bin/activate
 uv pip install -e .
+
+# Make sure each vendor CLI is installed and logged in
+claude -p "hi"
+gemini -p "hi"
+codex exec "hi"
+
+# Run the TUI
+council
+
+# Or one-shot, no UI
+council-headless "Your question here."
 ```
 
-## Use
+If Gemini hits quota (common on AI Pro), set once:
 
 ```bash
-council                          # bare pack
-council --pack chief-of-staff    # load ~/.council/packs/chief-of-staff/
-```
-
-### Choosing models per elder
-
-Each vendor's CLI supports a `--model` flag; the council forwards one per elder:
-
-```bash
-council --gemini-model gemini-2.5-flash --codex-model gpt-5-codex
-```
-
-Or set environment variables once and forget:
-
-```bash
-export COUNCIL_CLAUDE_MODEL=sonnet
 export COUNCIL_GEMINI_MODEL=gemini-2.5-flash
-export COUNCIL_CODEX_MODEL=gpt-5-codex
 ```
 
-**Heads-up:** Gemini Pro has a very tight free/Pro quota under the `gemini` CLI. Use `gemini-2.5-flash` for the Gemini slot if you hit `quota_exhausted` errors — Flash has ~10× the quota.
-
-Keybindings when a round completes:
+## Keybindings during a debate
 
 | Key | Action |
 |---|---|
-| `c` | Continue — run another round |
-| `s` | Synthesize now — pick who writes the final answer |
-| `a` | Abandon the debate |
-| `o` | Override convergence — treat everyone as agreed |
+| `c` | Continue another round — elders see each other's answers |
+| `s` | Synthesise — pick who writes the final answer |
+| `a` | Abandon |
+| `o` | Override convergence |
 
 ## Council packs
 
-Create `~/.council/packs/<name>/` with any of:
+Create `~/.council/packs/<name>/` with any of `shared.md`, `claude.md`, `gemini.md`, `chatgpt.md` — the contents are injected as persona/context for each elder. See the [usage guide](docs/USAGE.md) for examples.
 
-- `shared.md` — applied to all three elders
-- `claude.md` / `gemini.md` / `chatgpt.md` — per-elder overrides
+```bash
+council --pack chief-of-staff
+```
 
-All files optional.
+## Model selection
+
+```bash
+council --claude-model sonnet --gemini-model gemini-2.5-flash --codex-model gpt-5-codex
+```
+
+Or via env vars: `COUNCIL_CLAUDE_MODEL`, `COUNCIL_GEMINI_MODEL`, `COUNCIL_CODEX_MODEL`.
 
 ## Testing
 
 ```bash
 pytest                        # unit + e2e (fast)
-pytest -m integration         # also runs real CLIs (requires auth)
+pytest -m integration         # also hits real CLIs (requires auth)
 ```
+
+## Requirements
+
+- Python 3.12+
+- Claude Code CLI (`claude`) — `claude login`
+- Gemini CLI (`gemini`) — `gemini auth login`
+- Codex CLI (`codex`) — `codex login`
