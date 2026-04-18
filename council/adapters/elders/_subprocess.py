@@ -38,8 +38,11 @@ class SubprocessElder:
             stderr=asyncio.subprocess.PIPE,
         )
         try:
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout_s)
-        except asyncio.TimeoutError:
+            stdout, stderr = await asyncio.wait_for(
+                proc.communicate(), timeout=timeout_s
+            )
+        except BaseException:
+            # TimeoutError OR anything else (OSError, cancellation, ...)
             proc.kill()
             await proc.wait()
             raise
@@ -59,7 +62,12 @@ class SubprocessElder:
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
             )
+        except (FileNotFoundError, OSError):
+            return False
+        try:
             rc = await asyncio.wait_for(proc.wait(), timeout=5.0)
             return rc == 0
-        except (asyncio.TimeoutError, FileNotFoundError):
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
             return False
