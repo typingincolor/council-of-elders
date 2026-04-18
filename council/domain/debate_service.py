@@ -48,10 +48,10 @@ class DebateService:
                     TurnFailed(elder=elder_id, round_number=round_num, error=err)
                 )
                 return Turn(elder=elder_id, answer=ans)
-            except Exception as ex:  # adapter / subprocess / misc
-                err = ElderError(
-                    elder=elder_id, kind="nonzero_exit", detail=repr(ex)
-                )
+            except Exception as ex:
+                kind = getattr(ex, "kind", "nonzero_exit")
+                detail = getattr(ex, "detail", repr(ex))
+                err = ElderError(elder=elder_id, kind=kind, detail=detail)
                 ans = self._error_answer(elder_id, err)
                 await self.bus.publish(
                     TurnFailed(elder=elder_id, round_number=round_num, error=err)
