@@ -27,6 +27,7 @@ class SubprocessElder:
     binary: str
     build_args: Callable[[str], list[str]]
     classify_stderr: Callable[[str], str] = lambda s: "nonzero_exit"
+    sanitize_stdout: Callable[[str], str] = lambda s: s
 
     async def ask(self, prompt: str, *, timeout_s: float = 45.0) -> str:
         if shutil.which(self.binary) is None:
@@ -48,7 +49,7 @@ class SubprocessElder:
             detail = (stderr or b"").decode(errors="replace")[-400:]
             kind = self.classify_stderr(detail)
             raise ElderSubprocessError(kind, detail)
-        return (stdout or b"").decode(errors="replace")
+        return self.sanitize_stdout((stdout or b"").decode(errors="replace"))
 
     async def health_check(self) -> bool:
         if shutil.which(self.binary) is None:

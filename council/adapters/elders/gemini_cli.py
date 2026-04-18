@@ -2,6 +2,26 @@ from __future__ import annotations
 
 from council.adapters.elders._subprocess import SubprocessElder
 
+# Known chrome lines that the `gemini` CLI emits on stdout before the actual reply.
+# The CLI sometimes prints these concatenated with the reply on the same line
+# (no trailing newline), so we strip them from the start of the output.
+_NOISE_PREFIXES = (
+    "MCP issues detected. Run /mcp list for status.",
+    "Loaded cached credentials.",
+)
+
+
+def _sanitize(raw: str) -> str:
+    out = raw.lstrip()
+    changed = True
+    while changed:
+        changed = False
+        for prefix in _NOISE_PREFIXES:
+            if out.startswith(prefix):
+                out = out[len(prefix):].lstrip()
+                changed = True
+    return out
+
 
 def _classify(stderr_tail: str) -> str:
     s = stderr_tail.lower()
@@ -37,4 +57,5 @@ class GeminiCLIAdapter(SubprocessElder):
             binary="gemini",
             build_args=_build_args(model),
             classify_stderr=_classify,
+            sanitize_stdout=_sanitize,
         )
