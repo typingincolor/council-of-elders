@@ -45,6 +45,8 @@ class Round:
     def converged(self) -> bool:
         if len(self.turns) != 3:
             return False
+        if len({t.elder for t in self.turns}) != 3:
+            return False
         return all(t.answer.agreed is True for t in self.turns)
 
 

@@ -64,6 +64,17 @@ class TestRound:
         )
         assert r.converged() is False
 
+    def test_converged_false_when_elders_are_duplicates(self):
+        r = Round(
+            number=1,
+            turns=[
+                Turn(elder="claude", answer=_answer("claude", agreed=True)),
+                Turn(elder="claude", answer=_answer("claude", agreed=True)),
+                Turn(elder="claude", answer=_answer("claude", agreed=True)),
+            ],
+        )
+        assert r.converged() is False
+
 
 class TestCouncilPack:
     def test_empty_pack_has_no_overrides(self):
