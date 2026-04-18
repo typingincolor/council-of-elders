@@ -28,7 +28,7 @@ class SubprocessElder:
     build_args: Callable[[str], list[str]]
     classify_stderr: Callable[[str], str] = lambda s: "nonzero_exit"
 
-    async def ask(self, prompt: str, *, timeout_s: float = 120.0) -> str:
+    async def ask(self, prompt: str, *, timeout_s: float = 45.0) -> str:
         if shutil.which(self.binary) is None:
             raise ElderSubprocessError("cli_missing", self.binary)
         proc = await asyncio.create_subprocess_exec(

@@ -9,6 +9,7 @@ ErrorKind = Literal[
     "timeout",
     "cli_missing",
     "auth_failed",
+    "quota_exhausted",
     "nonzero_exit",
     "unparseable",
 ]

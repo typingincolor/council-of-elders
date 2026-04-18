@@ -141,7 +141,10 @@ class CouncilApp(App):
             status="in_progress",
             synthesis=None,
         )
-        self.query_one("#input", Input).disabled = True
+        input_widget = self.query_one("#input", Input)
+        input_widget.disabled = True
+        # Move focus off the disabled Input so app-level keybindings (c/s/a/o) fire.
+        self.query_one("#stream", ChronologicalStream).focus()
         self._spawn(self._service.run_round(self._debate))
 
     async def action_continue_round(self) -> None:
