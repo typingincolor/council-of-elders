@@ -1,0 +1,202 @@
+from __future__ import annotations
+
+import asyncio
+import uuid
+from dataclasses import replace
+from pathlib import Path
+
+from textual import on
+from textual.app import App, ComposeResult
+from textual.binding import Binding
+from textual.containers import Vertical
+from textual.screen import ModalScreen
+from textual.widgets import Footer, Header, Input, Static
+
+from council.adapters.bus.in_memory import InMemoryBus
+from council.adapters.clock.system import SystemClock
+from council.adapters.elders.claude_code import ClaudeCodeAdapter
+from council.adapters.elders.codex_cli import CodexCLIAdapter
+from council.adapters.elders.gemini_cli import GeminiCLIAdapter
+from council.adapters.packs.filesystem import FilesystemPackLoader
+from council.adapters.storage.json_file import JsonFileStore
+from council.app.tui.stream import ChronologicalStream, format_event
+from council.domain.debate_service import DebateService
+from council.domain.events import (
+    RoundCompleted,
+    SynthesisCompleted,
+)
+from council.domain.models import (
+    CouncilPack,
+    Debate,
+    ElderId,
+    Turn,
+)
+from council.domain.ports import (
+    Clock,
+    CouncilPackLoader,
+    ElderPort,
+    TranscriptStore,
+)
+
+
+class SynthesizerModal(ModalScreen[ElderId]):
+    BINDINGS = [
+        Binding("1", "pick('claude')", "Claude"),
+        Binding("2", "pick('gemini')", "Gemini"),
+        Binding("3", "pick('chatgpt')", "ChatGPT"),
+        Binding("escape", "dismiss(None)", "Cancel"),
+    ]
+
+    def compose(self) -> ComposeResult:
+        yield Vertical(
+            Static("Who should synthesize?"),
+            Static("[1] Claude   [2] Gemini   [3] ChatGPT   [Esc] Cancel"),
+        )
+
+    def action_pick(self, elder: str) -> None:
+        self.dismiss(elder)  # type: ignore[arg-type]
+
+
+class CouncilApp(App):
+    CSS = """
+    #stream { height: 1fr; }
+    #input { dock: bottom; }
+    """
+    BINDINGS = [
+        Binding("ctrl+c", "quit", "Quit"),
+        Binding("c", "continue_round", "Continue", show=False),
+        Binding("s", "synthesize", "Synthesize", show=False),
+        Binding("a", "abandon", "Abandon", show=False),
+        Binding("o", "override", "Override convergence", show=False),
+    ]
+
+    def __init__(
+        self,
+        *,
+        elders: dict[ElderId, ElderPort],
+        store: TranscriptStore,
+        clock: Clock,
+        pack_loader: CouncilPackLoader,
+        pack_name: str,
+    ) -> None:
+        super().__init__()
+        self._elders = elders
+        self._store = store
+        self._clock = clock
+        self._pack_loader = pack_loader
+        self._pack_name = pack_name
+        self._bus = InMemoryBus()
+        self._service = DebateService(
+            elders=elders, store=store, clock=clock, bus=self._bus
+        )
+        self._debate: Debate | None = None
+        self.awaiting_decision: bool = False
+        self.is_finished: bool = False
+        self.rendered_lines: list[str] = []
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+        yield ChronologicalStream(id="stream")
+        yield Input(placeholder="Ask the council…", id="input")
+        yield Footer()
+
+    async def on_mount(self) -> None:
+        self._stream_task = asyncio.create_task(self._consume_events())
+        self.query_one("#input", Input).focus()
+
+    async def _consume_events(self) -> None:
+        async for ev in self._bus.subscribe():
+            stream = self.query_one("#stream", ChronologicalStream)
+            line = format_event(ev)
+            if line:
+                self.rendered_lines.append(line)
+                stream.write(line)
+            if isinstance(ev, RoundCompleted):
+                self.awaiting_decision = True
+            if isinstance(ev, SynthesisCompleted):
+                self.is_finished = True
+                self.awaiting_decision = False
+
+    @on(Input.Submitted, "#input")
+    async def _on_prompt_submitted(self, event: Input.Submitted) -> None:
+        prompt = event.value.strip()
+        if not prompt or self._debate is not None:
+            return
+        pack = self._pack_loader.load(self._pack_name)
+        self._debate = Debate(
+            id=str(uuid.uuid4()),
+            prompt=prompt,
+            pack=pack,
+            rounds=[],
+            status="in_progress",
+            synthesis=None,
+        )
+        self.query_one("#input", Input).disabled = True
+        asyncio.create_task(self._service.run_round(self._debate))
+
+    async def action_continue_round(self) -> None:
+        if not self.awaiting_decision or self._debate is None:
+            return
+        self.awaiting_decision = False
+        asyncio.create_task(self._service.run_round(self._debate))
+
+    async def action_abandon(self) -> None:
+        if self._debate is None:
+            return
+        self._debate.status = "abandoned"
+        self.is_finished = True
+        self.awaiting_decision = False
+        self.exit()
+
+    async def action_override(self) -> None:
+        if not self.awaiting_decision or not self._debate or not self._debate.rounds:
+            return
+        # Force all turns to agreed=True for the most recent round
+        r = self._debate.rounds[-1]
+        r.turns = [
+            Turn(elder=t.elder, answer=replace(t.answer, agreed=True))
+            for t in r.turns
+        ]
+
+    async def action_synthesize(self) -> None:
+        if not self.awaiting_decision or self._debate is None:
+            return
+        self.run_worker(self._synthesize_worker(), exclusive=True)
+
+    async def _synthesize_worker(self) -> None:
+        if self._debate is None:
+            return
+        choice = await self.push_screen_wait(SynthesizerModal())
+        if choice is None:
+            return
+        self.awaiting_decision = False
+        asyncio.create_task(self._service.synthesize(self._debate, by=choice))
+
+
+def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(prog="council")
+    parser.add_argument("--pack", default="bare")
+    parser.add_argument("--packs-root", default=str(Path.home() / ".council" / "packs"))
+    parser.add_argument(
+        "--store-root", default=str(Path.home() / ".council" / "debates")
+    )
+    args = parser.parse_args()
+
+    packs_root = Path(args.packs_root)
+    packs_root.mkdir(parents=True, exist_ok=True)
+    (packs_root / args.pack).mkdir(exist_ok=True)  # ensure bare pack works
+
+    app = CouncilApp(
+        elders={
+            "claude": ClaudeCodeAdapter(),
+            "gemini": GeminiCLIAdapter(),
+            "chatgpt": CodexCLIAdapter(),
+        },
+        store=JsonFileStore(root=Path(args.store_root)),
+        clock=SystemClock(),
+        pack_loader=FilesystemPackLoader(root=packs_root),
+        pack_name=args.pack,
+    )
+    app.run()
