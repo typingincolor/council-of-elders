@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-import pytest
 
 from council.app.tui.stream import format_event
 from council.domain.events import (

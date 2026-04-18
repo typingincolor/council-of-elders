@@ -21,7 +21,9 @@ def format_event(event: DebateEvent) -> str:
     """Produce a Rich-markup-formatted line for an event."""
     if isinstance(event, TurnStarted):
         c = _COLORS[event.elder]
-        return f"[dim][{c}]{_LABELS[event.elder]}[/] is thinking… (round {event.round_number})[/dim]"
+        return (
+            f"[dim][{c}]{_LABELS[event.elder]}[/] is thinking… (round {event.round_number})[/dim]"
+        )
     if isinstance(event, TurnCompleted):
         c = _COLORS[event.elder]
         tag = ""

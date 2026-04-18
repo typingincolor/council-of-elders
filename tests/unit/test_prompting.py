@@ -92,6 +92,7 @@ class TestRoundTwoPlus:
 
     def test_excludes_failed_elders_from_other_advisors(self, builder):
         from council.domain.models import ElderError
+
         err = ElderError(elder="gemini", kind="timeout", detail="")
         failed = ElderAnswer(
             elder="gemini",

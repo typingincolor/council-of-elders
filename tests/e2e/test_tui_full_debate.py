@@ -1,6 +1,5 @@
 import asyncio
 from datetime import datetime, timezone
-import pytest
 
 from council.adapters.clock.fake import FakeClock
 from council.adapters.elders.fake import FakeElder
@@ -32,12 +31,8 @@ async def test_full_debate_via_tui(tmp_path):
                 "Final synthesized answer.",
             ],
         ),
-        "gemini": FakeElder(
-            elder_id="gemini", replies=["R1 Gemini\nCONVERGED: yes"]
-        ),
-        "chatgpt": FakeElder(
-            elder_id="chatgpt", replies=["R1 ChatGPT\nCONVERGED: yes"]
-        ),
+        "gemini": FakeElder(elder_id="gemini", replies=["R1 Gemini\nCONVERGED: yes"]),
+        "chatgpt": FakeElder(elder_id="chatgpt", replies=["R1 ChatGPT\nCONVERGED: yes"]),
     }
     app = CouncilApp(
         elders=elders,

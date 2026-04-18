@@ -92,6 +92,7 @@ class TestInMemoryBus:
                     return
 
         import asyncio
+
         task = asyncio.create_task(consume())
         await asyncio.sleep(0)  # let subscriber start
         await bus.publish(TurnCompleted(elder="claude", round_number=1, answer=answer))

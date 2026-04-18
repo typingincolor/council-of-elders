@@ -57,19 +57,17 @@ def main() -> None:
     parser.add_argument("prompt")
     parser.add_argument("--pack", default="bare")
     parser.add_argument("--packs-root", default=str(Path.home() / ".council" / "packs"))
-    parser.add_argument(
-        "--synthesizer", choices=["claude", "gemini", "chatgpt"], default="claude"
-    )
-    parser.add_argument(
-        "--store-root", default=str(Path.home() / ".council" / "debates")
-    )
+    parser.add_argument("--synthesizer", choices=["claude", "gemini", "chatgpt"], default="claude")
+    parser.add_argument("--store-root", default=str(Path.home() / ".council" / "debates"))
     args = parser.parse_args()
 
     packs_root = Path(args.packs_root)
     packs_root.mkdir(parents=True, exist_ok=True)
-    pack = FilesystemPackLoader(root=packs_root).load(args.pack) if (
-        packs_root / args.pack
-    ).is_dir() else CouncilPack(name=args.pack, shared_context=None, personas={})
+    pack = (
+        FilesystemPackLoader(root=packs_root).load(args.pack)
+        if (packs_root / args.pack).is_dir()
+        else CouncilPack(name=args.pack, shared_context=None, personas={})
+    )
 
     elders: dict[ElderId, ElderPort] = {
         "claude": ClaudeCodeAdapter(),

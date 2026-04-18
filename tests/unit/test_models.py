@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-import pytest
 from council.domain.models import (
     CouncilPack,
     Debate,
@@ -94,6 +93,8 @@ class TestElderAnswer:
 class TestDebate:
     def test_new_debate_has_no_rounds(self):
         pack = CouncilPack(name="bare", shared_context=None, personas={})
-        d = Debate(id="abc", prompt="hi", pack=pack, rounds=[], status="in_progress", synthesis=None)
+        d = Debate(
+            id="abc", prompt="hi", pack=pack, rounds=[], status="in_progress", synthesis=None
+        )
         assert d.rounds == []
         assert d.status == "in_progress"

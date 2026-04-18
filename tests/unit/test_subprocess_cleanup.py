@@ -12,11 +12,10 @@ async def test_ask_kills_subprocess_when_wait_for_raises_arbitrary_error(tmp_pat
         binary="/bin/cat",
         build_args=lambda p: [],
     )
+
     # Patch wait_for to immediately raise a non-TimeoutError
     class BoomError(RuntimeError):
         pass
-
-    original_wait_for = asyncio.wait_for
 
     async def fake_wait_for(coro, timeout):
         raise BoomError("simulated")

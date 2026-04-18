@@ -1,6 +1,4 @@
 from datetime import datetime, timezone
-from pathlib import Path
-import pytest
 
 from council.adapters.bus.in_memory import InMemoryBus
 from council.adapters.clock.fake import FakeClock
@@ -19,12 +17,8 @@ async def test_headless_runs_one_round_and_synthesizes(capsys):
                 "Final synthesized answer.",
             ],
         ),
-        "gemini": FakeElder(
-            elder_id="gemini", replies=["R1 Gemini\nCONVERGED: yes"]
-        ),
-        "chatgpt": FakeElder(
-            elder_id="chatgpt", replies=["R1 ChatGPT\nCONVERGED: yes"]
-        ),
+        "gemini": FakeElder(elder_id="gemini", replies=["R1 Gemini\nCONVERGED: yes"]),
+        "chatgpt": FakeElder(elder_id="chatgpt", replies=["R1 ChatGPT\nCONVERGED: yes"]),
     }
     pack = CouncilPack(name="bare", shared_context=None, personas={})
     await run_headless(

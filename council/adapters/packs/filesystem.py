@@ -28,11 +28,7 @@ class FilesystemPackLoader:
             raise FileNotFoundError(f"Council pack not found: {pack_dir}")
 
         shared_path = pack_dir / "shared.md"
-        shared = (
-            shared_path.read_text(encoding="utf-8").strip()
-            if shared_path.is_file()
-            else None
-        )
+        shared = shared_path.read_text(encoding="utf-8").strip() if shared_path.is_file() else None
         personas: dict[ElderId, str] = {}
         for filename, elder in _ELDER_FILES.items():
             f = pack_dir / filename

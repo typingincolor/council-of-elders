@@ -38,9 +38,7 @@ class SubprocessElder:
             stderr=asyncio.subprocess.PIPE,
         )
         try:
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(), timeout=timeout_s
-            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout_s)
         except BaseException:
             # TimeoutError OR anything else (OSError, cancellation, ...)
             proc.kill()

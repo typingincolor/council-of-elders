@@ -11,7 +11,6 @@ from council.domain.models import (
     Debate,
     ElderAnswer,
     ElderError,
-    ElderId,
     Round,
     Turn,
 )
@@ -24,9 +23,7 @@ class JsonFileStore:
     def save(self, debate: Debate) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
         path = self.root / f"{debate.id}.json"
-        path.write_text(
-            json.dumps(_serialize_debate(debate), indent=2), encoding="utf-8"
-        )
+        path.write_text(json.dumps(_serialize_debate(debate), indent=2), encoding="utf-8")
 
     def load(self, debate_id: str) -> Debate:
         path = self.root / f"{debate_id}.json"
@@ -58,9 +55,7 @@ def _serialize_pack(p: CouncilPack) -> dict[str, Any]:
 def _serialize_round(r: Round) -> dict[str, Any]:
     return {
         "number": r.number,
-        "turns": [
-            {"elder": t.elder, "answer": _serialize_answer(t.answer)} for t in r.turns
-        ],
+        "turns": [{"elder": t.elder, "answer": _serialize_answer(t.answer)} for t in r.turns],
     }
 
 
@@ -100,10 +95,7 @@ def _deserialize_pack(p: dict[str, Any]) -> CouncilPack:
 def _deserialize_round(r: dict[str, Any]) -> Round:
     return Round(
         number=r["number"],
-        turns=[
-            Turn(elder=t["elder"], answer=_deserialize_answer(t["answer"]))
-            for t in r["turns"]
-        ],
+        turns=[Turn(elder=t["elder"], answer=_deserialize_answer(t["answer"])) for t in r["turns"]],
     )
 
 

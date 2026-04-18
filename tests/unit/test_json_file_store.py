@@ -52,9 +52,7 @@ def _debate() -> Debate:
     return Debate(
         id="d1",
         prompt="What should I do?",
-        pack=CouncilPack(
-            name="coo", shared_context="help", personas={"claude": "legal"}
-        ),
+        pack=CouncilPack(name="coo", shared_context="help", personas={"claude": "legal"}),
         rounds=[_round_with_all_elders()],
         status="in_progress",
         synthesis=None,

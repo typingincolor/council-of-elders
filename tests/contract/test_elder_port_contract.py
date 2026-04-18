@@ -4,6 +4,7 @@ FakeElder always runs. Real-CLI adapters are parameterized with the
 `integration` marker, so they only run under `pytest -m integration`
 (the default pytest config uses `-m 'not integration'`).
 """
+
 from __future__ import annotations
 
 import pytest
@@ -21,16 +22,19 @@ def _fake_elder():
 # Real adapter factories import lazily — they're only imported when selected.
 def _claude_real():
     from council.adapters.elders.claude_code import ClaudeCodeAdapter
+
     return ClaudeCodeAdapter()
 
 
 def _gemini_real():
     from council.adapters.elders.gemini_cli import GeminiCLIAdapter
+
     return GeminiCLIAdapter()
 
 
 def _codex_real():
     from council.adapters.elders.codex_cli import CodexCLIAdapter
+
     return CodexCLIAdapter()
 
 

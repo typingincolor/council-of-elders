@@ -26,7 +26,6 @@ from council.domain.events import (
     SynthesisCompleted,
 )
 from council.domain.models import (
-    CouncilPack,
     Debate,
     ElderId,
     Turn,
@@ -92,9 +91,7 @@ class CouncilApp(App):
         self._pack_loader = pack_loader
         self._pack_name = pack_name
         self._bus = InMemoryBus()
-        self._service = DebateService(
-            elders=elders, store=store, clock=clock, bus=self._bus
-        )
+        self._service = DebateService(elders=elders, store=store, clock=clock, bus=self._bus)
         self._debate: Debate | None = None
         self.awaiting_decision: bool = False
         self.is_finished: bool = False
@@ -166,10 +163,7 @@ class CouncilApp(App):
             return
         # Force all turns to agreed=True for the most recent round
         r = self._debate.rounds[-1]
-        r.turns = [
-            Turn(elder=t.elder, answer=replace(t.answer, agreed=True))
-            for t in r.turns
-        ]
+        r.turns = [Turn(elder=t.elder, answer=replace(t.answer, agreed=True)) for t in r.turns]
 
     async def action_synthesize(self) -> None:
         if not self.awaiting_decision or self._debate is None:
@@ -192,9 +186,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="council")
     parser.add_argument("--pack", default="bare")
     parser.add_argument("--packs-root", default=str(Path.home() / ".council" / "packs"))
-    parser.add_argument(
-        "--store-root", default=str(Path.home() / ".council" / "debates")
-    )
+    parser.add_argument("--store-root", default=str(Path.home() / ".council" / "debates"))
     args = parser.parse_args()
 
     packs_root = Path(args.packs_root)

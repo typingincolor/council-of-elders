@@ -95,9 +95,7 @@ class TestRunRound:
                 ],
             ),
         }
-        s = DebateService(
-            elders=elders, store=InMemoryStore(), clock=clock, bus=InMemoryBus()
-        )
+        s = DebateService(elders=elders, store=InMemoryStore(), clock=clock, bus=InMemoryBus())
         d = _fresh_debate()
         r1 = await s.run_round(d)
         r2 = await s.run_round(d)
@@ -113,6 +111,7 @@ class TestRunRoundWithFailures:
 
             async def ask(self, prompt, *, timeout_s=120.0):
                 import asyncio
+
                 raise asyncio.TimeoutError()
 
             async def health_check(self):
@@ -123,9 +122,7 @@ class TestRunRoundWithFailures:
             "gemini": TimeoutElder(),
             "chatgpt": FakeElder(elder_id="chatgpt", replies=["ok\nCONVERGED: yes"]),
         }
-        s = DebateService(
-            elders=elders, store=InMemoryStore(), clock=clock, bus=InMemoryBus()
-        )
+        s = DebateService(elders=elders, store=InMemoryStore(), clock=clock, bus=InMemoryBus())
         d = _fresh_debate()
         r = await s.run_round(d)
         gem = next(t for t in r.turns if t.elder == "gemini")
@@ -148,9 +145,7 @@ class TestRunRoundWithFailures:
             "gemini": FakeElder(elder_id="gemini", replies=["ok\nCONVERGED: yes"]),
             "chatgpt": FakeElder(elder_id="chatgpt", replies=["ok\nCONVERGED: yes"]),
         }
-        s = DebateService(
-            elders=elders, store=InMemoryStore(), clock=clock, bus=InMemoryBus()
-        )
+        s = DebateService(elders=elders, store=InMemoryStore(), clock=clock, bus=InMemoryBus())
         d = _fresh_debate()
         r = await s.run_round(d)
         c = next(t for t in r.turns if t.elder == "claude")

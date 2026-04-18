@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-import pytest
 
 from council.adapters.bus.in_memory import InMemoryBus
 from council.adapters.clock.fake import FakeClock
