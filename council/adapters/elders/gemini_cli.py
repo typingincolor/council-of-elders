@@ -19,11 +19,22 @@ def _classify(stderr_tail: str) -> str:
     return "nonzero_exit"
 
 
+def _build_args(model: str | None):
+    def _args(prompt: str) -> list[str]:
+        args: list[str] = []
+        if model:
+            args += ["-m", model]
+        args += ["-p", prompt]
+        return args
+
+    return _args
+
+
 class GeminiCLIAdapter(SubprocessElder):
-    def __init__(self) -> None:
+    def __init__(self, model: str | None = None) -> None:
         super().__init__(
             elder_id="gemini",
             binary="gemini",
-            build_args=lambda prompt: ["-p", prompt],
+            build_args=_build_args(model),
             classify_stderr=_classify,
         )

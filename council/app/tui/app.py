@@ -185,11 +185,27 @@ class CouncilApp(App):
 
 def main() -> None:
     import argparse
+    import os
 
     parser = argparse.ArgumentParser(prog="council")
     parser.add_argument("--pack", default="bare")
     parser.add_argument("--packs-root", default=str(Path.home() / ".council" / "packs"))
     parser.add_argument("--store-root", default=str(Path.home() / ".council" / "debates"))
+    parser.add_argument(
+        "--claude-model",
+        default=os.environ.get("COUNCIL_CLAUDE_MODEL"),
+        help="Model alias or full name passed to `claude --model` (e.g. sonnet, opus).",
+    )
+    parser.add_argument(
+        "--gemini-model",
+        default=os.environ.get("COUNCIL_GEMINI_MODEL"),
+        help="Model name passed to `gemini -m` (e.g. gemini-2.5-flash — recommended; Pro has tight quota).",
+    )
+    parser.add_argument(
+        "--codex-model",
+        default=os.environ.get("COUNCIL_CODEX_MODEL"),
+        help="Model name passed to `codex exec -m` (e.g. gpt-5-codex).",
+    )
     args = parser.parse_args()
 
     packs_root = Path(args.packs_root)
@@ -198,9 +214,9 @@ def main() -> None:
 
     app = CouncilApp(
         elders={
-            "claude": ClaudeCodeAdapter(),
-            "gemini": GeminiCLIAdapter(),
-            "chatgpt": CodexCLIAdapter(),
+            "claude": ClaudeCodeAdapter(model=args.claude_model),
+            "gemini": GeminiCLIAdapter(model=args.gemini_model),
+            "chatgpt": CodexCLIAdapter(model=args.codex_model),
         },
         store=JsonFileStore(root=Path(args.store_root)),
         clock=SystemClock(),
