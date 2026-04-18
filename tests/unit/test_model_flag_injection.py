@@ -1,4 +1,5 @@
 """Each vendor adapter should inject its --model flag into argv when provided."""
+
 from council.adapters.elders.claude_code import ClaudeCodeAdapter
 from council.adapters.elders.codex_cli import CodexCLIAdapter
 from council.adapters.elders.gemini_cli import GeminiCLIAdapter

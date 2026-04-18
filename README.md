@@ -1,6 +1,9 @@
 # Council of Elders
 
-Send one prompt to Claude, Gemini, and ChatGPT simultaneously, watch them debate, and get one synthesised answer — all using your existing paid subscriptions (no API charges).
+[![CI](https://github.com/typingincolor/council-of-elders/actions/workflows/ci.yml/badge.svg)](https://github.com/typingincolor/council-of-elders/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+Send one prompt to Claude, Gemini, and ChatGPT simultaneously, watch them debate, and get one synthesised answer, all using your existing paid subscriptions (no API charges).
 
 > **Full user guide:** [`docs/USAGE.md`](docs/USAGE.md) — covers what the tool is for, how the debate mechanic works, writing council packs, model selection, troubleshooting, and how to get real value from it.
 

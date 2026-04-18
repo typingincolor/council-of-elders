@@ -18,7 +18,7 @@ def _sanitize(raw: str) -> str:
         changed = False
         for prefix in _NOISE_PREFIXES:
             if out.startswith(prefix):
-                out = out[len(prefix):].lstrip()
+                out = out[len(prefix) :].lstrip()
                 changed = True
     return out
 

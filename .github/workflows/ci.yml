@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: lint + test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install project
+        run: uv pip install --system -e '.[dev]'
+
+      - name: Lint
+        run: ruff check council/ tests/
+
+      - name: Format check
+        run: ruff format --check council/ tests/
+
+      - name: Tests (unit + e2e; integration tests skipped — require vendor CLIs)
+        run: pytest -v
