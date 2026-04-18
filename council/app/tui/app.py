@@ -70,6 +70,12 @@ class CouncilApp(App):
         Binding("o", "override", "Override convergence", show=False),
     ]
 
+    def _spawn(self, coro) -> asyncio.Task:
+        task = asyncio.create_task(coro)
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+        return task
+
     def __init__(
         self,
         *,
@@ -93,6 +99,7 @@ class CouncilApp(App):
         self.awaiting_decision: bool = False
         self.is_finished: bool = False
         self.rendered_lines: list[str] = []
+        self._tasks: set[asyncio.Task] = set()
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -101,8 +108,14 @@ class CouncilApp(App):
         yield Footer()
 
     async def on_mount(self) -> None:
-        self._stream_task = asyncio.create_task(self._consume_events())
+        self._stream_task = self._spawn(self._consume_events())
         self.query_one("#input", Input).focus()
+
+    async def on_unmount(self) -> None:
+        if hasattr(self, "_stream_task"):
+            self._stream_task.cancel()
+        for task in list(self._tasks):
+            task.cancel()
 
     async def _consume_events(self) -> None:
         async for ev in self._bus.subscribe():
@@ -132,13 +145,13 @@ class CouncilApp(App):
             synthesis=None,
         )
         self.query_one("#input", Input).disabled = True
-        asyncio.create_task(self._service.run_round(self._debate))
+        self._spawn(self._service.run_round(self._debate))
 
     async def action_continue_round(self) -> None:
         if not self.awaiting_decision or self._debate is None:
             return
         self.awaiting_decision = False
-        asyncio.create_task(self._service.run_round(self._debate))
+        self._spawn(self._service.run_round(self._debate))
 
     async def action_abandon(self) -> None:
         if self._debate is None:
@@ -170,7 +183,7 @@ class CouncilApp(App):
         if choice is None:
             return
         self.awaiting_decision = False
-        asyncio.create_task(self._service.synthesize(self._debate, by=choice))
+        self._spawn(self._service.synthesize(self._debate, by=choice))
 
 
 def main() -> None:
