@@ -64,37 +64,68 @@ source .venv/bin/activate
 council
 ```
 
-You'll see an empty chronological stream at the top and a prompt box at the bottom. Type your question, hit Enter, and the three elders fan out in parallel.
+You'll see an empty chronological stream at the top and a prompt box at the bottom. Type your question, hit Enter.
 
-As each elder returns, its answer appears in the stream with a label and a status tag:
+**Round 1** runs immediately — each elder answers independently, without seeing the others.
+
+**Round 2** runs automatically straight after R1. Now each elder has seen the other two's R1 answers and must ask exactly one question of exactly one peer. This is where real dialogue starts: no convergence is possible yet; the point is to surface disagreement.
+
+Once R2 completes, the tool pauses for your decision.
+
+As each elder returns, its answer appears in the stream with a label and (in R3+) a status tag:
 
 - **`(converged)`** — green — "I stand by this answer even after seeing what the others say."
-- **`(dissenting)`** — yellow — "I might revise if I see the others' answers."
-- **No tag** — the elder's reply did not include a recognisable convergence marker. Treat it as undeclared.
-
-Once all three have reported, a round is complete and the tool pauses for your decision.
+- **`(dissenting)`** — yellow — "I still have questions, and here's my probe."
+- **No tag** — R1 and R2 have no CONVERGED tag by design.
 
 ### What to do between rounds
 
 | Key | Action | Use it when |
 |---|---|---|
-| `c` | **Continue** — run another round. Each elder now sees the others' answers and can revise. | There is visible dissent, or you want to test how durable the agreement is. |
-| `s` | **Synthesise** — brings up a modal. Press `1`/`2`/`3` to pick who writes the final answer. | You have enough material. All three converged, or you trust one of them to reconcile. |
+| `c` | **Continue** — run another round. In R3+, each elder must say CONVERGED: yes or probe further with a question. | The debate still has open tension, or you want to test durability of the agreement. Only available after R2. |
+| `s` | **Synthesise** — brings up a modal. Press `1`/`2`/`3` to pick who writes the final answer. | You have enough material. |
 | `a` | **Abandon** — closes the debate, saves the transcript, exits. | You realise the question is wrong, or you want to start over. |
-| `o` | **Override** — treats all three turns of the most recent round as converged. | The elders are stuck in trivial dissent and you want to force synthesis without another round. |
+| `o` | **Override** — treats all three turns of the most recent round as converged. | The elders are stuck and you want to force synthesis without another round. |
+
+When all three elders emit `CONVERGED: yes` in the same round, the synthesiser-pick modal opens automatically — no need to press `s`. You can still dismiss it and press `c` to force another round, or `s` at any earlier point.
 
 Press `Ctrl+C` at any time to quit.
 
 ### Headless mode
 
-Same flow, no UI. Runs one round, synthesises with whichever elder you choose, prints everything, exits:
+Same flow, no UI. Always runs R1+R2 (the opening exchange), continues to R3+ until convergence or `--max-rounds`, synthesises, prints everything, exits:
 
 ```bash
 council-headless "Your question here."
+council-headless --max-rounds 6 "A deeper question."
 council-headless --pack chief-of-staff --synthesizer gemini "Your question."
 ```
 
+The `--max-rounds` flag caps total rounds (including R1+R2). Default is 3 — enough for the opening exchange plus one R3 if elders don't converge immediately. Minimum value is 2.
+
 Useful for scripting, piping into other tools, or when you just want the output and don't need to steer the debate.
+
+### How the debate mechanic works
+
+The council runs a three-phase debate — a deliberate shape designed to avoid the "three parallel monologues, everyone claims consensus" failure mode that plagues naive multi-model setups.
+
+**Phase 1 — Silent initial answers (Round 1).** Each elder sees only the question (and any persona/pack context). No knowledge of the others. No convergence tag. No questions yet. The point: capture each elder's unfiltered first take.
+
+**Phase 2 — Cross-examination (Round 2, auto-chains after R1).** Each elder now sees the other two's R1 answers. Every elder MUST end with exactly one question targeted at exactly one peer (`@claude`, `@gemini`, or `@chatgpt`). Convergence is not yet possible — this phase's only job is to make dialogue happen. Without this step, models tend to declare "I agree" on their own answers before ever engaging.
+
+**Phase 3 — Open debate with convergence (Round 3+).** Now each elder must either:
+- `CONVERGED: yes` — "I would not change my view after everything that has been said"; or
+- `CONVERGED: no` + a new `QUESTIONS:` block with one further probe.
+
+No middle ground. If an elder has nothing more to probe, convergence is the honest signal. If they're still probing, they must point at *what* they're still uncertain about.
+
+**Convergence can be un-made.** An elder that converged in round N can be pulled back in if a peer directs a question at it in round N+1. It either reaffirms `CONVERGED: yes` (implicitly answering the question, or addressing it in prose) or flips to `CONVERGED: no` and probes further. Convergence is not a one-way valve.
+
+**Retries.** If an elder's reply doesn't follow the phase contract (e.g. R2 with no question, or R3+ with CONVERGED: no but no question), the tool silently re-asks once with a sharpened reminder. Second reply is accepted whatever comes back — the debate proceeds rather than blocking on a stubborn model.
+
+**Conversation memory.** Each elder maintains a real multi-turn conversation across rounds. The elder sees its own prior answers as assistant turns in its history, not as paraphrases pasted into the user message. Prompts stay shorter each round, and OpenRouter prompt caching kicks in for free.
+
+**Between-round user messages.** You can type a clarifying question or nudge at any point after R2 completes. Your message gets injected into each elder's next user turn as a "You (the asker) said:" section. Elders see it alongside the other peers' answers and the directed-questions section.
 
 ## Council packs — giving each elder a persona
 

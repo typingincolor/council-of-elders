@@ -54,25 +54,36 @@ When a key is resolvable, all three elders go through OpenRouter and the vendor 
 
 If no key is set, the council falls back to the existing vendor-CLI behaviour with no change.
 
-### Participating in the debate
+### How the debate unfolds
+
+The council runs a structured three-phase debate so the elders actually engage rather than producing three parallel monologues:
+
+**Round 1 — Silent initial answers.** Each elder answers your question independently, without seeing the others. No convergence, no cross-talk.
+
+**Round 2 — Cross-examination (auto-runs after round 1).** Each elder now sees the other two's round-1 answers and must ask exactly one question of one peer (`@claude`, `@gemini`, or `@chatgpt`). Convergence is still not possible — this is the dialogue step.
+
+**Round 3 and beyond — Open debate.** Each elder either says `CONVERGED: yes` (they'd not change their view even hearing everything the others said) or `CONVERGED: no` and asks exactly one further question of a peer. You press `c` to trigger each round. When all three elders converge in the same round, you're prompted to pick a synthesiser automatically.
+
+Converged elders stay in the conversation. If a peer directs a question at an elder after it already converged, it sees that question in its next turn and may hold its position or change its mind.
+
+Each elder maintains a real multi-turn conversation with memory across rounds, so they reason over their own prior answers natively.
 
 Between rounds, the input at the bottom is re-enabled. Type a clarifying question or comment and press **Enter** to send it to the elders — they'll see it in the next round's prompt. Use **Ctrl+Enter** to insert a newline if you want to write a longer, multi-line message.
 
-Elders can also pose questions to each other by ending their reply with a block like:
+Elder questions are signalled with a trailing block:
 
 ```
 QUESTIONS:
 @gemini Have you considered the timeline impact?
-@chatgpt What about the growth tradeoff?
 ```
 
-When that happens, the question appears labelled `[To Gemini]` in the asker's pane and `[From Claude]` in the target's pane, and the target gets a "Questions directed at you" section in its next prompt.
+The question appears labelled `[To Gemini]` in the asker's pane and `[From Claude]` in the target's pane, and the target gets a "Questions directed at you" section in its next prompt.
 
 ## Keybindings during a debate
 
 | Key | Action |
 |---|---|
-| `c` | Continue another round — elders see each other's answers |
+| `c` | Continue another round (available after round 2, while elders haven't all converged) |
 | `s` | Synthesise — pick who writes the final answer |
 | `a` | Abandon |
 | `o` | Override convergence |
