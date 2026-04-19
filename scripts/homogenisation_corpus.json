@@ -1,0 +1,44 @@
+{
+  "prompts": [
+    {
+      "id": "headline_001",
+      "shape": "headline",
+      "prompt": "Write a single-sentence headline (max 12 words) for a product launch where a UK payments startup announces a fee cut for small businesses."
+    },
+    {
+      "id": "summary_001",
+      "shape": "summary",
+      "prompt": "In two sentences, explain to a non-technical reader what \"latency\" means in the context of a web API."
+    },
+    {
+      "id": "strategy_001",
+      "shape": "strategy_tradeoff",
+      "prompt": "A founder has $150k to either hire one senior engineer or three junior engineers for a year. Give a recommendation in one paragraph."
+    },
+    {
+      "id": "strategy_002",
+      "shape": "strategy_tradeoff",
+      "prompt": "A regional bookshop must pick one focus for the year: stronger e-commerce, or a programme of in-store author events. Recommend one, with reasoning."
+    },
+    {
+      "id": "technical_001",
+      "shape": "technical_decision",
+      "prompt": "A Python service must process 1M small JSON files on one VM. Recommend asyncio or a process pool, with one paragraph of reasoning."
+    },
+    {
+      "id": "technical_002",
+      "shape": "technical_decision",
+      "prompt": "An internal tool will serve ~50 users with light CRUD traffic. PostgreSQL or SQLite? One paragraph."
+    },
+    {
+      "id": "factual_001",
+      "shape": "factual_multipart",
+      "prompt": "Name three distinct primary causes of the 2008 financial crisis. One sentence on each."
+    },
+    {
+      "id": "value_001",
+      "shape": "contested_value",
+      "prompt": "Is it ethical for a company to use AI to monitor individual employee productivity? Take a clear position in one paragraph."
+    }
+  ]
+}

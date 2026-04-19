@@ -272,9 +272,11 @@ api_key = "sk-or-v1-..."
 
 [openrouter.models]
 claude = "anthropic/claude-sonnet-4.5"
-gemini = "google/gemini-2.5-flash"
+gemini = "meta-llama/llama-3.1-70b-instruct"
 chatgpt = "openai/gpt-5"
 ```
+
+The `gemini` slot deliberately runs an open-weights Llama model rather than a Gemini-family one. The slot is just a label — the debate protocol is slot-keyed, not model-keyed. A same-lineage trio (Anthropic + Google + OpenAI) overlaps more at R1 than a mixed-lineage trio, and the debate mechanic only beats picking the best R1 when the roster has genuine architectural diversity. See [`docs/experiments/2026-04-19-9288-homogenisation.md`](experiments/2026-04-19-9288-homogenisation.md) for the supporting evidence.
 
 Tip: Gemini thinking models (e.g. `gemini-2.5-pro`, `gemini-3.1-pro-preview`) occasionally emit their whole answer into the `reasoning` field with empty `content`. The adapter falls back to `reasoning` in that case so the elder isn't silent, but the fallback text is the model's scratchpad rather than a polished reply. Prefer non-thinking models like `gemini-2.5-flash` if you want the cleanest output.
 
@@ -287,7 +289,7 @@ Highest wins:
 1. `--claude-model` / `--gemini-model` / `--codex-model` CLI flag
 2. `COUNCIL_CLAUDE_MODEL` / `COUNCIL_GEMINI_MODEL` / `COUNCIL_CODEX_MODEL` env var
 3. `[openrouter.models].<elder>` in `~/.council/config.toml`
-4. Hard-coded default (`anthropic/claude-sonnet-4.5`, `google/gemini-2.5-flash`, `openai/gpt-5`)
+4. Hard-coded default (`anthropic/claude-sonnet-4.5`, `meta-llama/llama-3.1-70b-instruct`, `openai/gpt-5`)
 
 Note: in OpenRouter mode the CLI flag and env var values are passed verbatim as OpenRouter model ids. A CLI-flavoured alias like `sonnet` will not resolve through OpenRouter — use the full OpenRouter id (`anthropic/claude-sonnet-4.5`) when that transport is active.
 
