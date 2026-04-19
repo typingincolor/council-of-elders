@@ -91,7 +91,12 @@ class DebateService:
                 created_at=self.clock.now(),
             )
         except Exception as ex:
-            err = ElderError(elder=by, kind="nonzero_exit", detail=repr(ex))
+            # Duck-type on .kind / .detail (as in _ask) so ElderSubprocessError
+            # from adapters preserves its specific kind — cli_missing, auth_failed,
+            # quota_exhausted — rather than being flattened to nonzero_exit.
+            kind = getattr(ex, "kind", "nonzero_exit")
+            detail = getattr(ex, "detail", repr(ex))
+            err = ElderError(elder=by, kind=kind, detail=detail)
             ans = self._error_answer(by, err)
         debate.synthesis = ans
         debate.status = "synthesized"

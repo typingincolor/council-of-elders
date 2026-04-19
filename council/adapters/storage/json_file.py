@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -23,7 +24,12 @@ class JsonFileStore:
     def save(self, debate: Debate) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
         path = self.root / f"{debate.id}.json"
-        path.write_text(json.dumps(_serialize_debate(debate), indent=2), encoding="utf-8")
+        # Atomic write: stage to a sibling temp file, then rename into place.
+        # os.replace is atomic on POSIX and Windows, so a crash mid-write leaves
+        # the previous version intact rather than a truncated file.
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        tmp.write_text(json.dumps(_serialize_debate(debate), indent=2), encoding="utf-8")
+        os.replace(tmp, path)
 
     def load(self, debate_id: str) -> Debate:
         path = self.root / f"{debate_id}.json"

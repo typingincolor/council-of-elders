@@ -107,6 +107,45 @@ class CouncilApp(App):
     async def on_mount(self) -> None:
         self._stream_task = self._spawn(self._consume_events())
         self.query_one("#input", Input).focus()
+        self._spawn(self._run_health_checks())
+
+    async def _run_health_checks(self) -> None:
+        """Probe each elder's CLI at startup so missing/unauthenticated vendors
+        surface immediately rather than only after the user has typed a prompt."""
+        labels: dict[ElderId, str] = {
+            "claude": "Claude",
+            "gemini": "Gemini",
+            "chatgpt": "ChatGPT",
+        }
+
+        async def _probe(elder_id: ElderId) -> tuple[ElderId, bool]:
+            try:
+                ok = await self._elders[elder_id].health_check()
+            except Exception:
+                ok = False
+            return elder_id, ok
+
+        results = await asyncio.gather(*(_probe(eid) for eid in self._elders))
+        unhealthy = [eid for eid, ok in results if not ok]
+        if not unhealthy:
+            return
+        for eid in unhealthy:
+            self._write_notice(
+                f"[yellow]⚠ {labels[eid]} CLI is unavailable or unauthenticated. "
+                f"Install it and run its `login` command before asking a question.[/yellow]"
+            )
+        if len(unhealthy) == len(self._elders):
+            self.query_one("#input", Input).disabled = True
+            self._write_notice(
+                "[red]No elders available. Fix the vendor CLI setup above, "
+                "then restart the app.[/red]"
+            )
+
+    def _write_notice(self, line: str) -> None:
+        """Write an app-level notice (not a DebateEvent) to the stream AND the
+        test-observable rendered_lines buffer."""
+        self.rendered_lines.append(line)
+        self.query_one("#stream", ChronologicalStream).write(line)
 
     async def on_unmount(self) -> None:
         if hasattr(self, "_stream_task"):
