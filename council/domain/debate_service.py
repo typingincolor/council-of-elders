@@ -80,10 +80,15 @@ class DebateService:
                 )
                 return Turn(elder=elder_id, answer=ans)
 
-            cleaned, agreed = self.convergence.parse(raw)
-            cleaned2, questions = self.question_parser.parse(
-                cleaned, from_elder=elder_id, round_number=round_num
+            # Parse QUESTIONS first to strip the trailing block, then look
+            # for the CONVERGED tag on what's left. The R3+ prompt tells the
+            # model to emit CONVERGED BEFORE the QUESTIONS block, so running
+            # the convergence policy on raw text would miss the tag (the
+            # QUESTIONS lines would be the tail).
+            cleaned_qs, questions = self.question_parser.parse(
+                raw, from_elder=elder_id, round_number=round_num
             )
+            cleaned2, agreed = self.convergence.parse(cleaned_qs)
             result = self.rules.validate(
                 agreed=agreed,
                 questions=questions,
@@ -115,10 +120,10 @@ class DebateService:
                         TurnFailed(elder=elder_id, round_number=round_num, error=err)
                     )
                     return Turn(elder=elder_id, answer=ans)
-                cleaned, agreed = self.convergence.parse(raw2)
-                cleaned2, questions = self.question_parser.parse(
-                    cleaned, from_elder=elder_id, round_number=round_num
+                cleaned_qs, questions = self.question_parser.parse(
+                    raw2, from_elder=elder_id, round_number=round_num
                 )
+                cleaned2, agreed = self.convergence.parse(cleaned_qs)
                 final_raw = raw2
                 # Accept whatever; one retry ceiling. Log if still invalid.
                 post_result = self.rules.validate(

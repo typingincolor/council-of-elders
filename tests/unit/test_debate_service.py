@@ -240,6 +240,49 @@ class TestAddUserMessage:
         assert msg.text == "with space"
 
 
+class TestConvergenceWithQuestionsOrder:
+    async def test_converged_no_before_questions_is_parsed(self, clock):
+        # R3+ prompt says "CONVERGED: no, followed immediately by a
+        # QUESTIONS: block" — so the CONVERGED tag appears BEFORE the
+        # QUESTIONS block in the raw reply. Parser order must tolerate
+        # this: agreed must resolve to False and the question captured.
+        elders = {
+            "claude": FakeElder(
+                elder_id="claude",
+                replies=[
+                    "R1 Claude",
+                    "R2 Claude\n\nQUESTIONS:\n@gemini Why?",
+                    "R3 Claude body text.\n\nCONVERGED: no\n\nQUESTIONS:\n@gemini Still why?",
+                ],
+            ),
+            "gemini": FakeElder(
+                elder_id="gemini",
+                replies=[
+                    "R1 Gemini",
+                    "R2 Gemini\n\nQUESTIONS:\n@claude Why?",
+                    "R3 Gemini\nCONVERGED: yes",
+                ],
+            ),
+            "chatgpt": FakeElder(
+                elder_id="chatgpt",
+                replies=[
+                    "R1 ChatGPT",
+                    "R2 ChatGPT\n\nQUESTIONS:\n@gemini Why?",
+                    "R3 ChatGPT\nCONVERGED: yes",
+                ],
+            ),
+        }
+        s = DebateService(elders=elders, store=InMemoryStore(), clock=clock, bus=InMemoryBus())
+        d = _fresh_debate()
+        await s.run_round(d)  # R1
+        await s.run_round(d)  # R2
+        r3 = await s.run_round(d)  # R3
+        claude = next(t for t in r3.turns if t.elder == "claude")
+        assert claude.answer.agreed is False
+        assert len(claude.questions) == 1
+        assert claude.questions[0].text == "Still why?"
+
+
 class TestRunRoundExtractsQuestions:
     async def test_r2_questions_block_becomes_turn_questions(self, clock):
         # R2 is where questions first appear. R1 is silent.
