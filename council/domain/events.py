@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Union
 
-from council.domain.models import ElderAnswer, ElderError, ElderId, Round, UserMessage
+from council.domain.models import ElderAnswer, ElderError, ElderId, ElderQuestion, Round, UserMessage
 
 
 @dataclass(frozen=True)
@@ -17,6 +17,7 @@ class TurnCompleted:
     elder: ElderId
     round_number: int
     answer: ElderAnswer
+    questions: tuple[ElderQuestion, ...] = ()
 
 
 @dataclass(frozen=True)

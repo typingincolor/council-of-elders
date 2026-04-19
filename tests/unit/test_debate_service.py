@@ -177,3 +177,69 @@ class TestSynthesize:
         d = _fresh_debate()
         await s.run_round(d)
         assert store.load("d1") is d
+
+
+from council.domain.events import UserMessageReceived
+
+
+class TestAddUserMessage:
+    async def test_appends_saves_and_publishes(self, svc):
+        s, _ = svc
+        d = _fresh_debate()
+        # Run a round so user_messages.after_round = 1 makes sense
+        await s.run_round(d)
+        collected: list = []
+
+        async def collect():
+            async for ev in s.bus.subscribe():
+                collected.append(ev)
+
+        import asyncio
+        task = asyncio.create_task(collect())
+        await asyncio.sleep(0)
+        msg = await s.add_user_message(d, "please focus on timeline")
+        await asyncio.sleep(0)
+        task.cancel()
+        assert msg.text == "please focus on timeline"
+        assert msg.after_round == 1
+        assert d.user_messages == [msg]
+        assert any(
+            isinstance(ev, UserMessageReceived) and ev.message is msg
+            for ev in collected
+        )
+
+    async def test_strips_whitespace(self, svc):
+        s, _ = svc
+        d = _fresh_debate()
+        msg = await s.add_user_message(d, "   with space  \n")
+        assert msg.text == "with space"
+
+
+class TestRunRoundExtractsQuestions:
+    async def test_questions_block_becomes_turn_questions(self, clock):
+        elders = {
+            "claude": FakeElder(
+                elder_id="claude",
+                replies=[
+                    "My reply.\n\nQUESTIONS:\n@gemini Timeline?\n\nCONVERGED: no"
+                ],
+            ),
+            "gemini": FakeElder(
+                elder_id="gemini",
+                replies=["Mine\nCONVERGED: yes"],
+            ),
+            "chatgpt": FakeElder(
+                elder_id="chatgpt",
+                replies=["Mine\nCONVERGED: yes"],
+            ),
+        }
+        s = DebateService(
+            elders=elders, store=InMemoryStore(), clock=clock, bus=InMemoryBus()
+        )
+        d = _fresh_debate()
+        r = await s.run_round(d)
+        claude_turn = next(t for t in r.turns if t.elder == "claude")
+        assert len(claude_turn.questions) == 1
+        assert claude_turn.questions[0].to_elder == "gemini"
+        assert "QUESTIONS" not in (claude_turn.answer.text or "")
+        assert claude_turn.answer.text.strip() == "My reply."

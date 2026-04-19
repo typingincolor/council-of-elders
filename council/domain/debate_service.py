@@ -10,6 +10,7 @@ from council.domain.events import (
     TurnCompleted,
     TurnFailed,
     TurnStarted,
+    UserMessageReceived,
 )
 from council.domain.models import (
     Debate,
@@ -18,9 +19,11 @@ from council.domain.models import (
     ElderId,
     Round,
     Turn,
+    UserMessage,
 )
 from council.domain.ports import Clock, ElderPort, EventBus, TranscriptStore
 from council.domain.prompting import PromptBuilder
+from council.domain.questions import QuestionParser
 
 
 @dataclass
@@ -31,6 +34,7 @@ class DebateService:
     bus: EventBus
     prompt_builder: PromptBuilder = PromptBuilder()
     convergence: ConvergencePolicy = ConvergencePolicy()
+    question_parser: QuestionParser = QuestionParser()
 
     async def run_round(self, debate: Debate) -> Round:
         round_num = len(debate.rounds) + 1
@@ -59,17 +63,25 @@ class DebateService:
                 return Turn(elder=elder_id, answer=ans)
 
             cleaned, agreed = self.convergence.parse(raw)
+            cleaned_no_qs, questions = self.question_parser.parse(
+                cleaned, from_elder=elder_id, round_number=round_num
+            )
             ans = ElderAnswer(
                 elder=elder_id,
-                text=cleaned,
+                text=cleaned_no_qs,
                 error=None,
                 agreed=agreed,
                 created_at=self.clock.now(),
             )
             await self.bus.publish(
-                TurnCompleted(elder=elder_id, round_number=round_num, answer=ans)
+                TurnCompleted(
+                    elder=elder_id,
+                    round_number=round_num,
+                    answer=ans,
+                    questions=questions,
+                )
             )
-            return Turn(elder=elder_id, answer=ans)
+            return Turn(elder=elder_id, answer=ans, questions=questions)
 
         turns = await asyncio.gather(*(_ask(eid) for eid in self.elders.keys()))
         r = Round(number=round_num, turns=list(turns))
@@ -103,6 +115,17 @@ class DebateService:
         self.store.save(debate)
         await self.bus.publish(SynthesisCompleted(answer=ans))
         return ans
+
+    async def add_user_message(self, debate: Debate, text: str) -> UserMessage:
+        msg = UserMessage(
+            text=text.strip(),
+            after_round=len(debate.rounds),
+            created_at=self.clock.now(),
+        )
+        debate.user_messages.append(msg)
+        self.store.save(debate)
+        await self.bus.publish(UserMessageReceived(message=msg))
+        return msg
 
     def _error_answer(self, elder_id: ElderId, err: ElderError) -> ElderAnswer:
         return ElderAnswer(
