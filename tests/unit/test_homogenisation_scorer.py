@@ -1,16 +1,11 @@
 from __future__ import annotations
 
-import json
 import math
-from pathlib import Path
 
-import pytest
 
 from council.experiments.homogenisation.scorer import (
-    RosterSummary,
     _binomial_ci_90,
     _summarise_rosters,
-    score_probe,
 )
 
 

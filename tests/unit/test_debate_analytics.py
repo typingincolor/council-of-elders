@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 
-import pytest
 
 from council.domain.debate_analytics import (
     _parse_drift_verdict,

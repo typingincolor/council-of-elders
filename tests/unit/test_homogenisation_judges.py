@@ -1,8 +1,19 @@
+import random
+
+import pytest
+
+from council.adapters.elders.fake import FakeElder
 from council.experiments.homogenisation.judges import (
     BestR1Observation,
     JaccardObservation,
     _parse_best_r1,
     _parse_claim_overlap,
+    _parse_preference,
+    _resolve_preference_winner,
+    _shuffle_xy,
+    judge_best_r1,
+    judge_claim_overlap,
+    judge_preference,
 )
 
 
@@ -66,16 +77,6 @@ class TestParseBestR1:
         assert obs.best_index == 3
 
 
-import random
-
-from council.experiments.homogenisation.judges import (
-    PreferenceObservation,
-    _parse_preference,
-    _resolve_preference_winner,
-    _shuffle_xy,
-)
-
-
 class TestShuffleXY:
     def test_reproducible_with_same_seed(self) -> None:
         rng_a = random.Random(42)
@@ -127,16 +128,6 @@ def test_resolve_preference_winner_handles_all_cases() -> None:
     assert _resolve_preference_winner("X", "best_r1") == "best_r1"
     assert _resolve_preference_winner("Y", "best_r1") == "synthesis"
     assert _resolve_preference_winner("TIE", "synthesis") == "tie"
-
-
-import pytest
-
-from council.adapters.elders.fake import FakeElder
-from council.experiments.homogenisation.judges import (
-    judge_best_r1,
-    judge_claim_overlap,
-    judge_preference,
-)
 
 
 @pytest.mark.asyncio
