@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import httpx
 import pytest
 
-from council.adapters.elders.openrouter import OpenRouterAdapter, OpenRouterError
+from council.adapters.elders.openrouter import (
+    OpenRouterAdapter,
+    OpenRouterError,
+    format_cost_notice,
+)
 
 
 class TestConstructorAndHealth:
@@ -30,9 +35,6 @@ class TestConstructorAndHealth:
         e = OpenRouterError("auth_failed", "bad key")
         assert e.kind == "auth_failed"
         assert e.detail == "bad key"
-
-
-import httpx
 
 
 def _adapter_with_transport(transport: httpx.MockTransport) -> OpenRouterAdapter:
@@ -199,9 +201,6 @@ class TestCostCapture:
         await a.ask("hi")
         assert a.session_cost_usd == 0.0
         assert a.session_tokens == {"prompt": 1, "completion": 1}
-
-
-from council.adapters.elders.openrouter import format_cost_notice
 
 
 class TestFormatCostNotice:

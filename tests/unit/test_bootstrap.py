@@ -5,6 +5,7 @@ from __future__ import annotations
 from council.adapters.elders.claude_code import ClaudeCodeAdapter
 from council.adapters.elders.codex_cli import CodexCLIAdapter
 from council.adapters.elders.gemini_cli import GeminiCLIAdapter
+from council.adapters.elders.openrouter import OpenRouterAdapter
 from council.app.bootstrap import build_elders
 from council.app.config import AppConfig
 
@@ -29,9 +30,6 @@ class TestSubprocessBranch:
         claude = elders["claude"]
         assert isinstance(claude, ClaudeCodeAdapter)
         assert claude.build_args("hi") == ["--model", "sonnet", "-p", "hi"]
-
-
-from council.adapters.elders.openrouter import OpenRouterAdapter
 
 
 class TestOpenRouterBranch:

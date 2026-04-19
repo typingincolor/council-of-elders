@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import tomllib
 from pathlib import Path
 
 from council.app.config import AppConfig, load_config
@@ -66,10 +68,6 @@ class TestKeyPrecedence:
         cfg = load_config(path=tmp_path / "missing.toml")
         assert cfg.openrouter_api_key == "env-only"
         assert cfg.openrouter_models == {}
-
-
-import logging
-import tomllib
 
 
 class TestErrorHandling:
