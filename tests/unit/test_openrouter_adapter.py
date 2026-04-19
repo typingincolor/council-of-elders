@@ -39,6 +39,36 @@ class TestConstructorAndHealth:
         assert e.kind == "auth_failed"
         assert e.detail == "bad key"
 
+    def test_warns_on_vendor_cli_alias(self, caplog):
+        import logging
+
+        with caplog.at_level(logging.WARNING, logger="council.adapters.elders.openrouter"):
+            OpenRouterAdapter(elder_id="claude", model="sonnet", api_key="k")
+        assert any("does not look like an OpenRouter id" in rec.message for rec in caplog.records)
+
+    def test_does_not_warn_on_proper_openrouter_id(self, caplog):
+        import logging
+
+        with caplog.at_level(logging.WARNING, logger="council.adapters.elders.openrouter"):
+            OpenRouterAdapter(
+                elder_id="claude",
+                model="anthropic/claude-sonnet-4.5",
+                api_key="k",
+            )
+        assert not any(
+            "does not look like an OpenRouter id" in rec.message for rec in caplog.records
+        )
+
+    def test_does_not_warn_on_empty_model(self, caplog):
+        # Some test paths construct with empty model; don't fire the warning.
+        import logging
+
+        with caplog.at_level(logging.WARNING, logger="council.adapters.elders.openrouter"):
+            OpenRouterAdapter(elder_id="claude", model="", api_key="k")
+        assert not any(
+            "does not look like an OpenRouter id" in rec.message for rec in caplog.records
+        )
+
 
 def _adapter_with_transport(transport: httpx.MockTransport) -> OpenRouterAdapter:
     return OpenRouterAdapter(

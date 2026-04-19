@@ -1,10 +1,20 @@
 from __future__ import annotations
 
+import logging
+import re
 from dataclasses import dataclass, field
 
 import httpx
 
 from council.domain.models import ElderId, ErrorKind, Message
+
+log = logging.getLogger(__name__)
+
+# OpenRouter model IDs are of the form `provider/model[:variant]` — e.g.
+# "anthropic/claude-sonnet-4.5", "google/gemini-2.5-pro", "openai/gpt-5-mini".
+# Vendor-CLI aliases like "sonnet", "opus", "gpt-5-codex" will not be
+# accepted by OpenRouter and will produce a confusing 4xx mid-debate.
+_OPENROUTER_MODEL_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*/[\w\-.:]+$", re.IGNORECASE)
 
 
 class OpenRouterError(Exception):
@@ -53,6 +63,22 @@ class OpenRouterAdapter:
     client: httpx.AsyncClient | None = None
     session_cost_usd: float = 0.0
     session_tokens: dict[str, int] = field(default_factory=lambda: {"prompt": 0, "completion": 0})
+
+    def __post_init__(self) -> None:
+        # Warn (don't raise) when the model ID doesn't look like an
+        # OpenRouter identifier. Vendor-CLI aliases like "sonnet", "opus",
+        # or "gpt-5-codex" are valid in CLI mode but produce an opaque
+        # 4xx mid-debate when passed to OpenRouter. The warning lets the
+        # user catch the mistake before the first round fails.
+        if self.model and not _OPENROUTER_MODEL_RE.match(self.model):
+            log.warning(
+                "Elder %s: model %r does not look like an OpenRouter id "
+                '(expected form "provider/model", e.g. '
+                '"anthropic/claude-sonnet-4.5"). The request may fail '
+                "with a 4xx. Continuing anyway.",
+                self.elder_id,
+                self.model,
+            )
 
     async def ask(self, conversation: list[Message], *, timeout_s: float = 45.0) -> str:
         if not conversation:

@@ -20,6 +20,7 @@ dev = [
 [project.scripts]
 council = "council.app.tui.app:main"
 council-headless = "council.app.headless.main:main"
+council-analyze = "council.app.analyze.main:main"
 
 [build-system]
 requires = ["hatchling"]

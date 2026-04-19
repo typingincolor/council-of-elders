@@ -196,6 +196,54 @@ class TestSynthesize:
         assert ans.elder == "claude"
         assert ans.error is None
 
+    async def test_retries_once_on_synthesis_structural_violation(self, clock):
+        # First synthesis reply has a CoT-loop signature (3 bolded headers);
+        # validator triggers a single retry with a sharpened reminder; second
+        # reply is clean and gets accepted.
+        bad_synth = (
+            "**Defining Goals**\nFirst thought...\n\n"
+            "**Refining Objectives**\nSecond thought...\n\n"
+            "**Focusing on Outcomes**\nThird thought..."
+        )
+        clean_synth = "Ship value faster by modernising our technology."
+        elders = {
+            "claude": FakeElder(
+                elder_id="claude",
+                replies=["Claude R1", bad_synth, clean_synth],
+            ),
+            "gemini": FakeElder(elder_id="gemini", replies=["Gemini R1"]),
+            "chatgpt": FakeElder(elder_id="chatgpt", replies=["ChatGPT R1"]),
+        }
+        s = DebateService(elders=elders, store=InMemoryStore(), clock=clock, bus=InMemoryBus())
+        d = _fresh_debate()
+        await s.run_round(d)
+        ans = await s.synthesize(d, by="claude")
+        # The retry was triggered and produced the clean second reply.
+        assert ans.text == clean_synth
+        # Three Claude calls total: R1 + first synth attempt + retry synth.
+        assert len(elders["claude"].conversations) == 3
+
+    async def test_synthesis_retry_ceiling_accepts_best_effort(self, clock):
+        # Both synthesis attempts violate structure; the second is accepted
+        # anyway (one-retry ceiling, same policy as turn-contract retry).
+        bad_synth_1 = "Okay, here's the answer. Ship faster."
+        bad_synth_2 = "Sure thing. Ship faster is the answer."
+        elders = {
+            "claude": FakeElder(
+                elder_id="claude",
+                replies=["Claude R1", bad_synth_1, bad_synth_2],
+            ),
+            "gemini": FakeElder(elder_id="gemini", replies=["Gemini R1"]),
+            "chatgpt": FakeElder(elder_id="chatgpt", replies=["ChatGPT R1"]),
+        }
+        s = DebateService(elders=elders, store=InMemoryStore(), clock=clock, bus=InMemoryBus())
+        d = _fresh_debate()
+        await s.run_round(d)
+        ans = await s.synthesize(d, by="claude")
+        # Accept the (still-bad) retry output — no third attempt.
+        assert ans.text == bad_synth_2
+        assert len(elders["claude"].conversations) == 3
+
     async def test_persists_debate_after_round(self, clock):
         store = InMemoryStore()
         elders = {

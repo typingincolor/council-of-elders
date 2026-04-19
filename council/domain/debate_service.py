@@ -28,6 +28,7 @@ from council.domain.prompting import PromptBuilder
 from council.domain.questions import QuestionParser
 from council.domain.reporting import ReportBuilder
 from council.domain.rules import DebateRules, DefaultRules, Violation
+from council.domain.synthesis_validation import SynthesisValidator, SynthesisViolation
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ class DebateService:
     convergence: ConvergencePolicy = field(default_factory=ConvergencePolicy)
     question_parser: QuestionParser = field(default_factory=QuestionParser)
     report_builder: ReportBuilder = field(default_factory=ReportBuilder)
+    synthesis_validator: SynthesisValidator = field(default_factory=SynthesisValidator)
     conversations: dict[ElderId, list[Message]] = field(default_factory=dict)
 
     async def run_round(self, debate: Debate) -> Round:
@@ -189,6 +191,41 @@ class DebateService:
         prompt = self.prompt_builder.build_synthesis(debate, by=by)
         try:
             raw = await port.ask([Message("user", prompt)])
+
+            # Post-generation structural validation. Belt-and-braces against
+            # decoding pathologies the prompt alone can't fully solve
+            # (CoT-loop leakage on fast-tier models, draft-label emission,
+            # etc.). One-retry ceiling; accept whatever comes back on the
+            # retry, same policy as the turn-contract retry.
+            check = self.synthesis_validator.validate(raw)
+            if isinstance(check, SynthesisViolation):
+                log.warning(
+                    "Synthesis structural violation (%s): %s. Retrying once.",
+                    check.reason,
+                    check.detail,
+                )
+                retry_prompt = (
+                    f"Your previous reply had a structural problem: {check.detail} "
+                    "Re-send the synthesis with the correct structure. "
+                    "Begin immediately with the first word of the answer. "
+                    "No preamble, no headings, no draft labels, no mentions "
+                    "of the debate or advisors, no CONVERGED tag."
+                )
+                raw = await port.ask(
+                    [
+                        Message("user", prompt),
+                        Message("assistant", raw),
+                        Message("user", retry_prompt),
+                    ]
+                )
+                post = self.synthesis_validator.validate(raw)
+                if isinstance(post, SynthesisViolation):
+                    log.warning(
+                        "Synthesis still violates structure after retry (%s); "
+                        "accepting best-effort.",
+                        post.reason,
+                    )
+
             ans = ElderAnswer(
                 elder=by,
                 text=raw.strip(),
