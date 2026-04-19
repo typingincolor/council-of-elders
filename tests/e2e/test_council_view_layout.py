@@ -45,6 +45,24 @@ async def test_wide_width_selects_columns_mode():
         assert view.current_layout() == "columns"
 
 
+async def test_synthesis_pane_hidden_in_columns_mode():
+    view = _make_view()
+    async with _Host(view).run_test(size=(300, 40)) as pilot:
+        await pilot.pause()
+        assert view.current_layout() == "columns"
+        assert view.pane("synthesis").display is False
+
+
+async def test_synthesis_pane_visible_after_show_synthesis_pane():
+    view = _make_view()
+    async with _Host(view).run_test(size=(300, 40)) as pilot:
+        await pilot.pause()
+        assert view.pane("synthesis").display is False
+        view.show_synthesis_pane()
+        await pilot.pause()
+        assert view.pane("synthesis").display is True
+
+
 async def test_force_override_sticks_through_resize():
     view = _make_view()
     async with _Host(view).run_test(size=(80, 40)) as pilot:

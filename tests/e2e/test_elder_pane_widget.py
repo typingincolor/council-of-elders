@@ -90,6 +90,27 @@ async def test_widget_renders_failed_turn_in_history():
         assert "quota_exhausted" in history or "ERROR" in history
 
 
+async def test_widget_label_updates_while_thinking():
+    """When a turn is in flight, the elapsed seconds should advance."""
+    clock = FakeClock(now=datetime(2026, 4, 19, 12, tzinfo=timezone.utc))
+    widget = ElderPaneWidget(
+        elder_id="claude",
+        display_name="Claude",
+        verb_chooser=FixedVerbChooser("Pondering"),
+        clock=clock,
+    )
+    async with _Host(widget).run_test() as pilot:
+        await pilot.pause()
+        widget.begin_thinking(round_number=1)
+        await pilot.pause()
+        assert widget.label_text == "Claude · Pondering… 0s"
+        # Advance the fake clock; the ticker calls refresh_label which reads
+        # the clock via current_label().
+        clock.advance_seconds(7)
+        widget.refresh_label()
+        assert widget.label_text == "Claude · Pondering… 7s"
+
+
 async def test_synthesis_widget_hides_history_divider_and_placeholder():
     clock = FakeClock(now=datetime(2026, 4, 19, 12, tzinfo=timezone.utc))
     widget = ElderPaneWidget(

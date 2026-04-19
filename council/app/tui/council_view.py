@@ -68,6 +68,10 @@ class CouncilView(Widget):
     def pane(self, key: str) -> ElderPaneWidget:
         return self._panes[key]
 
+    def show_synthesis_pane(self) -> None:
+        """Reveal the synthesis pane (columns mode only — no-op in tabs mode)."""
+        self._panes["synthesis"].display = True
+
     def current_layout(self) -> LayoutMode:
         return self._current_layout or pick_layout(
             self.size.width if self.size else 0, self._forced_mode
@@ -91,17 +95,14 @@ class CouncilView(Widget):
 
     def _compose_mode(self, mode: LayoutMode) -> ComposeResult:
         if mode == "columns":
-            # Horizontal with three elder panes; synthesis overlays on completion.
-            # For this plan, synthesis pane is ALSO mounted in columns mode so
-            # the user can see it filling during synthesis. CSS hides it when
-            # idle.
             yield Horizontal(
                 self._panes["claude"],
                 self._panes["gemini"],
                 self._panes["chatgpt"],
                 id="columns-container",
             )
-            yield self._panes["synthesis"]  # rendered separately; can be hidden via CSS
+            yield self._panes["synthesis"]
+            self._panes["synthesis"].display = False
         else:
             tabbed = TabbedContent(id="tabs-container")
             yield tabbed

@@ -231,6 +231,7 @@ class CouncilApp(App):
         if choice is None:
             return
         self.awaiting_decision = False
+        self._view.show_synthesis_pane()
         self._view.pane("synthesis").begin_thinking(round_number=1)
         self._spawn(self._service.synthesize(self._debate, by=choice))
 

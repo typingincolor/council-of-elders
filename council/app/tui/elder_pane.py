@@ -5,8 +5,10 @@ counter). Exposes a `standalone()` classmethod that constructs an instance
 without Textual's mount machinery — used by unit tests that only care about
 label generation.
 
-This module currently only implements label-generation logic. Full widget
-rendering (history, mount, compose, reactive updates) is added in Task 4.
+`ElderPane` is the logic-only base class; `ElderPaneWidget` is the Textual
+Widget subclass that adds compose, reactive label updates, history rendering,
+and a 1-second ticker that keeps the elapsed-seconds counter live during a
+thinking turn.
 """
 
 from __future__ import annotations
@@ -125,6 +127,8 @@ class ElderPane:
 # -------------------------------------------------------------------------
 # Textual widget
 # -------------------------------------------------------------------------
+import asyncio  # noqa: E402
+
 from textual.app import ComposeResult  # noqa: E402
 from textual.reactive import reactive  # noqa: E402
 from textual.widget import Widget  # noqa: E402
@@ -185,6 +189,7 @@ class ElderPaneWidget(ElderPane, Widget):
         self._history_buffer: list[
             str
         ] = []  # test-observable; immune to RichLog deferred rendering
+        self._ticker_task: asyncio.Task | None = None
 
     def compose(self) -> ComposeResult:
         yield Static("", id="pane-thinking")
@@ -201,14 +206,18 @@ class ElderPaneWidget(ElderPane, Widget):
         super().begin_thinking(round_number)
         self.label_text = self.current_label()
         self._render_thinking_line()
+        self._cancel_ticker()
+        self._ticker_task = asyncio.create_task(self._tick_loop())
 
     def end_thinking_completed(self, answer: ElderAnswer) -> None:
+        self._cancel_ticker()
         super().end_thinking_completed(answer)
         self._clear_thinking_line()
         self._append_completed(answer)
         self.label_text = self.current_label()
 
     def end_thinking_failed(self, error: ElderError) -> None:
+        self._cancel_ticker()
         super().end_thinking_failed(error)
         self._clear_thinking_line()
         self._append_failed(error)
@@ -217,6 +226,22 @@ class ElderPaneWidget(ElderPane, Widget):
     def refresh_label(self) -> None:
         self.label_text = self.current_label()
         self._render_thinking_line()
+
+    def _cancel_ticker(self) -> None:
+        if self._ticker_task is not None:
+            self._ticker_task.cancel()
+            self._ticker_task = None
+
+    async def _tick_loop(self) -> None:
+        try:
+            while True:
+                await asyncio.sleep(1)
+                self.refresh_label()
+        except asyncio.CancelledError:
+            return
+
+    async def on_unmount(self) -> None:
+        self._cancel_ticker()
 
     # --- internals -------------------------------------------------------
     def _render_thinking_line(self) -> None:
