@@ -270,13 +270,32 @@ class TestBuildNarrativePrompt:
         assert "substituting" in low
         assert "careful technical user" in low
 
-    def test_forces_binary_concluding_sentence(self, builder):
-        # The rewrite forces a binary concluding sentence in one of two
-        # explicit forms.
+    def test_binary_leading_verdict_phrases_are_present(self, builder):
+        # The concluding sentence must lead with one of two verdict phrases.
         d = _debate_with_history()
         out = builder.build_narrative_prompt(d, d.synthesis)
         assert "This was real consensus on the answer" in out
         assert "This was procedural agreement with unresolved divergence" in out
+
+    def test_allows_qualified_real_consensus_variant(self, builder):
+        # The rewrite allows extending the "real consensus" verdict with a
+        # minor-residual qualifier, without creating a middle category.
+        d = _debate_with_history()
+        out = builder.build_narrative_prompt(d, d.synthesis)
+        low = out.lower()
+        assert "minor residual" in low
+        assert "do not invent a middle category" in low
+
+    def test_length_budget_allows_longer_on_divergence(self, builder):
+        # The word budget is not a hard cap; divergence with quotes can go
+        # longer without being padded.
+        d = _debate_with_history()
+        out = builder.build_narrative_prompt(d, d.synthesis)
+        low = out.lower()
+        assert "do not pad" in low
+        # The new budget guidance mentions the lower and higher bounds for
+        # the harmonious case.
+        assert "250-400" in out
 
 
 class TestAssembleReportMarkdown:

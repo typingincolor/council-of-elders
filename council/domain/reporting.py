@@ -127,10 +127,14 @@ class ReportBuilder:
             "process-and-audit note for a technical user who will decide "
             "whether to trust the synthesised answer or investigate "
             "divergences.\n\n"
-            "Length: 200-350 words. Format: plain prose paragraphs and short "
-            "bullets permitted. Do NOT use markdown headings of any level — "
-            "no `#`, `##`, or `###`. Bold and inline code are fine. Start "
-            "directly with the content; no preamble, no title.\n\n"
+            "Length: aim for 250-400 words on harmonious debates; go longer "
+            "when real divergence requires quoted spans and attribution to be "
+            "explicit. Do NOT pad a harmonious narrative to hit a target — "
+            "content quality beats length compliance. Format: plain prose "
+            "paragraphs and short bullets permitted. Do NOT use markdown "
+            "headings of any level — no `#`, `##`, or `###`. Bold and inline "
+            "code are fine. Start directly with the content; no preamble, no "
+            "title.\n\n"
             'Voice: past tense, third person. Name elders explicitly ("Claude '
             'argued…", "Gemini conceded…"). If you are one of the elders, '
             "refer to your past turns in the third person by your own name.\n\n"
@@ -153,11 +157,17 @@ class ReportBuilder:
             "and, where you can do so faithfully from the transcript, include "
             "a short quoted span with attribution. Do not paraphrase the "
             "difference away and do not restate the synthesised answer.\n\n"
-            'Conclude with one explicit sentence of the form: "This was real '
-            'consensus on the answer" OR "This was procedural agreement with '
-            'unresolved divergence on X," where X is named concretely. In the '
-            "latter case, add one sentence on what the user needs to inspect "
-            "or decide."
+            "Conclude with one explicit sentence whose leading verdict is "
+            'either "This was real consensus on the answer" OR "This was '
+            'procedural agreement with unresolved divergence on X," where X '
+            "is named concretely. Keep that leading verdict phrase intact — "
+            "do not invent a middle category. If the answer is real consensus "
+            "but a small residual point is worth flagging, you may extend the "
+            'sentence (e.g. "This was real consensus on the answer, with a '
+            'minor residual point on Y"), so long as the leading verdict '
+            'stays "real consensus" and Y is genuinely small. In the '
+            "procedural-agreement case, add one sentence on what the user "
+            "needs to inspect or decide."
         )
 
     def build_final_positions_section(self, debate: Debate) -> str:
