@@ -15,11 +15,10 @@ from textual.widgets import Footer, Header, RichLog, Static, TextArea
 
 from council.adapters.bus.in_memory import InMemoryBus
 from council.adapters.clock.system import SystemClock
-from council.adapters.elders.claude_code import ClaudeCodeAdapter
-from council.adapters.elders.codex_cli import CodexCLIAdapter
-from council.adapters.elders.gemini_cli import GeminiCLIAdapter
 from council.adapters.packs.filesystem import FilesystemPackLoader
 from council.adapters.storage.json_file import JsonFileStore
+from council.app.bootstrap import build_elders
+from council.app.config import load_config
 from council.app.tui.council_view import CouncilView
 from council.domain.debate_service import DebateService
 from council.domain.events import (
@@ -107,6 +106,7 @@ class CouncilApp(App):
         clock: Clock,
         pack_loader: CouncilPackLoader,
         pack_name: str,
+        using_openrouter: bool = False,
     ) -> None:
         super().__init__()
         self._elders = elders
@@ -114,6 +114,8 @@ class CouncilApp(App):
         self._clock = clock
         self._pack_loader = pack_loader
         self._pack_name = pack_name
+        self._using_openrouter = using_openrouter
+        self._prev_cost_total: float = 0.0
         self._bus = InMemoryBus()
         self._service = DebateService(elders=elders, store=store, clock=clock, bus=self._bus)
         self._debate: Debate | None = None
@@ -318,15 +320,20 @@ def main() -> None:
     packs_root.mkdir(parents=True, exist_ok=True)
     (packs_root / args.pack).mkdir(exist_ok=True)  # ensure bare pack works
 
+    config = load_config()
+    cli_models: dict[ElderId, str | None] = {
+        "claude": args.claude_model,
+        "gemini": args.gemini_model,
+        "chatgpt": args.codex_model,
+    }
+    elders, using_openrouter = build_elders(config, cli_models=cli_models)
+
     app = CouncilApp(
-        elders={
-            "claude": ClaudeCodeAdapter(model=args.claude_model),
-            "gemini": GeminiCLIAdapter(model=args.gemini_model),
-            "chatgpt": CodexCLIAdapter(model=args.codex_model),
-        },
+        elders=elders,
         store=JsonFileStore(root=Path(args.store_root)),
         clock=SystemClock(),
         pack_loader=FilesystemPackLoader(root=packs_root),
         pack_name=args.pack,
+        using_openrouter=using_openrouter,
     )
     app.run()
