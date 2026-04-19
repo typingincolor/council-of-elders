@@ -17,6 +17,7 @@ diagnostics.
 
 from __future__ import annotations
 
+import random
 import re
 from dataclasses import dataclass
 
@@ -143,4 +144,80 @@ def _parse_best_r1(raw: str) -> BestR1Observation:
         best_index=int(best_m.group(1)) if best_m else 1,
         reason=reason_m.group(1).strip() if reason_m else "",
         raw=raw,
+    )
+
+
+# ---- Preference judge -----------------------------------------------
+
+
+@dataclass(frozen=True)
+class PreferenceObservation:
+    winner: str  # "synthesis" | "best_r1" | "tie"
+    reason: str
+    raw: str
+    x_was: str  # "synthesis" or "best_r1"
+
+
+PREFERENCE_PROMPT = """You are judging which of two answers better addresses the question.
+
+User's question:
+<<<
+{question}
+>>>
+
+Answer X:
+<<<
+{answer_x}
+>>>
+
+Answer Y:
+<<<
+{answer_y}
+>>>
+
+Judge on: factual correctness, completeness, shape-fit (does the form match what was asked for — e.g., headline vs essay), and avoidance of bloat. DO NOT favour an answer just because it is longer or more formal — penalise bloat.
+
+Emit EXACTLY:
+winner: X | Y | TIE
+reason: one sentence."""
+
+
+_WINNER_RE = re.compile(r"^\s*winner\s*:\s*(X|Y|TIE)\b", re.MULTILINE | re.IGNORECASE)
+
+
+def _shuffle_xy(
+    synthesis: str, best_r1: str, rng: random.Random
+) -> tuple[str, str, str]:
+    """Randomly decide whether synthesis goes to the X or Y slot.
+
+    Returns (answer_x_text, answer_y_text, x_was) where `x_was` is
+    "synthesis" or "best_r1". Use a seeded `random.Random` for
+    reproducibility.
+    """
+    if rng.random() < 0.5:
+        return synthesis, best_r1, "synthesis"
+    return best_r1, synthesis, "best_r1"
+
+
+def _resolve_preference_winner(x_or_y: str, x_was: str) -> str:
+    if x_or_y.upper() == "TIE":
+        return "tie"
+    other = "best_r1" if x_was == "synthesis" else "synthesis"
+    if x_or_y.upper() == "X":
+        return x_was
+    return other
+
+
+def _parse_preference(raw: str, *, x_was: str) -> PreferenceObservation:
+    cleaned = _strip_markdown_fence(raw)
+    winner_m = _WINNER_RE.search(cleaned)
+    reason_m = _REASON_RE.search(cleaned)
+    if winner_m is None:
+        return PreferenceObservation(winner="tie", reason="", raw=raw, x_was=x_was)
+    winner = _resolve_preference_winner(winner_m.group(1), x_was)
+    return PreferenceObservation(
+        winner=winner,
+        reason=reason_m.group(1).strip() if reason_m else "",
+        raw=raw,
+        x_was=x_was,
     )

@@ -64,3 +64,66 @@ class TestParseBestR1:
     def test_case_insensitive_key(self) -> None:
         obs = _parse_best_r1("BEST: 3\nREASON: all clear\n")
         assert obs.best_index == 3
+
+
+import random
+
+from council.experiments.homogenisation.judges import (
+    PreferenceObservation,
+    _parse_preference,
+    _resolve_preference_winner,
+    _shuffle_xy,
+)
+
+
+class TestShuffleXY:
+    def test_reproducible_with_same_seed(self) -> None:
+        rng_a = random.Random(42)
+        rng_b = random.Random(42)
+        x1, y1, x_was1 = _shuffle_xy("S", "R", rng_a)
+        x2, y2, x_was2 = _shuffle_xy("S", "R", rng_b)
+        assert (x1, y1, x_was1) == (x2, y2, x_was2)
+
+    def test_shuffle_either_assigns_synthesis_to_x_or_y(self) -> None:
+        # Over many trials we should see both assignments.
+        seen: set[str] = set()
+        for seed in range(20):
+            _, _, x_was = _shuffle_xy("synth", "best", random.Random(seed))
+            seen.add(x_was)
+            if seen == {"synthesis", "best_r1"}:
+                break
+        assert seen == {"synthesis", "best_r1"}
+
+
+class TestParsePreference:
+    def test_winner_x_when_synthesis_is_x(self) -> None:
+        raw = "winner: X\nreason: more direct.\n"
+        obs = _parse_preference(raw, x_was="synthesis")
+        assert obs.winner == "synthesis"
+        assert obs.x_was == "synthesis"
+
+    def test_winner_y_when_synthesis_is_x(self) -> None:
+        raw = "winner: Y\nreason: better facts.\n"
+        obs = _parse_preference(raw, x_was="synthesis")
+        assert obs.winner == "best_r1"
+
+    def test_winner_y_when_synthesis_is_y(self) -> None:
+        raw = "winner: Y\nreason: clearer.\n"
+        obs = _parse_preference(raw, x_was="best_r1")
+        assert obs.winner == "synthesis"
+
+    def test_tie(self) -> None:
+        obs = _parse_preference("winner: TIE\nreason: equivalent.\n", x_was="synthesis")
+        assert obs.winner == "tie"
+
+    def test_unparsable_defaults_to_tie(self) -> None:
+        obs = _parse_preference("blah blah", x_was="synthesis")
+        assert obs.winner == "tie"
+
+
+def test_resolve_preference_winner_handles_all_cases() -> None:
+    assert _resolve_preference_winner("X", "synthesis") == "synthesis"
+    assert _resolve_preference_winner("Y", "synthesis") == "best_r1"
+    assert _resolve_preference_winner("X", "best_r1") == "best_r1"
+    assert _resolve_preference_winner("Y", "best_r1") == "synthesis"
+    assert _resolve_preference_winner("TIE", "synthesis") == "tie"
