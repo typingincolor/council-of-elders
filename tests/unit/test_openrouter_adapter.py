@@ -160,3 +160,42 @@ class TestAskErrorMapping:
         with pytest.raises(OpenRouterError) as ei:
             await a.ask("hi")
         assert ei.value.kind == "nonzero_exit"
+
+
+class TestCostCapture:
+    async def test_accumulates_cost_and_tokens_across_calls(self):
+        def handler(_req: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "id": "g",
+                    "choices": [{"message": {"content": "reply"}}],
+                    "usage": {
+                        "prompt_tokens": 10,
+                        "completion_tokens": 5,
+                        "cost": 0.001,
+                    },
+                },
+            )
+
+        a = _adapter_with_transport(httpx.MockTransport(handler))
+        await a.ask("one")
+        await a.ask("two")
+        assert a.session_cost_usd == pytest.approx(0.002)
+        assert a.session_tokens == {"prompt": 20, "completion": 10}
+
+    async def test_missing_cost_leaves_total_unchanged(self):
+        def handler(_req: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "id": "g",
+                    "choices": [{"message": {"content": "reply"}}],
+                    "usage": {"prompt_tokens": 1, "completion_tokens": 1},
+                },
+            )
+
+        a = _adapter_with_transport(httpx.MockTransport(handler))
+        await a.ask("hi")
+        assert a.session_cost_usd == 0.0
+        assert a.session_tokens == {"prompt": 1, "completion": 1}

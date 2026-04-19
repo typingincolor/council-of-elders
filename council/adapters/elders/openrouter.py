@@ -79,11 +79,19 @@ class OpenRouterAdapter:
 
             try:
                 data = resp.json()
-                return data["choices"][0]["message"]["content"]
+                content = data["choices"][0]["message"]["content"]
             except (ValueError, KeyError, IndexError, TypeError) as ex:
                 raise OpenRouterError(
                     "unparseable", f"unexpected response shape: {ex}"
                 ) from ex
+
+            usage = data.get("usage") or {}
+            cost = usage.get("cost")
+            if isinstance(cost, (int, float)):
+                self.session_cost_usd += float(cost)
+            self.session_tokens["prompt"] += int(usage.get("prompt_tokens") or 0)
+            self.session_tokens["completion"] += int(usage.get("completion_tokens") or 0)
+            return content
         finally:
             if owned:
                 await client.aclose()
