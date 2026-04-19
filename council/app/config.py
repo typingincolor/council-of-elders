@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import os
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from council.domain.models import ElderId
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -22,8 +25,14 @@ _VALID_ELDERS: tuple[ElderId, ...] = ("claude", "gemini", "chatgpt")
 def _read_toml(path: Path) -> dict:
     if not path.is_file():
         return {}
-    with path.open("rb") as f:
-        return tomllib.load(f)
+    try:
+        with path.open("rb") as f:
+            return tomllib.load(f)
+    except OSError as ex:
+        log.warning("Config file %s is unreadable (%s); ignoring.", path, ex)
+        return {}
+    except tomllib.TOMLDecodeError as ex:
+        raise tomllib.TOMLDecodeError(f"{path}: {ex}") from ex
 
 
 def _resolve_key(toml_data: dict) -> str | None:

@@ -66,3 +66,34 @@ class TestKeyPrecedence:
         cfg = load_config(path=tmp_path / "missing.toml")
         assert cfg.openrouter_api_key == "env-only"
         assert cfg.openrouter_models == {}
+
+
+import logging
+import tomllib
+
+
+class TestErrorHandling:
+    def test_malformed_toml_raises(self, tmp_path: Path, monkeypatch):
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+        cfg_path = tmp_path / "bad.toml"
+        cfg_path.write_text("this is = not [ valid toml\n")
+        import pytest as _pytest
+
+        with _pytest.raises(tomllib.TOMLDecodeError) as exc_info:
+            load_config(path=cfg_path)
+        assert str(cfg_path) in str(exc_info.value)
+
+    def test_unreadable_file_warns_and_returns_empty(
+        self, tmp_path: Path, monkeypatch, caplog
+    ):
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+        cfg_path = tmp_path / "locked.toml"
+        cfg_path.write_text('[openrouter]\napi_key = "x"\n')
+        cfg_path.chmod(0o000)
+        try:
+            with caplog.at_level(logging.WARNING):
+                cfg = load_config(path=cfg_path)
+        finally:
+            cfg_path.chmod(0o644)
+        assert cfg.openrouter_api_key is None
+        assert any("unreadable" in rec.message.lower() for rec in caplog.records)
