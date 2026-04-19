@@ -63,7 +63,7 @@ Per-roster preference rate = fraction of prompts where `winner = synthesis`, tie
 ### File layout
 
 - `scripts/homogenisation_probe.py` — entry-point script with subcommands
-- `scripts/homogenisation_corpus.yaml` — the 8 prompts, checked in
+- `scripts/homogenisation_corpus.json` — the 8 prompts, checked in
 - `runs/<run-id>/manifest.json` — roster × prompt → debate-id map (generated, git-ignored)
 - `runs/<run-id>/scores.json` — judge outputs keyed by debate-id (generated, git-ignored)
 - `docs/experiments/<run-id>-homogenisation.md` — human-readable report (generated, git-ignored by default; user can commit any interesting ones)
@@ -76,7 +76,7 @@ Each phase reads the previous phase's artifacts, is idempotent within itself, an
 
 | Phase | Subcommand | Reads | Writes | Resumability |
 |---|---|---|---|---|
-| 1. Run | `homogenisation_probe run` | Corpus YAML | Manifest + saved debates in `~/.council/debates/` | If manifest already has a `(roster, prompt)` entry, skip that debate |
+| 1. Run | `homogenisation_probe run` | Corpus JSON | Manifest + saved debates in `~/.council/debates/` | If manifest already has a `(roster, prompt)` entry, skip that debate |
 | 2. Score | `homogenisation_probe score --run-id <id>` | Manifest + saved debates | Scores JSON | Skip `(debate_id, metric)` pairs already present in scores |
 | 3. Report | `homogenisation_probe report --run-id <id>` | Scores JSON | Markdown report | Pure data transform; re-run freely |
 
@@ -193,7 +193,7 @@ Parse on `^\s*winner\s*:\s*(X|Y|TIE)` (case-insensitive). If unparsable, record 
 
 ## Corpus
 
-Stored at `scripts/homogenisation_corpus.yaml`. Eight prompts, each under 50 words, covering the shapes the issue flagged. None are famous benchmark problems.
+Stored at `scripts/homogenisation_corpus.json`. Eight prompts, each under 50 words, covering the shapes the issue flagged. None are famous benchmark problems.
 
 | id | shape | prompt |
 |---|---|---|
