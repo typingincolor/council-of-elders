@@ -133,6 +133,98 @@ Stored as a `list[Message]` per elder. `NamedTuple` gives us structural tuple ac
 
 **ElderPort contract change:** `ask(prompt: str) -> str` becomes `ask(conversation: list[Message]) -> str`. The simple `list[Message]` type is imported from `council.domain.models`. All four adapters are updated. Contract tests are updated.
 
+## Debate rules abstraction
+
+The three-phase model is *a* set of debate rules, not *the* set. The user has explicitly flagged future variants (adversarial, quick-consensus, per-pack rules) as plausible. We introduce a small seam now — a `DebateRules` Protocol — so alternate rule sets can be dropped in later without reshaping `DebateService`.
+
+**`council/domain/rules.py` (new)** — Protocol + default implementation:
+
+```python
+from typing import Protocol
+
+from council.domain.models import (
+    Debate, ElderId, ElderQuestion, Message, Round,
+)
+
+
+@dataclass(frozen=True)
+class ValidationOk: ...
+
+@dataclass(frozen=True)
+class Violation:
+    reason: str
+    detail: str
+
+ValidationResult = ValidationOk | Violation
+
+
+class DebateRules(Protocol):
+    """A pluggable debate-rules policy.
+
+    Concrete implementations define per-phase prompt content, validation
+    contract, and convergence semantics. DebateService consumes the Protocol
+    only; it does not know whether the ruleset is the default three-phase
+    model or something else.
+    """
+
+    def system_message(self, debate: Debate, elder: ElderId) -> str: ...
+    def user_message(self, debate: Debate, elder: ElderId, round_num: int) -> str: ...
+    def retry_reminder(self, violation: Violation) -> str: ...
+    def validate(
+        self,
+        *,
+        agreed: bool | None,
+        questions: tuple[ElderQuestion, ...],
+        round_num: int,
+        from_elder: ElderId,
+    ) -> ValidationResult: ...
+    def is_converged(self, rnd: Round) -> bool: ...
+
+
+class DefaultRules:
+    """The three-phase debate rules:
+       R1 silent initial / R2 forced cross-exam / R3+ open with convergence.
+
+    Thin facade over PromptBuilder (prompting.py) and TurnValidator
+    (validation.py). This keeps the rules entry-point API small and
+    testable while leaving the prompt-building and validation internals
+    independently swappable.
+    """
+    _prompt_builder: PromptBuilder
+    _validator: TurnValidator
+
+    def __init__(self, *, prompt_builder: PromptBuilder | None = None,
+                 validator: TurnValidator | None = None) -> None:
+        self._prompt_builder = prompt_builder or PromptBuilder()
+        self._validator = validator or TurnValidator()
+
+    def system_message(self, debate, elder):
+        return self._prompt_builder.build_system_message(debate, elder)
+
+    def user_message(self, debate, elder, round_num):
+        if round_num == 1:
+            return self._prompt_builder.build_round_1_user(debate)
+        if round_num == 2:
+            return self._prompt_builder.build_round_2_user(debate, elder)
+        return self._prompt_builder.build_round_n_user(debate, elder, round_num)
+
+    def retry_reminder(self, violation):
+        return self._prompt_builder.build_retry_reminder(violation.detail)
+
+    def validate(self, *, agreed, questions, round_num, from_elder):
+        return self._validator.validate(
+            agreed=agreed, questions=questions,
+            round_num=round_num, from_elder=from_elder,
+        )
+
+    def is_converged(self, rnd):
+        return rnd.converged()    # existing Round.converged() method
+```
+
+`DebateService` is parameterised on the Protocol — `rules: DebateRules = DefaultRules()` — not on `PromptBuilder` / `TurnValidator` directly. The two internal classes remain (focused responsibility, independently testable), but they are implementation details of `DefaultRules`, not part of `DebateService`'s public surface.
+
+**Future rule sets** implement `DebateRules` directly (can subclass `DefaultRules` and override specific methods, or write a standalone class). Testing-wise, swapping in a stub rules object is trivial.
+
 ## Components
 
 ### `council/domain/prompting.py` — conversation-aware message builders
@@ -190,37 +282,42 @@ The validator emits at most one `Violation` per call — the first contract fail
 
 ### `council/domain/debate_service.py` — per-elder conversations, retry branch
 
-`DebateService` gains two new pieces of state:
+`DebateService` state changes:
 
-1. `validator: TurnValidator = TurnValidator()` — dependency.
-2. `conversations: dict[ElderId, list[Message]]` — in-memory per-elder conversation, populated lazily on first round and extended every round. Reset if `DebateService` is re-instantiated.
+1. Replace `prompt_builder: PromptBuilder` with `rules: DebateRules = DefaultRules()` — single policy dependency.
+2. Add `conversations: dict[ElderId, list[Message]]` — in-memory per-elder conversation, populated lazily on first round and extended every round. Reset if `DebateService` is re-instantiated.
+
+Remove the separate `convergence_policy` and `question_parser` dependencies only if they were on `DebateService`; keep the **parsers** as today (they stay as stateless utilities — they are about *parsing text into structure*, not about rules). `ConvergencePolicy.parse` and `QuestionParser.parse` continue to be called directly.
 
 Per-elder loop (inside the existing `_ask` task) for round N:
 
 ```
 1. conv = conversations[elder]   # list[Message], empty on first call
 2. if conv is empty:
-       system_text = prompt_builder.build_system_message(debate, elder)
+       system_text = rules.system_message(debate, elder)
        if system_text: conv.append(Message("system", system_text))
-       conv.append(Message("user", prompt_builder.build_round_1_user(debate)))
+       conv.append(Message("user", rules.user_message(debate, elder, N)))
    else:
-       if N == 2:
-           conv.append(Message("user", prompt_builder.build_round_2_user(debate, elder)))
-       else:  # N >= 3
-           conv.append(Message("user", prompt_builder.build_round_n_user(debate, elder, N)))
+       conv.append(Message("user", rules.user_message(debate, elder, N)))
 3. raw = await port.ask(conv)
 4. cleaned, agreed = convergence.parse(raw)
 5. cleaned2, questions = question_parser.parse(cleaned, from_elder=elder, round_number=N)
-6. result = validator.validate(agreed=agreed, questions=questions, round_num=N, from_elder=elder)
+6. result = rules.validate(agreed=agreed, questions=questions, round_num=N, from_elder=elder)
 7. if isinstance(result, Violation):
        conv.append(Message("assistant", raw))   # record what they said
-       conv.append(Message("user", prompt_builder.build_retry_reminder(result.detail)))
+       conv.append(Message("user", rules.retry_reminder(result)))
        raw2 = await port.ask(conv)
        cleaned, agreed = convergence.parse(raw2)
        cleaned2, questions = question_parser.parse(cleaned, from_elder=elder, round_number=N)
+       final_raw = raw2
        # Accept whatever comes back. Do NOT re-validate-and-retry; one retry ceiling.
        # If the validator would still flag it, log a warning and proceed.
-8. Apply phase-specific "drop with warn" cleanup:
+   else:
+       final_raw = raw
+8. Apply phase-specific "drop with warn" cleanup (delegated to rules-aware helpers
+   inside DebateService; rules doesn't need to know about this — the drop is a
+   post-process that's safe across any ruleset that signals "questions optional"
+   via its validator). For DefaultRules:
        - R1: discard `agreed` and `questions` (set agreed=None, questions=())
        - R3+ with agreed=True: discard `questions` (set to ())
 9. conv.append(Message("assistant", final_raw))   # record the final reply in memory
@@ -229,7 +326,7 @@ Per-elder loop (inside the existing `_ask` task) for round N:
 
 Error paths from adapters (`ElderSubprocessError`, `OpenRouterError`, `asyncio.TimeoutError`) are unchanged — they still flow into `TurnFailed` / error `Turn` as today. The retry branch only fires on **contract** violations, i.e. when the adapter returned a response but the shape is wrong.
 
-`run_round` signature is unchanged. The service does **not** auto-chain R1→R2; that's a caller concern (see TUI / headless changes).
+`run_round` signature is unchanged. The service does **not** auto-chain R1→R2; that's a caller concern (see TUI / headless changes). Convergence *detection* at the TUI/headless layer also goes through the rules object: callers consult `self._service.rules.is_converged(latest_round)` rather than `latest_round.converged()` directly. `Round.converged()` remains on the domain model as today (DefaultRules delegates to it), so existing callers and serialisation are untouched.
 
 ### `council/app/tui/app.py` — R1+R2 opening exchange, auto-synth on full convergence
 
@@ -239,7 +336,7 @@ New behaviour on initial prompt submission:
 3. After R2 completes, re-enable TextArea and user controls.
 
 After each subsequent round (R3+):
-- Check `debate.rounds[-1].converged()` (existing method on `Round`).
+- Check `self._service.rules.is_converged(debate.rounds[-1])`.
 - If True → show the synthesiser-pick prompt (same UI as pressing `s`).
 - If False → remain in between-rounds idle state.
 
@@ -251,7 +348,7 @@ Headless today runs exactly one round, then synthesises. That's inadequate under
 
 New flow:
 1. Always run R1 and R2 (opening exchange — minimum two rounds).
-2. Continue running rounds until either `debate.rounds[-1].converged()` is True, or `--max-rounds N` (new flag, default **3**) is hit. `N` counts *total* rounds including R1+R2, so the default allows one optional R3. A user who wants deeper debate can pass `--max-rounds 6`.
+2. Continue running rounds until either `svc.rules.is_converged(debate.rounds[-1])` is True, or `--max-rounds N` (new flag, default **3**) is hit. `N` counts *total* rounds including R1+R2, so the default allows one optional R3. A user who wants deeper debate can pass `--max-rounds 6`.
 3. Synthesise.
 
 Values of `N < 2` are rejected at argparse time — the opening exchange is non-optional. Cost line emission is unchanged (still a single line after synthesis).
@@ -341,10 +438,12 @@ run_round(debate)
 | Unit | `PromptBuilder.build_retry_reminder`: contains violation reason + restated contract. | `tests/unit/test_prompting.py` |
 | Unit | `TurnValidator`: full matrix — R1 OK/tag/questions, R2 OK/0Qs/2Qs/self, R3+ OK/missing-tag/yes+Q/no+0Qs/no+2Qs. | `tests/unit/test_validation.py` (new) |
 | Unit | `flatten_conversation` helper: correct SYSTEM/USER/ASSISTANT tagging, separators, omits SYSTEM when absent. | `tests/unit/test_flatten_conversation.py` (new) |
+| Unit | `DefaultRules` facade: `user_message` dispatches on round_num; `is_converged` delegates to `Round.converged()`; `retry_reminder` delegates to `build_retry_reminder`. | `tests/unit/test_rules.py` (new) |
+| Unit | `DebateService` accepts any `DebateRules`: a stub ruleset (always valid, fixed prompts) drives `run_round` successfully — verifies Protocol-only coupling. | `tests/unit/test_debate_service.py` |
 | Unit | `DebateService.run_round` conversation growth: after R1, conv = [system, user_r1, assistant_r1]; after R2, adds [user_r2, assistant_r2]; after R3, adds [user_r3, assistant_r3]. | `tests/unit/test_debate_service.py` |
 | Unit | `DebateService.run_round` retry path: first reply violates → retry called once → second reply valid → Turn built with second reply's data; conv has [..., assistant_bad, user_retry, assistant_good]. | `tests/unit/test_debate_service.py` |
 | Unit | `DebateService.run_round` retry ceiling: second reply still invalid → Turn built best-effort, no third call. | `tests/unit/test_debate_service.py` |
-| Unit | R3 full convergence: `debate.rounds[-1].converged()` returns True only when all three turns have `agreed=True`. | `tests/unit/test_debate_service.py` |
+| Unit | R3 full convergence: `DefaultRules.is_converged(round)` returns True only when all three turns have `agreed=True`. | `tests/unit/test_rules.py` |
 | Unit | `OpenRouterAdapter.ask(conversation)`: correct messages-array shape in POST body; system role preserved; cost accounting unchanged. | `tests/unit/test_openrouter_adapter.py` (extend) |
 | Unit | `ClaudeCodeAdapter.ask(conversation)`: conversation flattened correctly before CLI invocation. | `tests/unit/test_claude_code_adapter.py` (extend) |
 | Contract | `ElderPort` contract updated — `ask(conversation: list[Message]) -> str`. All adapters re-verified. | `tests/contract/test_elder_port_contract.py` |
