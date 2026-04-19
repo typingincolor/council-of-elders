@@ -76,8 +76,14 @@ _B_ONLY_RE = re.compile(r"^\s*b_only_count\s*:\s*(\d+)", re.MULTILINE | re.IGNOR
 _NOTE_RE = re.compile(r"^\s*note\s*:\s*(.+?)\s*$", re.MULTILINE | re.IGNORECASE)
 
 
+# ---- Shared parsing primitives ------------------------------------------
+
+
 def _strip_markdown_fence(raw: str) -> str:
     return re.sub(r"^```[a-z]*\n?|\n?```$", "", raw.strip(), flags=re.MULTILINE)
+
+
+_REASON_RE = re.compile(r"^\s*reason\s*:\s*(.+?)\s*$", re.MULTILINE | re.IGNORECASE)
 
 
 def _parse_claim_overlap(raw: str) -> JaccardObservation:
@@ -133,7 +139,6 @@ reason: one sentence."""
 
 
 _BEST_RE = re.compile(r"^\s*best\s*:\s*([1-3])\b", re.MULTILINE | re.IGNORECASE)
-_REASON_RE = re.compile(r"^\s*reason\s*:\s*(.+?)\s*$", re.MULTILINE | re.IGNORECASE)
 
 
 def _parse_best_r1(raw: str) -> BestR1Observation:
