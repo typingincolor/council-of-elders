@@ -183,6 +183,7 @@ class ElderPaneWidget(ElderPane, Widget):
         self.display_name = display_name  # public for CouncilView / TabbedContent
         self._last_round_rendered: int | None = None
         self.label_text = display_name
+        self._history_buffer: list[str] = []  # test-observable; immune to RichLog deferred rendering
 
     def compose(self) -> ComposeResult:
         yield Static("", id="pane-thinking")
@@ -192,6 +193,7 @@ class ElderPaneWidget(ElderPane, Widget):
         if self._synthesis:
             log = self.query_one("#pane-history", RichLog)
             log.write(_SYNTHESIS_PLACEHOLDER)
+            self._history_buffer.append(_SYNTHESIS_PLACEHOLDER)
 
     # --- state transitions override: sync UI -----------------------------
     def begin_thinking(self, round_number: int) -> None:
@@ -227,20 +229,23 @@ class ElderPaneWidget(ElderPane, Widget):
         log = self.query_one("#pane-history", RichLog)
         if self._synthesis:
             log.clear()  # replace placeholder or previous synthesis
+            self._history_buffer.clear()
         else:
             if self._current_round and self._current_round >= 2 and (
                 self._last_round_rendered != self._current_round
             ):
-                log.write(f"[dim]─── Round {self._current_round} ───[/dim]")
-        log.write(
-            format_event(
-                TurnCompleted(
-                    elder=answer.elder,
-                    round_number=self._current_round or 1,
-                    answer=answer,
-                )
+                divider = f"[dim]─── Round {self._current_round} ───[/dim]"
+                log.write(divider)
+                self._history_buffer.append(divider)
+        line = format_event(
+            TurnCompleted(
+                elder=answer.elder,
+                round_number=self._current_round or 1,
+                answer=answer,
             )
         )
+        log.write(line)
+        self._history_buffer.append(line)
         self._last_round_rendered = self._current_round
 
     def _append_failed(self, error: ElderError) -> None:
@@ -249,23 +254,25 @@ class ElderPaneWidget(ElderPane, Widget):
             if self._current_round and self._current_round >= 2 and (
                 self._last_round_rendered != self._current_round
             ):
-                log.write(f"[dim]─── Round {self._current_round} ───[/dim]")
-        log.write(
-            format_event(
-                TurnFailed(
-                    elder=error.elder,
-                    round_number=self._current_round or 1,
-                    error=error,
-                )
+                divider = f"[dim]─── Round {self._current_round} ───[/dim]"
+                log.write(divider)
+                self._history_buffer.append(divider)
+        line = format_event(
+            TurnFailed(
+                elder=error.elder,
+                round_number=self._current_round or 1,
+                error=error,
             )
         )
+        log.write(line)
+        self._history_buffer.append(line)
         self._last_round_rendered = self._current_round
 
     # --- test helper -----------------------------------------------------
     def history_text(self) -> str:
-        log = self.query_one("#pane-history", RichLog)
-        # RichLog stores lines as Strip objects; render each to plain text.
-        out: list[str] = []
-        for line in log.lines:
-            out.append(line.text if hasattr(line, "text") else str(line))
-        return "\n".join(out)
+        """Return all written history as a single string.
+
+        Uses an internal buffer rather than RichLog.lines so that it works
+        for inactive tabs (where RichLog defers rendering until size is known).
+        """
+        return "\n".join(self._history_buffer)
