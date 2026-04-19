@@ -92,3 +92,55 @@ def _parse_claim_overlap(raw: str) -> JaccardObservation:
         note=note_m.group(1).strip() if note_m else "",
         raw=raw,
     )
+
+
+# ---- Best-R1 picker judge -------------------------------------------
+
+
+@dataclass(frozen=True)
+class BestR1Observation:
+    best_index: int  # 1, 2, or 3
+    reason: str
+    raw: str
+
+
+BEST_R1_PROMPT = """You will see three candidate answers to the user's question. Pick the single strongest one on correctness, completeness, and shape-fit. Ignore stylistic polish. Do not favour longer answers.
+
+User's question:
+<<<
+{question}
+>>>
+
+Answer 1:
+<<<
+{answer_1}
+>>>
+
+Answer 2:
+<<<
+{answer_2}
+>>>
+
+Answer 3:
+<<<
+{answer_3}
+>>>
+
+Emit EXACTLY:
+best: 1 | 2 | 3
+reason: one sentence."""
+
+
+_BEST_RE = re.compile(r"^\s*best\s*:\s*([1-3])\b", re.MULTILINE | re.IGNORECASE)
+_REASON_RE = re.compile(r"^\s*reason\s*:\s*(.+?)\s*$", re.MULTILINE | re.IGNORECASE)
+
+
+def _parse_best_r1(raw: str) -> BestR1Observation:
+    cleaned = _strip_markdown_fence(raw)
+    best_m = _BEST_RE.search(cleaned)
+    reason_m = _REASON_RE.search(cleaned)
+    return BestR1Observation(
+        best_index=int(best_m.group(1)) if best_m else 1,
+        reason=reason_m.group(1).strip() if reason_m else "",
+        raw=raw,
+    )

@@ -1,5 +1,7 @@
 from council.experiments.homogenisation.judges import (
+    BestR1Observation,
     JaccardObservation,
+    _parse_best_r1,
     _parse_claim_overlap,
 )
 
@@ -40,3 +42,25 @@ class TestParseClaimOverlap:
         raw = "```\nshared_count: 2\na_only_count: 1\nb_only_count: 1\nnote: ok\n```\n"
         obs = _parse_claim_overlap(raw)
         assert obs.shared == 2
+
+
+class TestParseBestR1:
+    def test_well_formed_response_parses(self) -> None:
+        raw = "best: 2\nreason: Answer 2 cites concrete tradeoffs.\n"
+        obs = _parse_best_r1(raw)
+        assert obs == BestR1Observation(
+            best_index=2, reason="Answer 2 cites concrete tradeoffs.", raw=raw,
+        )
+
+    def test_default_on_unparsable(self) -> None:
+        obs = _parse_best_r1("gibberish")
+        assert obs.best_index == 1  # documented safe default
+        assert obs.reason == ""
+
+    def test_rejects_out_of_range(self) -> None:
+        obs = _parse_best_r1("best: 7\nreason: invalid\n")
+        assert obs.best_index == 1  # out-of-range falls back to default
+
+    def test_case_insensitive_key(self) -> None:
+        obs = _parse_best_r1("BEST: 3\nREASON: all clear\n")
+        assert obs.best_index == 3
