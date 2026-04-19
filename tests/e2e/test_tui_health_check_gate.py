@@ -68,7 +68,7 @@ async def test_unhealthy_elder_produces_warning_line(tmp_path):
 
 
 async def test_all_unhealthy_disables_input(tmp_path):
-    from textual.widgets import Input
+    from council.app.tui.app import CouncilInput
 
     app = _app(
         tmp_path,
@@ -81,7 +81,7 @@ async def test_all_unhealthy_disables_input(tmp_path):
     async with app.run_test() as pilot:
         await _wait_until(
             pilot,
-            lambda: app.query_one("#input", Input).disabled,
+            lambda: app.query_one("#input", CouncilInput).disabled,
         )
         transcript = "\n".join(app.rendered_lines)
         assert "No elders available" in transcript

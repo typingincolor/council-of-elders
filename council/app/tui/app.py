@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from dataclasses import replace
 from pathlib import Path
 
 from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
+from textual.message import Message
 from textual.screen import ModalScreen
-from textual.widgets import Footer, Header, Input, RichLog, Static
+from textual.widgets import Footer, Header, RichLog, Static, TextArea
 
 from council.adapters.bus.in_memory import InMemoryBus
 from council.adapters.clock.system import SystemClock
@@ -26,14 +28,29 @@ from council.domain.events import (
     TurnCompleted,
     TurnFailed,
     TurnStarted,
+    UserMessageReceived,
 )
-from council.domain.models import Debate, ElderId
+from council.domain.models import Debate, ElderId, Turn
 from council.domain.ports import (
     Clock,
     CouncilPackLoader,
     ElderPort,
     TranscriptStore,
 )
+
+
+class CouncilInput(TextArea):
+    """A TextArea that emits a Submitted message on Ctrl+Enter."""
+
+    class Submitted(Message):
+        def __init__(self, value: str) -> None:
+            super().__init__()
+            self.value = value
+
+    BINDINGS = [Binding("ctrl+enter", "submit", "Submit", show=False)]
+
+    def action_submit(self) -> None:
+        self.post_message(self.Submitted(self.text))
 
 
 class SynthesizerModal(ModalScreen[ElderId]):
@@ -58,7 +75,7 @@ class CouncilApp(App):
     CSS = """
     #notices { height: auto; max-height: 6; padding: 0 1; }
     #view { height: 1fr; }
-    #input { dock: bottom; }
+    #input { dock: bottom; min-height: 3; max-height: 8; }
     """
 
     BINDINGS = [
@@ -108,12 +125,12 @@ class CouncilApp(App):
         yield Header()
         yield RichLog(id="notices", markup=True, wrap=True, highlight=False)
         yield self._view
-        yield Input(placeholder="Ask the council…", id="input")
+        yield CouncilInput(id="input")
         yield Footer()
 
     async def on_mount(self) -> None:
         self._stream_task = self._spawn(self._consume_events())
-        self.query_one("#input", Input).focus()
+        self.query_one("#input", CouncilInput).focus()
         self._spawn(self._run_health_checks())
 
     async def on_unmount(self) -> None:
@@ -133,11 +150,17 @@ class CouncilApp(App):
                 self._view.pane(ev.elder).end_thinking_failed(ev.error)
             elif isinstance(ev, RoundCompleted):
                 self.awaiting_decision = True
+                # Re-enable input so the user can type a follow-up.
+                self.query_one("#input", CouncilInput).disabled = False
             elif isinstance(ev, SynthesisCompleted):
                 self._view.pane("synthesis").end_thinking_completed(ev.answer)
                 self._view.pane("synthesis").focus()
                 self.is_finished = True
                 self.awaiting_decision = False
+            elif isinstance(ev, UserMessageReceived):
+                # UI rendering handled by T8; placeholder no-op for now.
+                # T8 will replace this with fan-out to all elder panes.
+                pass
 
     # --- health check ----------------------------------------------------
     async def _run_health_checks(self) -> None:
@@ -164,7 +187,7 @@ class CouncilApp(App):
                 f"Install it and run its `login` command before asking a question.[/yellow]"
             )
         if len(unhealthy) == len(self._elders):
-            self.query_one("#input", Input).disabled = True
+            self.query_one("#input", CouncilInput).disabled = True
             self._write_notice(
                 "[red]No elders available. Fix the vendor CLI setup above, "
                 "then restart the app.[/red]"
@@ -175,30 +198,38 @@ class CouncilApp(App):
         self.query_one("#notices", RichLog).write(line)
 
     # --- user actions ----------------------------------------------------
-    @on(Input.Submitted, "#input")
-    async def _on_prompt_submitted(self, event: Input.Submitted) -> None:
-        prompt = event.value.strip()
-        if not prompt or self._debate is not None:
+    @on(CouncilInput.Submitted)
+    async def _on_input_submitted(self, event: CouncilInput.Submitted) -> None:
+        text = event.value.strip()
+        if not text:
             return
-        pack = self._pack_loader.load(self._pack_name)
-        self._debate = Debate(
-            id=str(uuid.uuid4()),
-            prompt=prompt,
-            pack=pack,
-            rounds=[],
-            status="in_progress",
-            synthesis=None,
-        )
-        input_widget = self.query_one("#input", Input)
-        input_widget.disabled = True
-        # Move focus onto the first elder pane.
-        self._view.pane("claude").focus()
-        self._spawn(self._service.run_round(self._debate))
+        input_widget = self.query_one("#input", CouncilInput)
+        input_widget.clear()
+        if self._debate is None:
+            # First submission — use as the initial prompt.
+            pack = self._pack_loader.load(self._pack_name)
+            self._debate = Debate(
+                id=str(uuid.uuid4()),
+                prompt=text,
+                pack=pack,
+                rounds=[],
+                status="in_progress",
+                synthesis=None,
+            )
+            input_widget.disabled = True
+            self._view.focus()
+            self._spawn(self._service.run_round(self._debate))
+        else:
+            # Between-round user message.
+            if not self.awaiting_decision:
+                return
+            self._spawn(self._service.add_user_message(self._debate, text))
 
     async def action_continue_round(self) -> None:
         if not self.awaiting_decision or self._debate is None:
             return
         self.awaiting_decision = False
+        self.query_one("#input", CouncilInput).disabled = True
         self._spawn(self._service.run_round(self._debate))
 
     async def action_abandon(self) -> None:
@@ -212,10 +243,6 @@ class CouncilApp(App):
     async def action_override(self) -> None:
         if not self.awaiting_decision or not self._debate or not self._debate.rounds:
             return
-        from dataclasses import replace
-
-        from council.domain.models import Turn
-
         r = self._debate.rounds[-1]
         r.turns = [Turn(elder=t.elder, answer=replace(t.answer, agreed=True)) for t in r.turns]
 
@@ -231,7 +258,6 @@ class CouncilApp(App):
         if choice is None:
             return
         self.awaiting_decision = False
-        self._view.show_synthesis_pane()
         self._view.pane("synthesis").begin_thinking(round_number=1)
         self._spawn(self._service.synthesize(self._debate, by=choice))
 

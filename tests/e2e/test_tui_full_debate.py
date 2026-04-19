@@ -44,7 +44,7 @@ async def test_full_debate_via_tui(tmp_path):
 
     async with app.run_test() as pilot:
         await pilot.press(*"What should I do?")
-        await pilot.press("enter")
+        await pilot.press("ctrl+enter")
         await _wait_until(pilot, lambda: app.awaiting_decision)
 
         await pilot.press("s")
