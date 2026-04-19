@@ -43,7 +43,7 @@ The council today reaches each elder by shelling out to a vendor CLI (`claude`, 
 | Error mapping | `401/403 → auth_failed`, `429 → quota_exhausted`, `httpx.TimeoutException → timeout`, malformed JSON → `unparseable`, other → `nonzero_exit`. |
 | Cost tracking | Adapter captures `usage.cost` per response; exposes `session_cost_usd`, `session_tokens`, and `fetch_credits()`. |
 | Cost surfacing (TUI) | After each `RoundCompleted`, write a line to the `#notices` area: `[openrouter] round: $X · session: $X` followed by `· credits remaining: $X` when the key has a known limit, or `· credits used: $X` otherwise. |
-| Cost surfacing (headless) | After synthesis, print `[openrouter] total spent: $X`. |
+| Cost surfacing (headless) | After synthesis, print the same `[openrouter] round: $X · session: $X · credits remaining/used: $X` line as the TUI (one-shot, no per-round delta). |
 | Empty env key (`OPENROUTER_API_KEY=`) | Treated as absent — does not activate OpenRouter mode. |
 | Malformed TOML | Raise with a clear message at startup; do not fall back silently. |
 | Unreadable TOML (permissions) | Log a warning on stderr, treat as absent. |
