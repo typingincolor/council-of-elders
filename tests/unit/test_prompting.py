@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 import pytest
-from council.domain.models import CouncilPack, Debate, ElderAnswer, Round, Turn
+from council.domain.models import CouncilPack, Debate, ElderAnswer, ElderQuestion, Round, Turn, UserMessage
 from council.domain.prompting import PromptBuilder
 
 
@@ -142,3 +142,140 @@ class TestSynthesis:
         r1 = Round(number=1, turns=[])
         prompt = builder.build_synthesis(_debate(rounds=[r1]), by="claude")
         assert "CONVERGED" not in prompt
+
+
+def _user_msg(text="clarify", after_round=1):
+    return UserMessage(
+        text=text,
+        after_round=after_round,
+        created_at=datetime(2026, 4, 19, tzinfo=timezone.utc),
+    )
+
+
+def _q(from_elder="claude", to_elder="gemini", text="why?", round_number=1):
+    return ElderQuestion(
+        from_elder=from_elder,
+        to_elder=to_elder,
+        text=text,
+        round_number=round_number,
+    )
+
+
+class TestUserMessagesInPrompt:
+    def test_round_1_omits_user_messages_section(self, builder):
+        d = _debate()
+        d.user_messages.append(_user_msg())
+        prompt = builder.build(d, "claude", 1)
+        assert "You (the asker) said" not in prompt
+
+    def test_round_2_includes_user_messages_section(self, builder):
+        prev = Round(
+            number=1,
+            turns=[
+                Turn(elder="claude", answer=_answer("claude", "t1")),
+                Turn(elder="gemini", answer=_answer("gemini", "t2")),
+                Turn(elder="chatgpt", answer=_answer("chatgpt", "t3")),
+            ],
+        )
+        d = _debate(rounds=[prev])
+        d.user_messages.append(_user_msg("focus on timeline", after_round=1))
+        prompt = builder.build(d, "claude", 2)
+        assert "You (the asker) said" in prompt
+        assert "focus on timeline" in prompt
+        assert "After round 1" in prompt
+
+    def test_round_3_shows_all_prior_user_messages_in_order(self, builder):
+        r1 = Round(
+            number=1,
+            turns=[
+                Turn(elder="claude", answer=_answer("claude", "t1")),
+                Turn(elder="gemini", answer=_answer("gemini", "t2")),
+                Turn(elder="chatgpt", answer=_answer("chatgpt", "t3")),
+            ],
+        )
+        r2 = Round(
+            number=2,
+            turns=[
+                Turn(elder="claude", answer=_answer("claude", "u1")),
+                Turn(elder="gemini", answer=_answer("gemini", "u2")),
+                Turn(elder="chatgpt", answer=_answer("chatgpt", "u3")),
+            ],
+        )
+        d = _debate(rounds=[r1, r2])
+        d.user_messages.append(_user_msg("first clarification", after_round=1))
+        d.user_messages.append(_user_msg("second clarification", after_round=2))
+        prompt = builder.build(d, "claude", 3)
+        first = prompt.find("first clarification")
+        second = prompt.find("second clarification")
+        assert first != -1 and second != -1
+        assert first < second
+
+
+class TestDirectedQuestionsInPrompt:
+    def test_questions_directed_at_target_elder_are_surfaced(self, builder):
+        prev = Round(
+            number=1,
+            turns=[
+                Turn(
+                    elder="claude",
+                    answer=_answer("claude", "t1"),
+                    questions=(_q(from_elder="claude", to_elder="gemini",
+                                  text="timeline?"),),
+                ),
+                Turn(elder="gemini", answer=_answer("gemini", "t2")),
+                Turn(elder="chatgpt", answer=_answer("chatgpt", "t3")),
+            ],
+        )
+        d = _debate(rounds=[prev])
+        gemini_prompt = builder.build(d, "gemini", 2)
+        assert "Questions directed at you" in gemini_prompt
+        assert "From Claude" in gemini_prompt
+        assert "timeline?" in gemini_prompt
+
+    def test_other_questions_between_advisors_are_listed_separately(self, builder):
+        prev = Round(
+            number=1,
+            turns=[
+                Turn(
+                    elder="claude",
+                    answer=_answer("claude", "t1"),
+                    questions=(_q(from_elder="claude", to_elder="chatgpt",
+                                  text="growth?"),),
+                ),
+                Turn(elder="gemini", answer=_answer("gemini", "t2")),
+                Turn(elder="chatgpt", answer=_answer("chatgpt", "t3")),
+            ],
+        )
+        d = _debate(rounds=[prev])
+        gemini_prompt = builder.build(d, "gemini", 2)
+        assert "Questions directed at you" not in gemini_prompt
+        assert "Other questions raised between advisors" in gemini_prompt
+        assert "Claude" in gemini_prompt and "ChatGPT" in gemini_prompt
+        assert "growth?" in gemini_prompt
+
+    def test_prompt_asks_for_questions_block(self, builder):
+        d = _debate()
+        prompt = builder.build(d, "claude", 1)
+        assert "QUESTIONS:" in prompt
+        assert "@" in prompt
+
+    def test_synthesis_prompt_ignores_questions_and_user_messages(self, builder):
+        r1 = Round(
+            number=1,
+            turns=[
+                Turn(
+                    elder="claude",
+                    answer=_answer("claude", "t1"),
+                    questions=(_q(from_elder="claude", to_elder="gemini",
+                                  text="ignored in synth"),),
+                ),
+                Turn(elder="gemini", answer=_answer("gemini", "t2")),
+                Turn(elder="chatgpt", answer=_answer("chatgpt", "t3")),
+            ],
+        )
+        d = _debate(rounds=[r1])
+        d.user_messages.append(_user_msg("ignored user msg"))
+        synth = builder.build_synthesis(d, by="claude")
+        assert "QUESTIONS:" not in synth
+        assert "You (the asker) said" not in synth
+        assert "Questions directed at you" not in synth
