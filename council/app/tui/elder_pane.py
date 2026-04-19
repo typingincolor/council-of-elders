@@ -119,3 +119,153 @@ class ElderPane:
         # Intentionally empty — the label is computed on demand by
         # current_label(); refresh_label() exists for future hook points.
         return
+
+
+# -------------------------------------------------------------------------
+# Textual widget
+# -------------------------------------------------------------------------
+from textual.app import ComposeResult  # noqa: E402
+from textual.reactive import reactive  # noqa: E402
+from textual.widget import Widget  # noqa: E402
+from textual.widgets import RichLog, Static  # noqa: E402
+
+from council.adapters.clock.system import SystemClock  # noqa: E402
+from council.app.tui.stream import format_event  # noqa: E402
+from council.app.tui.verbs import RandomVerbChooser  # noqa: E402
+from council.domain.events import TurnCompleted, TurnFailed  # noqa: E402
+
+_SYNTHESIS_PLACEHOLDER = (
+    "[dim]Synthesis runs after you press [bold]s[/] and pick an elder.[/dim]"
+)
+
+
+class ElderPaneWidget(ElderPane, Widget):
+    """Textual widget wrapping the label state machine with a history log."""
+
+    can_focus = True
+
+    DEFAULT_CSS = """
+    ElderPaneWidget {
+        layout: vertical;
+        height: 1fr;
+        border: tall $panel;
+        padding: 0 1;
+    }
+    ElderPaneWidget #pane-thinking {
+        height: 1;
+        color: $text-muted;
+    }
+    ElderPaneWidget #pane-history {
+        height: 1fr;
+    }
+    """
+
+    label_text: reactive[str] = reactive("")
+
+    def __init__(
+        self,
+        *,
+        elder_id: str,
+        display_name: str,
+        verb_chooser: VerbChooser | None = None,
+        clock: Clock | None = None,
+        synthesis: bool = False,
+    ) -> None:
+        ElderPane.__init__(
+            self,
+            elder_id=elder_id,
+            display_name=display_name,
+            verb_chooser=verb_chooser or RandomVerbChooser(),
+            clock=clock or SystemClock(),
+            synthesis=synthesis,
+        )
+        Widget.__init__(self)
+        self.display_name = display_name  # public for CouncilView / TabbedContent
+        self._last_round_rendered: int | None = None
+        self.label_text = display_name
+
+    def compose(self) -> ComposeResult:
+        yield Static("", id="pane-thinking")
+        yield RichLog(id="pane-history", markup=True, wrap=True, highlight=False)
+
+    def on_mount(self) -> None:
+        if self._synthesis:
+            log = self.query_one("#pane-history", RichLog)
+            log.write(_SYNTHESIS_PLACEHOLDER)
+
+    # --- state transitions override: sync UI -----------------------------
+    def begin_thinking(self, round_number: int) -> None:
+        super().begin_thinking(round_number)
+        self.label_text = self.current_label()
+        self._render_thinking_line()
+
+    def end_thinking_completed(self, answer: ElderAnswer) -> None:
+        super().end_thinking_completed(answer)
+        self._clear_thinking_line()
+        self._append_completed(answer)
+        self.label_text = self.current_label()
+
+    def end_thinking_failed(self, error: ElderError) -> None:
+        super().end_thinking_failed(error)
+        self._clear_thinking_line()
+        self._append_failed(error)
+        self.label_text = self.current_label()
+
+    def refresh_label(self) -> None:
+        self.label_text = self.current_label()
+        self._render_thinking_line()
+
+    # --- internals -------------------------------------------------------
+    def _render_thinking_line(self) -> None:
+        thinking = self.query_one("#pane-thinking", Static)
+        thinking.update(f"[dim]{self.current_label()}[/dim]")
+
+    def _clear_thinking_line(self) -> None:
+        self.query_one("#pane-thinking", Static).update("")
+
+    def _append_completed(self, answer: ElderAnswer) -> None:
+        log = self.query_one("#pane-history", RichLog)
+        if self._synthesis:
+            log.clear()  # replace placeholder or previous synthesis
+        else:
+            if self._current_round and self._current_round >= 2 and (
+                self._last_round_rendered != self._current_round
+            ):
+                log.write(f"[dim]─── Round {self._current_round} ───[/dim]")
+        log.write(
+            format_event(
+                TurnCompleted(
+                    elder=answer.elder,
+                    round_number=self._current_round or 1,
+                    answer=answer,
+                )
+            )
+        )
+        self._last_round_rendered = self._current_round
+
+    def _append_failed(self, error: ElderError) -> None:
+        log = self.query_one("#pane-history", RichLog)
+        if not self._synthesis:
+            if self._current_round and self._current_round >= 2 and (
+                self._last_round_rendered != self._current_round
+            ):
+                log.write(f"[dim]─── Round {self._current_round} ───[/dim]")
+        log.write(
+            format_event(
+                TurnFailed(
+                    elder=error.elder,
+                    round_number=self._current_round or 1,
+                    error=error,
+                )
+            )
+        )
+        self._last_round_rendered = self._current_round
+
+    # --- test helper -----------------------------------------------------
+    def history_text(self) -> str:
+        log = self.query_one("#pane-history", RichLog)
+        # RichLog stores lines as Strip objects; render each to plain text.
+        out: list[str] = []
+        for line in log.lines:
+            out.append(line.text if hasattr(line, "text") else str(line))
+        return "\n".join(out)
