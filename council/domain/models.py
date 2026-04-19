@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
 
@@ -33,9 +33,25 @@ class ElderAnswer:
 
 
 @dataclass(frozen=True)
+class UserMessage:
+    text: str
+    after_round: int
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class ElderQuestion:
+    from_elder: ElderId
+    to_elder: ElderId
+    text: str
+    round_number: int
+
+
+@dataclass(frozen=True)
 class Turn:
     elder: ElderId
     answer: ElderAnswer
+    questions: tuple[ElderQuestion, ...] = ()
 
 
 @dataclass
@@ -66,3 +82,4 @@ class Debate:
     rounds: list[Round]
     status: DebateStatus
     synthesis: ElderAnswer | None
+    user_messages: list[UserMessage] = field(default_factory=list)

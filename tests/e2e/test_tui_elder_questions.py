@@ -19,40 +19,38 @@ async def _wait_until(pilot, predicate, *, timeout_s=5.0, tick=0.05):
             raise AssertionError(f"Timed out; elapsed={elapsed:.2f}s")
 
 
-async def test_full_debate_via_tui(tmp_path):
+async def test_elder_question_surfaces_in_both_asker_and_target_panes(tmp_path):
     (tmp_path / "bare").mkdir()
-    loader = FilesystemPackLoader(root=tmp_path)
-
     elders = {
         "claude": FakeElder(
             elder_id="claude",
-            replies=[
-                "R1 Claude\nCONVERGED: yes",
-                "Final synthesised answer.",
-            ],
+            replies=["My answer.\n\nQUESTIONS:\n@gemini Timeline?\n\nCONVERGED: no"],
         ),
-        "gemini": FakeElder(elder_id="gemini", replies=["R1 Gemini\nCONVERGED: yes"]),
-        "chatgpt": FakeElder(elder_id="chatgpt", replies=["R1 ChatGPT\nCONVERGED: yes"]),
+        "gemini": FakeElder(elder_id="gemini", replies=["mine\nCONVERGED: no"]),
+        "chatgpt": FakeElder(elder_id="chatgpt", replies=["mine\nCONVERGED: no"]),
     }
     app = CouncilApp(
         elders=elders,
         store=InMemoryStore(),
         clock=FakeClock(now=datetime(2026, 4, 19, tzinfo=timezone.utc)),
-        pack_loader=loader,
+        pack_loader=FilesystemPackLoader(root=tmp_path),
         pack_name="bare",
     )
-
     async with app.run_test() as pilot:
-        await pilot.press(*"What should I do?")
+        await pilot.press(*"Go")
         await pilot.press("ctrl+enter")
         await _wait_until(pilot, lambda: app.awaiting_decision)
 
-        await pilot.press("s")
-        await _wait_until(pilot, lambda: len(app.screen_stack) > 1, timeout_s=2.0)
-        await pilot.press("1")  # pick Claude as synthesiser
-        await _wait_until(pilot, lambda: app.is_finished)
+        # Claude's pane should show the outgoing question.
+        claude_text = pane_lines(app, "claude")
+        assert "To Gemini" in claude_text
+        assert "Timeline?" in claude_text
 
-        assert "R1 Claude" in pane_lines(app, "claude")
-        assert "R1 Gemini" in pane_lines(app, "gemini")
-        assert "R1 ChatGPT" in pane_lines(app, "chatgpt")
-        assert "Final synthesised answer." in pane_lines(app, "synthesis")
+        # Gemini's pane should show the incoming question.
+        gemini_text = pane_lines(app, "gemini")
+        assert "From Claude" in gemini_text
+        assert "Timeline?" in gemini_text
+
+        # ChatGPT's pane should NOT show this question (not directed at it).
+        chatgpt_text = pane_lines(app, "chatgpt")
+        assert "Timeline?" not in chatgpt_text

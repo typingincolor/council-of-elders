@@ -44,7 +44,7 @@ async def test_two_rounds_appear_in_each_elder_pane_with_divider(tmp_path):
     )
     async with app.run_test(size=(80, 40)) as pilot:
         await pilot.press(*"Two rounds?")
-        await pilot.press("enter")
+        await pilot.press("ctrl+enter")
         await _wait_until(pilot, lambda: app.awaiting_decision)
         # First round landed.  action_continue_round sets awaiting_decision=False
         # before spawning round 2; the bus consumer flips it back to True

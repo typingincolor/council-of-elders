@@ -51,3 +51,45 @@ def test_synthesis_and_abandoned_shapes():
     )
     assert SynthesisCompleted(answer=ans).answer is ans
     assert DebateAbandoned().__class__.__name__ == "DebateAbandoned"
+
+
+def test_user_message_received_carries_message():
+    from council.domain.events import UserMessageReceived
+    from council.domain.models import UserMessage
+
+    m = UserMessage(
+        text="clarify please",
+        after_round=1,
+        created_at=datetime(2026, 4, 19, tzinfo=timezone.utc),
+    )
+    e = UserMessageReceived(message=m)
+    assert e.message is m
+
+
+def test_turn_completed_carries_questions_tuple():
+    from council.domain.models import ElderAnswer, ElderQuestion
+
+    ans = ElderAnswer(
+        elder="claude",
+        text="x",
+        error=None,
+        agreed=True,
+        created_at=datetime(2026, 4, 19, tzinfo=timezone.utc),
+    )
+    q = ElderQuestion(from_elder="claude", to_elder="gemini", text="why?", round_number=1)
+    e = TurnCompleted(elder="claude", round_number=1, answer=ans, questions=(q,))
+    assert e.questions == (q,)
+
+
+def test_turn_completed_questions_default_empty():
+    from council.domain.models import ElderAnswer
+
+    ans = ElderAnswer(
+        elder="claude",
+        text="x",
+        error=None,
+        agreed=True,
+        created_at=datetime(2026, 4, 19, tzinfo=timezone.utc),
+    )
+    e = TurnCompleted(elder="claude", round_number=1, answer=ans)
+    assert e.questions == ()

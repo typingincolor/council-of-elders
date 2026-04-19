@@ -8,7 +8,7 @@ from textual.app import App, ComposeResult
 from council.adapters.clock.fake import FakeClock
 from council.app.tui.elder_pane import ElderPaneWidget
 from council.app.tui.verbs import FixedVerbChooser
-from council.domain.models import ElderAnswer, ElderError
+from council.domain.models import ElderAnswer, ElderError, ElderQuestion, UserMessage
 
 
 def _answer(elder="claude", text="hi", agreed=True):
@@ -131,3 +131,70 @@ async def test_synthesis_widget_hides_history_divider_and_placeholder():
         assert "The final synthesised answer." in history
         # Synthesis doesn't have round dividers.
         assert "Round 2" not in history
+
+
+async def test_widget_renders_user_message_inline():
+    clock = FakeClock(now=datetime(2026, 4, 19, 12, tzinfo=timezone.utc))
+    widget = ElderPaneWidget(
+        elder_id="claude",
+        display_name="Claude",
+        verb_chooser=FixedVerbChooser("Pondering"),
+        clock=clock,
+    )
+    async with _Host(widget).run_test() as pilot:
+        await pilot.pause()
+        widget.begin_thinking(1)
+        widget.end_thinking_completed(_answer(text="R1 answer"))
+        await pilot.pause()
+        widget.on_user_message(
+            UserMessage(
+                text="please clarify scope",
+                after_round=1,
+                created_at=datetime(2026, 4, 19, tzinfo=timezone.utc),
+            )
+        )
+        await pilot.pause()
+        history = widget.history_text()
+        assert "R1 answer" in history
+        assert "please clarify scope" in history
+        assert "You" in history
+
+
+async def test_widget_renders_asker_question_in_asker_pane():
+    """Claude's pane shows Claude's own outgoing questions as '[To Gemini] …'."""
+    clock = FakeClock(now=datetime(2026, 4, 19, 12, tzinfo=timezone.utc))
+    widget = ElderPaneWidget(
+        elder_id="claude",
+        display_name="Claude",
+        verb_chooser=FixedVerbChooser("Pondering"),
+        clock=clock,
+    )
+    async with _Host(widget).run_test() as pilot:
+        await pilot.pause()
+        widget.begin_thinking(1)
+        q = ElderQuestion(from_elder="claude", to_elder="gemini", text="timeline?", round_number=1)
+        widget.end_thinking_completed(_answer(text="My answer"), questions=(q,))
+        await pilot.pause()
+        history = widget.history_text()
+        assert "My answer" in history
+        assert "To Gemini" in history
+        assert "timeline?" in history
+
+
+async def test_widget_renders_incoming_question_in_target_pane():
+    """Gemini's pane shows Claude's question TO Gemini as '[From Claude] …'."""
+    clock = FakeClock(now=datetime(2026, 4, 19, 12, tzinfo=timezone.utc))
+    widget = ElderPaneWidget(
+        elder_id="gemini",
+        display_name="Gemini",
+        verb_chooser=FixedVerbChooser("Pondering"),
+        clock=clock,
+    )
+    async with _Host(widget).run_test() as pilot:
+        await pilot.pause()
+        q = ElderQuestion(from_elder="claude", to_elder="gemini", text="timeline?", round_number=1)
+        widget.on_incoming_question(q)
+        await pilot.pause()
+        history = widget.history_text()
+        assert "From Claude" in history
+        assert "timeline?" in history

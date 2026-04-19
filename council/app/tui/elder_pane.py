@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from council.domain.models import ElderAnswer, ElderError
+from council.domain.models import ElderAnswer, ElderError, ElderQuestion, UserMessage
 from council.domain.ports import Clock
 from council.app.tui.verbs import VerbChooser
 
@@ -141,6 +141,16 @@ from council.domain.events import TurnCompleted, TurnFailed  # noqa: E402
 
 _SYNTHESIS_PLACEHOLDER = "[dim]Synthesis runs after you press [bold]s[/] and pick an elder.[/dim]"
 
+_DISPLAY_NAMES: dict[str, str] = {
+    "claude": "Claude",
+    "gemini": "Gemini",
+    "chatgpt": "ChatGPT",
+}
+
+
+def _display(elder: str) -> str:
+    return _DISPLAY_NAMES.get(elder, elder)
+
 
 class ElderPaneWidget(ElderPane, Widget):
     """Textual widget wrapping the label state machine with a history log."""
@@ -209,11 +219,18 @@ class ElderPaneWidget(ElderPane, Widget):
         self._cancel_ticker()
         self._ticker_task = asyncio.create_task(self._tick_loop())
 
-    def end_thinking_completed(self, answer: ElderAnswer) -> None:
+    def end_thinking_completed(
+        self,
+        answer: ElderAnswer,
+        questions: tuple[ElderQuestion, ...] = (),
+    ) -> None:
         self._cancel_ticker()
         super().end_thinking_completed(answer)
         self._clear_thinking_line()
         self._append_completed(answer)
+        # Render the asker's own outgoing questions below the answer.
+        for q in questions:
+            self._append_to_line(f"[dim][To {_display(q.to_elder)}][/] {q.text}")
         self.label_text = self.current_label()
 
     def end_thinking_failed(self, error: ElderError) -> None:
@@ -297,6 +314,16 @@ class ElderPaneWidget(ElderPane, Widget):
         log.write(line)
         self._history_buffer.append(line)
         self._last_round_rendered = self._current_round
+
+    def on_user_message(self, message: UserMessage) -> None:
+        self._append_to_line(f"[dim][You after round {message.after_round}][/] {message.text}")
+
+    def on_incoming_question(self, question: ElderQuestion) -> None:
+        self._append_to_line(f"[dim][From {_display(question.from_elder)}][/] {question.text}")
+
+    def _append_to_line(self, line: str) -> None:
+        self._history_buffer.append(line)
+        self.query_one("#pane-history", RichLog).write(line)
 
     # --- test helper -----------------------------------------------------
     def history_text(self) -> str:
