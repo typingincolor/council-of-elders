@@ -51,3 +51,16 @@ def test_synthesis_and_abandoned_shapes():
     )
     assert SynthesisCompleted(answer=ans).answer is ans
     assert DebateAbandoned().__class__.__name__ == "DebateAbandoned"
+
+
+def test_user_message_received_carries_message():
+    from council.domain.events import UserMessageReceived
+    from council.domain.models import UserMessage
+
+    m = UserMessage(
+        text="clarify please",
+        after_round=1,
+        created_at=datetime(2026, 4, 19, tzinfo=timezone.utc),
+    )
+    e = UserMessageReceived(message=m)
+    assert e.message is m

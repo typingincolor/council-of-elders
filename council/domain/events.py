@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Union
 
-from council.domain.models import ElderAnswer, ElderError, ElderId, Round
+from council.domain.models import ElderAnswer, ElderError, ElderId, Round, UserMessage
 
 
 @dataclass(frozen=True)
@@ -41,6 +41,11 @@ class DebateAbandoned:
     pass
 
 
+@dataclass(frozen=True)
+class UserMessageReceived:
+    message: UserMessage
+
+
 DebateEvent = Union[
     TurnStarted,
     TurnCompleted,
@@ -48,4 +53,5 @@ DebateEvent = Union[
     RoundCompleted,
     SynthesisCompleted,
     DebateAbandoned,
+    UserMessageReceived,
 ]
