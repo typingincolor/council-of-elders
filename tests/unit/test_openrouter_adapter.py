@@ -201,6 +201,43 @@ class TestCostCapture:
         assert a.session_tokens == {"prompt": 1, "completion": 1}
 
 
+from council.adapters.elders.openrouter import format_cost_notice
+
+
+class TestFormatCostNotice:
+    def test_with_known_limit_shows_remaining(self):
+        a = OpenRouterAdapter(
+            elder_id="claude", model="x", api_key="k"
+        )
+        a.session_cost_usd = 0.10
+        b = OpenRouterAdapter(
+            elder_id="gemini", model="x", api_key="k"
+        )
+        b.session_cost_usd = 0.05
+        line = format_cost_notice(
+            elders={"claude": a, "gemini": b},
+            round_cost_delta_usd=0.03,
+            credits_used=2.5,
+            credits_limit=10.0,
+        )
+        assert "round: $0.0300" in line
+        assert "session: $0.1500" in line
+        assert "credits remaining: $7.50" in line
+
+    def test_with_no_limit_shows_used(self):
+        a = OpenRouterAdapter(
+            elder_id="claude", model="x", api_key="k"
+        )
+        line = format_cost_notice(
+            elders={"claude": a},
+            round_cost_delta_usd=0.01,
+            credits_used=3.25,
+            credits_limit=None,
+        )
+        assert "credits used: $3.25" in line
+        assert "remaining" not in line
+
+
 class TestFetchCredits:
     async def test_returns_used_and_limit(self):
         def handler(request: httpx.Request) -> httpx.Response:

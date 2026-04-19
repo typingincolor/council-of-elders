@@ -165,6 +165,8 @@ class CouncilApp(App):
                 self.awaiting_decision = True
                 # Re-enable input so the user can type a follow-up.
                 self.query_one("#input", CouncilInput).disabled = False
+                if self._using_openrouter:
+                    self._spawn(self._write_cost_notice())
             elif isinstance(ev, SynthesisCompleted):
                 self._view.pane("synthesis").end_thinking_completed(ev.answer)
                 self._view.pane("synthesis").focus()
@@ -209,6 +211,36 @@ class CouncilApp(App):
     def _write_notice(self, line: str) -> None:
         self.rendered_lines.append(line)
         self.query_one("#notices", RichLog).write(line)
+
+    async def _write_cost_notice(self) -> None:
+        from council.adapters.elders.openrouter import (
+            OpenRouterAdapter,
+            format_cost_notice,
+        )
+
+        current = sum(
+            e.session_cost_usd
+            for e in self._elders.values()
+            if isinstance(e, OpenRouterAdapter)
+        )
+        delta = current - self._prev_cost_total
+        self._prev_cost_total = current
+
+        any_or = next(
+            (e for e in self._elders.values() if isinstance(e, OpenRouterAdapter)),
+            None,
+        )
+        used, limit = (0.0, None)
+        if any_or is not None:
+            used, limit = await any_or.fetch_credits()
+
+        line = format_cost_notice(
+            elders=self._elders,
+            round_cost_delta_usd=delta,
+            credits_used=used,
+            credits_limit=limit,
+        )
+        self._write_notice(f"[blue]{line}[/blue]")
 
     # --- user actions ----------------------------------------------------
     @on(CouncilInput.Submitted)

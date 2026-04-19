@@ -119,3 +119,25 @@ class OpenRouterAdapter:
 
     async def health_check(self) -> bool:
         return bool(self.api_key)
+
+
+def format_cost_notice(
+    elders: dict,  # dict[ElderId, ElderPort]
+    round_cost_delta_usd: float,
+    credits_used: float,
+    credits_limit: float | None,
+) -> str:
+    session_total = sum(
+        getattr(e, "session_cost_usd", 0.0) for e in elders.values()
+    )
+    parts = [
+        "[openrouter]",
+        f"round: ${round_cost_delta_usd:.4f}",
+        f"session: ${session_total:.4f}",
+    ]
+    if credits_limit is not None:
+        remaining = max(credits_limit - credits_used, 0.0)
+        parts.append(f"credits remaining: ${remaining:.2f}")
+    else:
+        parts.append(f"credits used: ${credits_used:.2f}")
+    return " · ".join(parts)
