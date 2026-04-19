@@ -96,5 +96,26 @@ class OpenRouterAdapter:
             if owned:
                 await client.aclose()
 
+    async def fetch_credits(self) -> tuple[float, float | None]:
+        client = self.client or httpx.AsyncClient(base_url=_BASE_URL)
+        owned = self.client is None
+        try:
+            try:
+                resp = await client.get(
+                    "/api/v1/credits",
+                    headers={"Authorization": f"Bearer {self.api_key}"},
+                    timeout=10.0,
+                )
+                data = resp.json().get("data", {}) if resp.status_code == 200 else {}
+            except (httpx.HTTPError, ValueError):
+                return (0.0, None)
+            used = float(data.get("total_usage") or 0.0)
+            limit_raw = data.get("total_credits")
+            limit = float(limit_raw) if isinstance(limit_raw, (int, float)) else None
+            return (used, limit)
+        finally:
+            if owned:
+                await client.aclose()
+
     async def health_check(self) -> bool:
         return bool(self.api_key)

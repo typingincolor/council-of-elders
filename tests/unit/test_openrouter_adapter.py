@@ -199,3 +199,36 @@ class TestCostCapture:
         await a.ask("hi")
         assert a.session_cost_usd == 0.0
         assert a.session_tokens == {"prompt": 1, "completion": 1}
+
+
+class TestFetchCredits:
+    async def test_returns_used_and_limit(self):
+        def handler(request: httpx.Request) -> httpx.Response:
+            assert request.url.path == "/api/v1/credits"
+            return httpx.Response(
+                200,
+                json={"data": {"total_credits": 10.0, "total_usage": 2.5}},
+            )
+
+        a = _adapter_with_transport(httpx.MockTransport(handler))
+        used, limit = await a.fetch_credits()
+        assert used == pytest.approx(2.5)
+        assert limit == pytest.approx(10.0)
+
+    async def test_missing_data_returns_safe_default(self):
+        def handler(_req: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={})
+
+        a = _adapter_with_transport(httpx.MockTransport(handler))
+        used, limit = await a.fetch_credits()
+        assert used == 0.0
+        assert limit is None
+
+    async def test_http_error_returns_safe_default(self):
+        def handler(_req: httpx.Request) -> httpx.Response:
+            raise httpx.ConnectError("no route")
+
+        a = _adapter_with_transport(httpx.MockTransport(handler))
+        used, limit = await a.fetch_credits()
+        assert used == 0.0
+        assert limit is None
