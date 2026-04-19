@@ -87,6 +87,9 @@ async def _run_one_debate(
     return debate.id
 
 
+_SYNTHESISER_ROTATION: tuple[ElderId, ...] = ("claude", "gemini", "chatgpt")
+
+
 async def run_probe(
     *,
     rosters: tuple[RosterSpec, ...],
@@ -96,7 +99,6 @@ async def run_probe(
     debate_store_root: Path,
     elder_factory: ElderFactory,
     max_rounds: int,
-    synthesiser: ElderId,
 ) -> Path:
     """Run the debates and write the manifest. Returns the manifest path."""
     if max_rounds < 2:
@@ -114,6 +116,8 @@ async def run_probe(
             continue
         elders = elder_factory(roster)
         for prompt in pending:
+            prompt_index = prompts.index(prompt)
+            synthesiser: ElderId = _SYNTHESISER_ROTATION[prompt_index % 3]
             debate_id = await _run_one_debate(
                 prompt=prompt.prompt, elders=elders, store=store,
                 max_rounds=max_rounds, synthesiser=synthesiser,
@@ -122,6 +126,7 @@ async def run_probe(
                 "roster": roster.name,
                 "prompt_id": prompt.id,
                 "debate_id": debate_id,
+                "synthesiser": synthesiser,
             })
             _write_manifest(manifest_path, manifest)  # persist incrementally
     return manifest_path

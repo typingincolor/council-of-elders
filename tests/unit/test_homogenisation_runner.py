@@ -47,13 +47,17 @@ async def test_run_probe_produces_manifest_with_every_pair(tmp_path: Path) -> No
     manifest_path = await run_probe(
         rosters=specs, prompts=prompts, run_id=run_id,
         runs_root=tmp_path, debate_store_root=tmp_path / "debates",
-        elder_factory=elder_factory, max_rounds=3, synthesiser="claude",
+        elder_factory=elder_factory, max_rounds=3,
     )
     manifest = json.loads(Path(manifest_path).read_text())
     assert len(manifest["entries"]) == 2  # 2 rosters × 1 prompt
     rosters_seen = {e["roster"] for e in manifest["entries"]}
     assert rosters_seen == {"r1", "r2"}
     assert all("debate_id" in e for e in manifest["entries"])
+    assert all(
+        e["synthesiser"] in {"claude", "gemini", "chatgpt"}
+        for e in manifest["entries"]
+    )
 
 
 @pytest.mark.asyncio
@@ -72,11 +76,11 @@ async def test_run_probe_is_resumable(tmp_path: Path) -> None:
     await run_probe(
         rosters=specs, prompts=prompts, run_id=run_id,
         runs_root=tmp_path, debate_store_root=tmp_path / "debates",
-        elder_factory=elder_factory, max_rounds=3, synthesiser="claude",
+        elder_factory=elder_factory, max_rounds=3,
     )
     await run_probe(  # second call, should skip
         rosters=specs, prompts=prompts, run_id=run_id,
         runs_root=tmp_path, debate_store_root=tmp_path / "debates",
-        elder_factory=elder_factory, max_rounds=3, synthesiser="claude",
+        elder_factory=elder_factory, max_rounds=3,
     )
     assert calls["n"] == 1  # second call skipped entirely

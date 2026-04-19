@@ -60,7 +60,7 @@ async def test_full_probe_pipeline_end_to_end(tmp_path: Path) -> None:
     await run_probe(
         rosters=rosters, prompts=corpus, run_id=run_id,
         runs_root=tmp_path, debate_store_root=tmp_path / "debates",
-        elder_factory=_elder_factory, max_rounds=3, synthesiser="claude",
+        elder_factory=_elder_factory, max_rounds=3,
     )
     manifest_path = tmp_path / run_id / "manifest.json"
     assert manifest_path.exists()

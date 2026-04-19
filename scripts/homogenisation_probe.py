@@ -64,7 +64,7 @@ async def _cmd_run(args: argparse.Namespace) -> None:
         runs_root=Path(args.runs_root),
         debate_store_root=Path.home() / ".council" / "debates",
         elder_factory=factory,
-        max_rounds=args.max_rounds, synthesiser="claude",
+        max_rounds=args.max_rounds,
     )
     print(f"Run complete. Manifest: {manifest_path}")
 
