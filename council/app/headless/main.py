@@ -64,11 +64,7 @@ async def run_headless(
         used, limit = (0.0, None)
         if any_or is not None:
             used, limit = await any_or.fetch_credits()
-        total = sum(
-            e.session_cost_usd
-            for e in elders.values()
-            if isinstance(e, OpenRouterAdapter)
-        )
+        total = sum(e.session_cost_usd for e in elders.values() if isinstance(e, OpenRouterAdapter))
         line = format_cost_notice(
             elders=elders,
             round_cost_delta_usd=total,  # for headless a single "round" = whole session

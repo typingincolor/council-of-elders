@@ -64,15 +64,11 @@ class TestOpenRouterBranch:
             openrouter_api_key="sk-or-x",
             openrouter_models={"gemini": "toml/gemini-model"},
         )
-        elders, _ = build_elders(
-            cfg, cli_models={"claude": None, "gemini": None, "chatgpt": None}
-        )
+        elders, _ = build_elders(cfg, cli_models={"claude": None, "gemini": None, "chatgpt": None})
         assert elders["gemini"].model == "toml/gemini-model"
 
     def test_api_key_propagates_to_adapters(self):
         cfg = AppConfig(openrouter_api_key="sk-or-abc", openrouter_models={})
-        elders, _ = build_elders(
-            cfg, cli_models={"claude": None, "gemini": None, "chatgpt": None}
-        )
+        elders, _ = build_elders(cfg, cli_models={"claude": None, "gemini": None, "chatgpt": None})
         for e in ("claude", "gemini", "chatgpt"):
             assert elders[e].api_key == "sk-or-abc"

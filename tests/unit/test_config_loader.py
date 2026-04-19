@@ -81,9 +81,7 @@ class TestErrorHandling:
             load_config(path=cfg_path)
         assert str(cfg_path) in str(exc_info.value)
 
-    def test_unreadable_file_warns_and_returns_empty(
-        self, tmp_path: Path, monkeypatch, caplog
-    ):
+    def test_unreadable_file_warns_and_returns_empty(self, tmp_path: Path, monkeypatch, caplog):
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
         cfg_path = tmp_path / "locked.toml"
         cfg_path.write_text('[openrouter]\napi_key = "x"\n')

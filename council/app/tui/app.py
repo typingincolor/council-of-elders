@@ -219,9 +219,7 @@ class CouncilApp(App):
         )
 
         current = sum(
-            e.session_cost_usd
-            for e in self._elders.values()
-            if isinstance(e, OpenRouterAdapter)
+            e.session_cost_usd for e in self._elders.values() if isinstance(e, OpenRouterAdapter)
         )
         delta = current - self._prev_cost_total
         self._prev_cost_total = current

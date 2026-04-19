@@ -26,9 +26,7 @@ class TestConstructorAndHealth:
         assert await a.health_check() is True
 
     async def test_health_check_false_when_key_empty(self):
-        a = OpenRouterAdapter(
-            elder_id="claude", model="anthropic/claude-sonnet-4.5", api_key=""
-        )
+        a = OpenRouterAdapter(elder_id="claude", model="anthropic/claude-sonnet-4.5", api_key="")
         assert await a.health_check() is False
 
     def test_error_class_has_kind_and_detail(self):
@@ -267,13 +265,9 @@ class TestCostCapture:
 
 class TestFormatCostNotice:
     def test_with_known_limit_shows_remaining(self):
-        a = OpenRouterAdapter(
-            elder_id="claude", model="x", api_key="k"
-        )
+        a = OpenRouterAdapter(elder_id="claude", model="x", api_key="k")
         a.session_cost_usd = 0.10
-        b = OpenRouterAdapter(
-            elder_id="gemini", model="x", api_key="k"
-        )
+        b = OpenRouterAdapter(elder_id="gemini", model="x", api_key="k")
         b.session_cost_usd = 0.05
         line = format_cost_notice(
             elders={"claude": a, "gemini": b},
@@ -286,9 +280,7 @@ class TestFormatCostNotice:
         assert "credits remaining: $7.50" in line
 
     def test_with_no_limit_shows_used(self):
-        a = OpenRouterAdapter(
-            elder_id="claude", model="x", api_key="k"
-        )
+        a = OpenRouterAdapter(elder_id="claude", model="x", api_key="k")
         line = format_cost_notice(
             elders={"claude": a},
             round_cost_delta_usd=0.01,
