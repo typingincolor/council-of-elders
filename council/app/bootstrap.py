@@ -8,9 +8,16 @@ from council.app.config import AppConfig
 from council.domain.models import ElderId
 from council.domain.ports import ElderPort
 
+# The `gemini` slot defaults to an open-weights Llama model rather than
+# a Gemini-family model deliberately: a same-lineage trio (all three of
+# Anthropic, Google, OpenAI) produces R1 answers that overlap more than
+# a mixed-lineage trio does, and the debate protocol only beats picking
+# the best R1 when the roster has genuine architectural diversity. See
+# `docs/experiments/2026-04-19-9288-homogenisation.md`. The slot label
+# is just a label — the debate protocol is slot-keyed, not model-keyed.
 _DEFAULT_OPENROUTER_MODELS: dict[ElderId, str] = {
     "claude": "anthropic/claude-sonnet-4.5",
-    "gemini": "google/gemini-2.5-flash",
+    "gemini": "meta-llama/llama-3.1-70b-instruct",
     "chatgpt": "openai/gpt-5",
 }
 
