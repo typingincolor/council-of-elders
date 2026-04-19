@@ -47,22 +47,10 @@ class CouncilInput(TextArea):
             super().__init__()
             self.value = value
 
-    BINDINGS = [Binding("ctrl+enter", "action_submit", "Submit", show=False)]
-
-    def __init__(self, *args, placeholder_title: str = "", **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self._placeholder_title = placeholder_title
-
-    def on_mount(self) -> None:
-        if self._placeholder_title:
-            self.border_title = self._placeholder_title
+    BINDINGS = [Binding("ctrl+enter", "submit", "Submit", show=False)]
 
     def action_submit(self) -> None:
         self.post_message(self.Submitted(self.text))
-
-    def set_placeholder_title(self, title: str) -> None:
-        self._placeholder_title = title
-        self.border_title = title
 
 
 class SynthesizerModal(ModalScreen[ElderId]):
@@ -137,10 +125,7 @@ class CouncilApp(App):
         yield Header()
         yield RichLog(id="notices", markup=True, wrap=True, highlight=False)
         yield self._view
-        yield CouncilInput(
-            id="input",
-            placeholder_title="Ask the council… (Ctrl+Enter to send)",
-        )
+        yield CouncilInput(id="input")
         yield Footer()
 
     async def on_mount(self) -> None:
@@ -169,11 +154,7 @@ class CouncilApp(App):
             elif isinstance(ev, RoundCompleted):
                 self.awaiting_decision = True
                 # Re-enable input so the user can type a follow-up.
-                input_widget = self.query_one("#input", CouncilInput)
-                input_widget.disabled = False
-                input_widget.set_placeholder_title(
-                    "Anything to add? (Ctrl+Enter to send, or press a shortcut)"
-                )
+                self.query_one("#input", CouncilInput).disabled = False
             elif isinstance(ev, SynthesisCompleted):
                 self._view.pane("synthesis").end_thinking_completed(ev.answer)
                 self._view.pane("synthesis").focus()
