@@ -42,6 +42,11 @@ export COUNCIL_GEMINI_MODEL=gemini-2.5-flash
 | `s` | Synthesise — pick who writes the final answer |
 | `a` | Abandon |
 | `o` | Override convergence |
+| `1` / `2` / `3` / `4` | Jump to Claude / Gemini / ChatGPT / Synthesis pane |
+| `Tab` / `Shift+Tab` | Cycle forward / backward through panes |
+| `f` | Toggle layout: auto → force tabs → force columns → auto |
+
+The layout automatically uses three columns when the terminal is at least 240 characters wide (80 per elder) and tabs otherwise. Press `f` to override.
 
 ## Council packs
 
