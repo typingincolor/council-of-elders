@@ -27,8 +27,11 @@ class TestParseClaimOverlap:
         )
         obs = _parse_claim_overlap(raw)
         assert obs == JaccardObservation(
-            shared=3, a_only=1, b_only=2,
-            note="Both agreed on core recommendation.", raw=raw,
+            shared=3,
+            a_only=1,
+            b_only=2,
+            note="Both agreed on core recommendation.",
+            raw=raw,
         )
 
     def test_jaccard_property(self) -> None:
@@ -60,7 +63,9 @@ class TestParseBestR1:
         raw = "best: 2\nreason: Answer 2 cites concrete tradeoffs.\n"
         obs = _parse_best_r1(raw)
         assert obs == BestR1Observation(
-            best_index=2, reason="Answer 2 cites concrete tradeoffs.", raw=raw,
+            best_index=2,
+            reason="Answer 2 cites concrete tradeoffs.",
+            raw=raw,
         )
 
     def test_default_on_unparsable(self) -> None:
@@ -137,7 +142,10 @@ async def test_judge_claim_overlap_formats_prompt_and_parses_reply() -> None:
         replies=["shared_count: 4\na_only_count: 1\nb_only_count: 1\nnote: ok\n"],
     )
     obs = await judge_claim_overlap(
-        question="Q?", answer_a="alpha", answer_b="beta", judge_port=judge,
+        question="Q?",
+        answer_a="alpha",
+        answer_b="beta",
+        judge_port=judge,
     )
     assert obs.shared == 4 and obs.jaccard == 4 / 6
     conv = judge.conversations[0]
@@ -149,7 +157,9 @@ async def test_judge_claim_overlap_formats_prompt_and_parses_reply() -> None:
 async def test_judge_best_r1_returns_parsed_obs() -> None:
     judge = FakeElder(elder_id="claude", replies=["best: 2\nreason: fewer hedges.\n"])
     obs = await judge_best_r1(
-        question="Q?", answers=("a1", "a2", "a3"), judge_port=judge,
+        question="Q?",
+        answers=("a1", "a2", "a3"),
+        judge_port=judge,
     )
     assert obs.best_index == 2
 
@@ -159,8 +169,11 @@ async def test_judge_preference_uses_shuffle_and_resolves_winner() -> None:
     judge = FakeElder(elder_id="claude", replies=["winner: X\nreason: tighter.\n"])
     rng = random.Random(0)  # rng.random() >= 0.5 → best_r1 goes to X
     obs = await judge_preference(
-        question="Q?", best_r1="r1-text", synthesis="synth-text",
-        judge_port=judge, rng=rng,
+        question="Q?",
+        best_r1="r1-text",
+        synthesis="synth-text",
+        judge_port=judge,
+        rng=rng,
     )
     # With seed 0, best_r1 is in X slot; winner X resolves to best_r1.
     assert obs.winner == "best_r1"

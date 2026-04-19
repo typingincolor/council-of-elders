@@ -9,7 +9,7 @@ def test_load_corpus_returns_all_eight_prompts(tmp_path: Path) -> None:
         '{"prompts": ['
         '{"id": "p1", "shape": "headline", "prompt": "Q1?"},'
         '{"id": "p2", "shape": "summary", "prompt": "Q2?"}'
-        ']}'
+        "]}"
     )
     prompts = load_corpus(path)
     assert len(prompts) == 2

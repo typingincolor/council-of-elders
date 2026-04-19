@@ -193,9 +193,7 @@ reason: one sentence."""
 _WINNER_RE = re.compile(r"^\s*winner\s*:\s*(X|Y|TIE)\b", re.MULTILINE | re.IGNORECASE)
 
 
-def _shuffle_xy(
-    synthesis: str, best_r1: str, rng: random.Random
-) -> tuple[str, str, str]:
+def _shuffle_xy(synthesis: str, best_r1: str, rng: random.Random) -> tuple[str, str, str]:
     """Randomly decide whether synthesis goes to the X or Y slot.
 
     Returns (answer_x_text, answer_y_text, x_was) where `x_was` is

@@ -74,14 +74,14 @@ async def _run_one_debate(
         synthesis=None,
     )
     svc = DebateService(
-        elders=elders, store=store, clock=SystemClock(), bus=InMemoryBus(),
+        elders=elders,
+        store=store,
+        clock=SystemClock(),
+        bus=InMemoryBus(),
     )
     await svc.run_round(debate)  # R1
     await svc.run_round(debate)  # R2
-    while (
-        len(debate.rounds) < max_rounds
-        and not svc.rules.is_converged(debate.rounds[-1])
-    ):
+    while len(debate.rounds) < max_rounds and not svc.rules.is_converged(debate.rounds[-1]):
         await svc.run_round(debate)
     await svc.synthesize(debate, by=synthesiser)
     return debate.id
@@ -105,9 +105,7 @@ async def run_probe(
         raise ValueError("max_rounds must be at least 2 (R1+R2 are mandatory)")
     manifest_path = _manifest_path(runs_root, run_id)
     manifest = _load_manifest(manifest_path)
-    done: set[tuple[str, str]] = {
-        (e["roster"], e["prompt_id"]) for e in manifest["entries"]
-    }
+    done: set[tuple[str, str]] = {(e["roster"], e["prompt_id"]) for e in manifest["entries"]}
     store = JsonFileStore(root=debate_store_root)
 
     for roster in rosters:
@@ -119,14 +117,19 @@ async def run_probe(
             prompt_index = prompts.index(prompt)
             synthesiser: ElderId = _SYNTHESISER_ROTATION[prompt_index % 3]
             debate_id = await _run_one_debate(
-                prompt=prompt.prompt, elders=elders, store=store,
-                max_rounds=max_rounds, synthesiser=synthesiser,
+                prompt=prompt.prompt,
+                elders=elders,
+                store=store,
+                max_rounds=max_rounds,
+                synthesiser=synthesiser,
             )
-            manifest["entries"].append({
-                "roster": roster.name,
-                "prompt_id": prompt.id,
-                "debate_id": debate_id,
-                "synthesiser": synthesiser,
-            })
+            manifest["entries"].append(
+                {
+                    "roster": roster.name,
+                    "prompt_id": prompt.id,
+                    "debate_id": debate_id,
+                    "synthesiser": synthesiser,
+                }
+            )
             _write_manifest(manifest_path, manifest)  # persist incrementally
     return manifest_path

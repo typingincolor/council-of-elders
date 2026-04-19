@@ -51,9 +51,7 @@ ROSTERS: tuple[RosterSpec, ...] = (
 )
 
 
-def build_roster_elders(
-    spec: RosterSpec, *, api_key: str
-) -> dict[ElderId, ElderPort]:
+def build_roster_elders(spec: RosterSpec, *, api_key: str) -> dict[ElderId, ElderPort]:
     """Build a fresh {slot → OpenRouterAdapter} mapping for a roster.
 
     Adapters own their HTTP client implicitly via OpenRouterAdapter's

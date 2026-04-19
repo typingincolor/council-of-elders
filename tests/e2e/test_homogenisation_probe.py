@@ -21,7 +21,8 @@ def _scripted_debate_replies() -> list[str]:
         "CONVERGED: no\n\nR2 answer\n\nQUESTIONS:\n@chatgpt why?",
         "CONVERGED: yes\n\nR3 final",
         "Synthesised answer.",
-        "Report body.", "Narrative audit body.",
+        "Report body.",
+        "Narrative audit body.",
     ]
 
 
@@ -50,17 +51,23 @@ def _judge_port() -> FakeElder:
 @pytest.mark.asyncio
 async def test_full_probe_pipeline_end_to_end(tmp_path: Path) -> None:
     corpus = [CorpusPrompt(id="p1", shape="headline", prompt="Q?")]
-    rosters = (RosterSpec(
-        name="mixed_baseline",
-        models={"claude": "a/a", "gemini": "b/b", "chatgpt": "c/c"},
-    ),)
+    rosters = (
+        RosterSpec(
+            name="mixed_baseline",
+            models={"claude": "a/a", "gemini": "b/b", "chatgpt": "c/c"},
+        ),
+    )
     run_id = "2026-04-19-e2e"
 
     # Phase 1.
     await run_probe(
-        rosters=rosters, prompts=corpus, run_id=run_id,
-        runs_root=tmp_path, debate_store_root=tmp_path / "debates",
-        elder_factory=_elder_factory, max_rounds=3,
+        rosters=rosters,
+        prompts=corpus,
+        run_id=run_id,
+        runs_root=tmp_path,
+        debate_store_root=tmp_path / "debates",
+        elder_factory=_elder_factory,
+        max_rounds=3,
     )
     manifest_path = tmp_path / run_id / "manifest.json"
     assert manifest_path.exists()
@@ -69,7 +76,9 @@ async def test_full_probe_pipeline_end_to_end(tmp_path: Path) -> None:
 
     # Phase 2.
     scores_path = await score_probe(
-        run_id=run_id, runs_root=tmp_path, debate_store_root=tmp_path / "debates",
+        run_id=run_id,
+        runs_root=tmp_path,
+        debate_store_root=tmp_path / "debates",
         judge_port=_judge_port(),
     )
     assert scores_path.exists()
@@ -79,7 +88,10 @@ async def test_full_probe_pipeline_end_to_end(tmp_path: Path) -> None:
 
     # Phase 3.
     md = render_report(
-        scores_path=scores_path, corpus=corpus, rosters=rosters, run_id=run_id,
+        scores_path=scores_path,
+        corpus=corpus,
+        rosters=rosters,
+        run_id=run_id,
     )
     assert "# Model homogenisation probe" in md
     assert "mixed_baseline" in md

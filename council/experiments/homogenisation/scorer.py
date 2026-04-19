@@ -67,7 +67,9 @@ async def _score_one_debate(
     jaccards: list[float] = []
     for a, b in pairs:
         obs = await judge_claim_overlap(
-            question=debate.prompt, answer_a=r1[a], answer_b=r1[b],
+            question=debate.prompt,
+            answer_a=r1[a],
+            answer_b=r1[b],
             judge_port=judge_port,
         )
         jaccards.append(obs.jaccard)
@@ -75,13 +77,18 @@ async def _score_one_debate(
 
     answers = tuple(r1[e] for e in _ELDER_ORDER)
     best = await judge_best_r1(
-        question=debate.prompt, answers=answers, judge_port=judge_port,
+        question=debate.prompt,
+        answers=answers,
+        judge_port=judge_port,
     )
     best_text = answers[best.best_index - 1]
     synth_text = debate.synthesis.text if debate.synthesis else ""
     pref = await judge_preference(
-        question=debate.prompt, best_r1=best_text, synthesis=synth_text,
-        judge_port=judge_port, rng=rng,
+        question=debate.prompt,
+        best_r1=best_text,
+        synthesis=synth_text,
+        judge_port=judge_port,
+        rng=rng,
     )
     return mean_j, pref.winner
 
@@ -119,8 +126,11 @@ def _summarise_rosters(rows: list[dict[str, Any]]) -> list[RosterSummary]:
         jaccards = [g["r1_jaccard"] for g in group]
         # Synthesis wins count as 1, ties count as 0.5, losses 0.
         synth_score = sum(
-            1.0 if g["preference_winner"] == "synthesis"
-            else 0.5 if g["preference_winner"] == "tie" else 0.0
+            1.0
+            if g["preference_winner"] == "synthesis"
+            else 0.5
+            if g["preference_winner"] == "tie"
+            else 0.0
             for g in group
         )
         rate = synth_score / len(group) if group else 0.0
@@ -129,12 +139,17 @@ def _summarise_rosters(rows: list[dict[str, Any]]) -> list[RosterSummary]:
         # the nearest integer for the binomial approximation.
         successes = round(synth_score)
         lo, hi = _binomial_ci_90(successes=successes, n=len(group))
-        out.append(RosterSummary(
-            roster=name, n_debates=len(group),
-            mean_r1_jaccard=statistics.fmean(jaccards) if jaccards else 0.0,
-            median_r1_jaccard=statistics.median(jaccards) if jaccards else 0.0,
-            preference_rate=rate, preference_ci_lo=lo, preference_ci_hi=hi,
-        ))
+        out.append(
+            RosterSummary(
+                roster=name,
+                n_debates=len(group),
+                mean_r1_jaccard=statistics.fmean(jaccards) if jaccards else 0.0,
+                median_r1_jaccard=statistics.median(jaccards) if jaccards else 0.0,
+                preference_rate=rate,
+                preference_ci_lo=lo,
+                preference_ci_hi=hi,
+            )
+        )
     return out
 
 

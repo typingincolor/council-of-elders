@@ -116,8 +116,7 @@ def _preference_table(summaries: list[dict[str, Any]]) -> str:
 
 
 def _appendix(rows: list[dict[str, Any]]) -> str:
-    lines = ["| debate | roster | prompt | R1 Jaccard | winner |",
-             "|---|---|---|---|---|"]
+    lines = ["| debate | roster | prompt | R1 Jaccard | winner |", "|---|---|---|---|---|"]
     for r in rows:
         lines.append(
             f"| `{r['debate_id'][:8]}` | {r['roster']} | {r['prompt_id']} | "

@@ -26,7 +26,4 @@ def load_corpus(path: Path) -> list[CorpusPrompt]:
     malformed file fails fast at startup rather than mid-run.
     """
     data = json.loads(path.read_text())
-    return [
-        CorpusPrompt(id=p["id"], shape=p["shape"], prompt=p["prompt"])
-        for p in data["prompts"]
-    ]
+    return [CorpusPrompt(id=p["id"], shape=p["shape"], prompt=p["prompt"]) for p in data["prompts"]]

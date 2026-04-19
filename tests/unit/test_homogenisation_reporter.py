@@ -11,18 +11,40 @@ from council.experiments.homogenisation.rosters import RosterSpec
 def _fixture_scores() -> dict[str, object]:
     return {
         "rows": [
-            {"debate_id": "d1", "roster": "homogeneous", "prompt_id": "p1",
-             "r1_jaccard": 0.8, "preference_winner": "synthesis"},
-            {"debate_id": "d2", "roster": "mixed_baseline", "prompt_id": "p1",
-             "r1_jaccard": 0.4, "preference_winner": "best_r1"},
+            {
+                "debate_id": "d1",
+                "roster": "homogeneous",
+                "prompt_id": "p1",
+                "r1_jaccard": 0.8,
+                "preference_winner": "synthesis",
+            },
+            {
+                "debate_id": "d2",
+                "roster": "mixed_baseline",
+                "prompt_id": "p1",
+                "r1_jaccard": 0.4,
+                "preference_winner": "best_r1",
+            },
         ],
         "summaries": [
-            {"roster": "homogeneous", "n_debates": 1, "mean_r1_jaccard": 0.8,
-             "median_r1_jaccard": 0.8, "preference_rate": 1.0,
-             "preference_ci_lo": 0.0, "preference_ci_hi": 1.0},
-            {"roster": "mixed_baseline", "n_debates": 1, "mean_r1_jaccard": 0.4,
-             "median_r1_jaccard": 0.4, "preference_rate": 0.0,
-             "preference_ci_lo": 0.0, "preference_ci_hi": 1.0},
+            {
+                "roster": "homogeneous",
+                "n_debates": 1,
+                "mean_r1_jaccard": 0.8,
+                "median_r1_jaccard": 0.8,
+                "preference_rate": 1.0,
+                "preference_ci_lo": 0.0,
+                "preference_ci_hi": 1.0,
+            },
+            {
+                "roster": "mixed_baseline",
+                "n_debates": 1,
+                "mean_r1_jaccard": 0.4,
+                "median_r1_jaccard": 0.4,
+                "preference_rate": 0.0,
+                "preference_ci_lo": 0.0,
+                "preference_ci_hi": 1.0,
+            },
         ],
     }
 
@@ -36,7 +58,10 @@ def test_render_report_contains_all_key_sections(tmp_path: Path) -> None:
         RosterSpec(name="mixed_baseline", models={"claude": "m2", "gemini": "m3", "chatgpt": "m4"}),
     )
     md = render_report(
-        scores_path=scores_path, corpus=corpus, rosters=rosters, run_id="2026-04-19-test",
+        scores_path=scores_path,
+        corpus=corpus,
+        rosters=rosters,
+        run_id="2026-04-19-test",
     )
     for section in [
         "# Model homogenisation probe",
@@ -59,16 +84,24 @@ def test_render_report_interprets_small_diversity_gap() -> None:
     scores_path_input["summaries"][1]["mean_r1_jaccard"] = 0.58
     from pathlib import Path as _P
     from tempfile import TemporaryDirectory
+
     with TemporaryDirectory() as td:
         p = _P(td) / "scores.json"
         p.write_text(json.dumps(scores_path_input))
         corpus = [CorpusPrompt(id="p1", shape="headline", prompt="Q?")]
         rosters = (
-            RosterSpec(name="homogeneous", models={"claude": "m1", "gemini": "m1", "chatgpt": "m1"}),
-            RosterSpec(name="mixed_baseline", models={"claude": "m2", "gemini": "m3", "chatgpt": "m4"}),
+            RosterSpec(
+                name="homogeneous", models={"claude": "m1", "gemini": "m1", "chatgpt": "m1"}
+            ),
+            RosterSpec(
+                name="mixed_baseline", models={"claude": "m2", "gemini": "m3", "chatgpt": "m4"}
+            ),
         )
         md = render_report(
-            scores_path=p, corpus=corpus, rosters=rosters, run_id="2026-04-19-test",
+            scores_path=p,
+            corpus=corpus,
+            rosters=rosters,
+            run_id="2026-04-19-test",
         )
     assert "negligible" in md.lower() or "doesn't matter" in md.lower()
 
@@ -88,6 +121,9 @@ def test_render_report_flags_unexpected_negative_preference_gap(tmp_path: Path) 
         RosterSpec(name="mixed_baseline", models={"claude": "m2", "gemini": "m3", "chatgpt": "m4"}),
     )
     md = render_report(
-        scores_path=scores_path, corpus=corpus, rosters=rosters, run_id="2026-04-19-test",
+        scores_path=scores_path,
+        corpus=corpus,
+        rosters=rosters,
+        run_id="2026-04-19-test",
     )
     assert "unexpected" in md.lower()
