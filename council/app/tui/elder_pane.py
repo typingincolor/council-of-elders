@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from council.domain.models import ElderAnswer, ElderError, ElderId, ElderQuestion, UserMessage
+from council.domain.models import ElderAnswer, ElderError, ElderQuestion, UserMessage
 from council.domain.ports import Clock
 from council.app.tui.verbs import VerbChooser
 
@@ -230,7 +230,7 @@ class ElderPaneWidget(ElderPane, Widget):
         self._append_completed(answer)
         # Render the asker's own outgoing questions below the answer.
         for q in questions:
-            self._append_to_line(f'[dim][To {_display(q.to_elder)}][/] {q.text}')
+            self._append_to_line(f"[dim][To {_display(q.to_elder)}][/] {q.text}")
         self.label_text = self.current_label()
 
     def end_thinking_failed(self, error: ElderError) -> None:
@@ -316,14 +316,10 @@ class ElderPaneWidget(ElderPane, Widget):
         self._last_round_rendered = self._current_round
 
     def on_user_message(self, message: UserMessage) -> None:
-        self._append_to_line(
-            f'[dim][You after round {message.after_round}][/] {message.text}'
-        )
+        self._append_to_line(f"[dim][You after round {message.after_round}][/] {message.text}")
 
     def on_incoming_question(self, question: ElderQuestion) -> None:
-        self._append_to_line(
-            f'[dim][From {_display(question.from_elder)}][/] {question.text}'
-        )
+        self._append_to_line(f"[dim][From {_display(question.from_elder)}][/] {question.text}")
 
     def _append_to_line(self, line: str) -> None:
         self._history_buffer.append(line)

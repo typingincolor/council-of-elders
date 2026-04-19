@@ -172,13 +172,8 @@ async def test_widget_renders_asker_question_in_asker_pane():
     async with _Host(widget).run_test() as pilot:
         await pilot.pause()
         widget.begin_thinking(1)
-        q = ElderQuestion(
-            from_elder="claude", to_elder="gemini",
-            text="timeline?", round_number=1
-        )
-        widget.end_thinking_completed(
-            _answer(text="My answer"), questions=(q,)
-        )
+        q = ElderQuestion(from_elder="claude", to_elder="gemini", text="timeline?", round_number=1)
+        widget.end_thinking_completed(_answer(text="My answer"), questions=(q,))
         await pilot.pause()
         history = widget.history_text()
         assert "My answer" in history
@@ -197,10 +192,7 @@ async def test_widget_renders_incoming_question_in_target_pane():
     )
     async with _Host(widget).run_test() as pilot:
         await pilot.pause()
-        q = ElderQuestion(
-            from_elder="claude", to_elder="gemini",
-            text="timeline?", round_number=1
-        )
+        q = ElderQuestion(from_elder="claude", to_elder="gemini", text="timeline?", round_number=1)
         widget.on_incoming_question(q)
         await pilot.pause()
         history = widget.history_text()

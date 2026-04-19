@@ -23,12 +23,7 @@ class TestNoBlock:
 
 class TestValidBlock:
     def test_single_question_extracted(self, parser):
-        raw = (
-            "My answer text.\n"
-            "\n"
-            "QUESTIONS:\n"
-            "@gemini Have you considered timeline?"
-        )
+        raw = "My answer text.\n\nQUESTIONS:\n@gemini Have you considered timeline?"
         cleaned, qs = parser.parse(raw, from_elder="claude", round_number=1)
         assert "QUESTIONS:" not in cleaned
         assert "@gemini" not in cleaned
@@ -40,12 +35,7 @@ class TestValidBlock:
         assert qs[0].round_number == 1
 
     def test_multiple_questions_extracted(self, parser):
-        raw = (
-            "Answer.\n"
-            "QUESTIONS:\n"
-            "@gemini Timeline?\n"
-            "@chatgpt Growth?"
-        )
+        raw = "Answer.\nQUESTIONS:\n@gemini Timeline?\n@chatgpt Growth?"
         cleaned, qs = parser.parse(raw, from_elder="claude", round_number=2)
         assert cleaned.strip() == "Answer."
         assert len(qs) == 2
@@ -96,12 +86,7 @@ class TestMalformedOrUnknown:
 
 class TestPositioning:
     def test_only_strips_when_block_is_at_tail(self, parser):
-        raw = (
-            "QUESTIONS:\n"
-            "@gemini Early question\n"
-            "\n"
-            "But this is the real body."
-        )
+        raw = "QUESTIONS:\n@gemini Early question\n\nBut this is the real body."
         cleaned, qs = parser.parse(raw, from_elder="claude", round_number=1)
         # The QUESTIONS block is not at the tail — keep raw, return ().
         assert qs == ()

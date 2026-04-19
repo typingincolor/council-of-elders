@@ -3,7 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Union
 
-from council.domain.models import ElderAnswer, ElderError, ElderId, ElderQuestion, Round, UserMessage
+from council.domain.models import (
+    ElderAnswer,
+    ElderError,
+    ElderId,
+    ElderQuestion,
+    Round,
+    UserMessage,
+)
 
 
 @dataclass(frozen=True)

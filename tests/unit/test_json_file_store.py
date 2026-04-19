@@ -110,36 +110,25 @@ def test_round_trips_turn_questions(tmp_path: Path):
     store = JsonFileStore(root=tmp_path)
     t = datetime(2026, 4, 19, tzinfo=timezone.utc)
     d = _debate()
-    q = ElderQuestion(
-        from_elder="claude", to_elder="gemini",
-        text="timeline?", round_number=1
-    )
+    q = ElderQuestion(from_elder="claude", to_elder="gemini", text="timeline?", round_number=1)
     d.rounds[0].turns = [
         Turn(
             elder="claude",
-            answer=ElderAnswer(
-                elder="claude", text="ok", error=None, agreed=True, created_at=t
-            ),
+            answer=ElderAnswer(elder="claude", text="ok", error=None, agreed=True, created_at=t),
             questions=(q,),
         ),
         Turn(
             elder="gemini",
-            answer=ElderAnswer(
-                elder="gemini", text="yes", error=None, agreed=True, created_at=t
-            ),
+            answer=ElderAnswer(elder="gemini", text="yes", error=None, agreed=True, created_at=t),
         ),
         Turn(
             elder="chatgpt",
-            answer=ElderAnswer(
-                elder="chatgpt", text="ok", error=None, agreed=True, created_at=t
-            ),
+            answer=ElderAnswer(elder="chatgpt", text="ok", error=None, agreed=True, created_at=t),
         ),
     ]
     store.save(d)
     loaded = store.load("d1")
-    claude_turn = next(
-        t_ for t_ in loaded.rounds[0].turns if t_.elder == "claude"
-    )
+    claude_turn = next(t_ for t_ in loaded.rounds[0].turns if t_.elder == "claude")
     assert len(claude_turn.questions) == 1
     assert claude_turn.questions[0].to_elder == "gemini"
     assert claude_turn.questions[0].text == "timeline?"

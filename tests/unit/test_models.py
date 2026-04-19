@@ -135,9 +135,7 @@ class TestElderQuestion:
         assert q.to_elder == "gemini"
 
     def test_is_frozen(self):
-        q = ElderQuestion(
-            from_elder="claude", to_elder="gemini", text="x", round_number=1
-        )
+        q = ElderQuestion(from_elder="claude", to_elder="gemini", text="x", round_number=1)
         with pytest.raises(Exception):
             q.text = "y"  # type: ignore[misc]
 
@@ -171,9 +169,7 @@ class TestTurnQuestions:
         assert t.questions == ()
 
     def test_turn_with_questions(self):
-        q = ElderQuestion(
-            from_elder="claude", to_elder="gemini", text="?", round_number=1
-        )
+        q = ElderQuestion(from_elder="claude", to_elder="gemini", text="?", round_number=1)
         t = Turn(
             elder="claude",
             answer=ElderAnswer(

@@ -145,9 +145,7 @@ class CouncilApp(App):
             if isinstance(ev, TurnStarted):
                 self._view.pane(ev.elder).begin_thinking(ev.round_number)
             elif isinstance(ev, TurnCompleted):
-                self._view.pane(ev.elder).end_thinking_completed(
-                    ev.answer, questions=ev.questions
-                )
+                self._view.pane(ev.elder).end_thinking_completed(ev.answer, questions=ev.questions)
                 # Fan each outgoing question into the TARGET elder's pane.
                 for q in ev.questions:
                     self._view.pane(q.to_elder).on_incoming_question(q)

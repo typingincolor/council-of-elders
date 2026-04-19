@@ -17,6 +17,7 @@ Rules:
 - If the block isn't at the tail (non-blank content after the last
   `@elder` line of the block), treat as not a block and return unchanged.
 """
+
 from __future__ import annotations
 
 import re
@@ -54,9 +55,7 @@ class QuestionParser:
 
         # Check if there's any non-blank body content before the header.
         # If not, the block is not "at tail" of the body.
-        has_body_before = any(
-            lines[i].strip() for i in range(header_idx)
-        )
+        has_body_before = any(lines[i].strip() for i in range(header_idx))
         if not has_body_before:
             return raw, ()
 

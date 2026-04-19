@@ -1,6 +1,14 @@
 from datetime import datetime, timezone
 import pytest
-from council.domain.models import CouncilPack, Debate, ElderAnswer, ElderQuestion, Round, Turn, UserMessage
+from council.domain.models import (
+    CouncilPack,
+    Debate,
+    ElderAnswer,
+    ElderQuestion,
+    Round,
+    Turn,
+    UserMessage,
+)
 from council.domain.prompting import PromptBuilder
 
 
@@ -219,8 +227,7 @@ class TestDirectedQuestionsInPrompt:
                 Turn(
                     elder="claude",
                     answer=_answer("claude", "t1"),
-                    questions=(_q(from_elder="claude", to_elder="gemini",
-                                  text="timeline?"),),
+                    questions=(_q(from_elder="claude", to_elder="gemini", text="timeline?"),),
                 ),
                 Turn(elder="gemini", answer=_answer("gemini", "t2")),
                 Turn(elder="chatgpt", answer=_answer("chatgpt", "t3")),
@@ -239,8 +246,7 @@ class TestDirectedQuestionsInPrompt:
                 Turn(
                     elder="claude",
                     answer=_answer("claude", "t1"),
-                    questions=(_q(from_elder="claude", to_elder="chatgpt",
-                                  text="growth?"),),
+                    questions=(_q(from_elder="claude", to_elder="chatgpt", text="growth?"),),
                 ),
                 Turn(elder="gemini", answer=_answer("gemini", "t2")),
                 Turn(elder="chatgpt", answer=_answer("chatgpt", "t3")),
@@ -266,8 +272,9 @@ class TestDirectedQuestionsInPrompt:
                 Turn(
                     elder="claude",
                     answer=_answer("claude", "t1"),
-                    questions=(_q(from_elder="claude", to_elder="gemini",
-                                  text="ignored in synth"),),
+                    questions=(
+                        _q(from_elder="claude", to_elder="gemini", text="ignored in synth"),
+                    ),
                 ),
                 Turn(elder="gemini", answer=_answer("gemini", "t2")),
                 Turn(elder="chatgpt", answer=_answer("chatgpt", "t3")),

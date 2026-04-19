@@ -6,6 +6,7 @@ from council.adapters.clock.fake import FakeClock
 from council.adapters.elders.fake import FakeElder
 from council.adapters.storage.in_memory import InMemoryStore
 from council.domain.debate_service import DebateService
+from council.domain.events import UserMessageReceived
 from council.domain.models import CouncilPack, Debate
 
 
@@ -179,9 +180,6 @@ class TestSynthesize:
         assert store.load("d1") is d
 
 
-from council.domain.events import UserMessageReceived
-
-
 class TestAddUserMessage:
     async def test_appends_saves_and_publishes(self, svc):
         s, _ = svc
@@ -195,6 +193,7 @@ class TestAddUserMessage:
                 collected.append(ev)
 
         import asyncio
+
         task = asyncio.create_task(collect())
         await asyncio.sleep(0)
         msg = await s.add_user_message(d, "please focus on timeline")
@@ -203,10 +202,7 @@ class TestAddUserMessage:
         assert msg.text == "please focus on timeline"
         assert msg.after_round == 1
         assert d.user_messages == [msg]
-        assert any(
-            isinstance(ev, UserMessageReceived) and ev.message is msg
-            for ev in collected
-        )
+        assert any(isinstance(ev, UserMessageReceived) and ev.message is msg for ev in collected)
 
     async def test_strips_whitespace(self, svc):
         s, _ = svc
@@ -220,9 +216,7 @@ class TestRunRoundExtractsQuestions:
         elders = {
             "claude": FakeElder(
                 elder_id="claude",
-                replies=[
-                    "My reply.\n\nQUESTIONS:\n@gemini Timeline?\n\nCONVERGED: no"
-                ],
+                replies=["My reply.\n\nQUESTIONS:\n@gemini Timeline?\n\nCONVERGED: no"],
             ),
             "gemini": FakeElder(
                 elder_id="gemini",
@@ -233,9 +227,7 @@ class TestRunRoundExtractsQuestions:
                 replies=["Mine\nCONVERGED: yes"],
             ),
         }
-        s = DebateService(
-            elders=elders, store=InMemoryStore(), clock=clock, bus=InMemoryBus()
-        )
+        s = DebateService(elders=elders, store=InMemoryStore(), clock=clock, bus=InMemoryBus())
         d = _fresh_debate()
         r = await s.run_round(d)
         claude_turn = next(t for t in r.turns if t.elder == "claude")

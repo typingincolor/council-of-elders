@@ -24,9 +24,7 @@ async def test_elder_question_surfaces_in_both_asker_and_target_panes(tmp_path):
     elders = {
         "claude": FakeElder(
             elder_id="claude",
-            replies=[
-                "My answer.\n\nQUESTIONS:\n@gemini Timeline?\n\nCONVERGED: no"
-            ],
+            replies=["My answer.\n\nQUESTIONS:\n@gemini Timeline?\n\nCONVERGED: no"],
         ),
         "gemini": FakeElder(elder_id="gemini", replies=["mine\nCONVERGED: no"]),
         "chatgpt": FakeElder(elder_id="chatgpt", replies=["mine\nCONVERGED: no"]),

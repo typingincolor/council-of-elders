@@ -12,7 +12,6 @@ from council.domain.models import (
     Debate,
     ElderAnswer,
     ElderError,
-    ElderId,
     ElderQuestion,
     Round,
     Turn,
@@ -144,9 +143,7 @@ def _deserialize_round(r: dict[str, Any]) -> Round:
             Turn(
                 elder=t["elder"],
                 answer=_deserialize_answer(t["answer"]),
-                questions=tuple(
-                    _deserialize_question(q) for q in t.get("questions", [])
-                ),
+                questions=tuple(_deserialize_question(q) for q in t.get("questions", [])),
             )
             for t in r["turns"]
         ],

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from council.domain.models import Debate, ElderId, Round
+from council.domain.models import Debate, ElderId
 
 _CONVERGED_INSTRUCTION = (
     "End your reply with exactly one of:\n"
@@ -61,8 +61,7 @@ class PromptBuilder:
             parts.append(other_qs)
 
         parts.append(
-            "You may revise your answer if their arguments change your view, "
-            "or stand by it."
+            "You may revise your answer if their arguments change your view, or stand by it."
         )
         parts.append(_QUESTIONS_INSTRUCTION)
         parts.append(_CONVERGED_INSTRUCTION)
@@ -93,18 +92,14 @@ class PromptBuilder:
             lines.append(debate.pack.shared_context.strip())
         return "\n\n".join(lines)
 
-    def _own_previous_answer(
-        self, debate: Debate, elder: ElderId, round_num: int
-    ) -> str | None:
+    def _own_previous_answer(self, debate: Debate, elder: ElderId, round_num: int) -> str | None:
         prior = debate.rounds[round_num - 2]
         for t in prior.turns:
             if t.elder == elder and t.answer.text:
                 return t.answer.text
         return None
 
-    def _other_advisors_section(
-        self, debate: Debate, elder: ElderId, round_num: int
-    ) -> str:
+    def _other_advisors_section(self, debate: Debate, elder: ElderId, round_num: int) -> str:
         prior = debate.rounds[round_num - 2]
         lines = ["Other advisors said:"]
         for t in prior.turns:
@@ -125,26 +120,18 @@ class PromptBuilder:
             lines.append(f'After round {m.after_round}: "{m.text}"')
         return "\n".join(lines)
 
-    def _directed_questions_section(
-        self, debate: Debate, elder: ElderId, round_num: int
-    ) -> str:
+    def _directed_questions_section(self, debate: Debate, elder: ElderId, round_num: int) -> str:
         prior = debate.rounds[round_num - 2]
         directed: list[str] = []
         for t in prior.turns:
             for q in t.questions:
                 if q.to_elder == elder:
-                    directed.append(
-                        f'- From {_ELDER_LABEL[q.from_elder]}: "{q.text}"'
-                    )
+                    directed.append(f'- From {_ELDER_LABEL[q.from_elder]}: "{q.text}"')
         if not directed:
             return ""
-        return "Questions directed at you from the previous round:\n" + "\n".join(
-            directed
-        )
+        return "Questions directed at you from the previous round:\n" + "\n".join(directed)
 
-    def _other_questions_section(
-        self, debate: Debate, elder: ElderId, round_num: int
-    ) -> str:
+    def _other_questions_section(self, debate: Debate, elder: ElderId, round_num: int) -> str:
         prior = debate.rounds[round_num - 2]
         others: list[str] = []
         for t in prior.turns:
@@ -152,8 +139,7 @@ class PromptBuilder:
                 if q.to_elder == elder:
                     continue
                 others.append(
-                    f'- [{_ELDER_LABEL[q.from_elder]} to '
-                    f'{_ELDER_LABEL[q.to_elder]}]: "{q.text}"'
+                    f'- [{_ELDER_LABEL[q.from_elder]} to {_ELDER_LABEL[q.to_elder]}]: "{q.text}"'
                 )
         if not others:
             return ""
