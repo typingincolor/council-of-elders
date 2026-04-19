@@ -34,6 +34,20 @@ If Gemini hits quota (common on AI Pro), set once:
 export COUNCIL_GEMINI_MODEL=gemini-2.5-flash
 ```
 
+### Participating in the debate
+
+Between rounds, the input at the bottom is re-enabled. Type a clarifying question or comment and press **Ctrl+Enter** to send it to the elders — they'll see it in the next round's prompt. Plain **Enter** just inserts a newline so you can write longer messages.
+
+Elders can also pose questions to each other by ending their reply with a block like:
+
+```
+QUESTIONS:
+@gemini Have you considered the timeline impact?
+@chatgpt What about the growth tradeoff?
+```
+
+When that happens, the question appears labelled `[To Gemini]` in the asker's pane and `[From Claude]` in the target's pane, and the target gets a "Questions directed at you" section in its next prompt.
+
 ## Keybindings during a debate
 
 | Key | Action |
