@@ -12,8 +12,11 @@ from council.domain.models import (
     Debate,
     ElderAnswer,
     ElderError,
+    ElderId,
+    ElderQuestion,
     Round,
     Turn,
+    UserMessage,
 )
 
 
@@ -47,6 +50,7 @@ def _serialize_debate(d: Debate) -> dict[str, Any]:
         "rounds": [_serialize_round(r) for r in d.rounds],
         "status": d.status,
         "synthesis": _serialize_answer(d.synthesis) if d.synthesis else None,
+        "user_messages": [_serialize_user_message(m) for m in d.user_messages],
     }
 
 
@@ -58,10 +62,25 @@ def _serialize_pack(p: CouncilPack) -> dict[str, Any]:
     }
 
 
+def _serialize_user_message(m: UserMessage) -> dict[str, Any]:
+    return {
+        "text": m.text,
+        "after_round": m.after_round,
+        "created_at": m.created_at.isoformat(),
+    }
+
+
 def _serialize_round(r: Round) -> dict[str, Any]:
     return {
         "number": r.number,
-        "turns": [{"elder": t.elder, "answer": _serialize_answer(t.answer)} for t in r.turns],
+        "turns": [
+            {
+                "elder": t.elder,
+                "answer": _serialize_answer(t.answer),
+                "questions": [_serialize_question(q) for q in t.questions],
+            }
+            for t in r.turns
+        ],
     }
 
 
@@ -79,8 +98,17 @@ def _serialize_answer(a: ElderAnswer) -> dict[str, Any]:
     }
 
 
+def _serialize_question(q: ElderQuestion) -> dict[str, Any]:
+    return {
+        "from_elder": q.from_elder,
+        "to_elder": q.to_elder,
+        "text": q.text,
+        "round_number": q.round_number,
+    }
+
+
 def _deserialize_debate(d: dict[str, Any]) -> Debate:
-    return Debate(
+    debate = Debate(
         id=d["id"],
         prompt=d["prompt"],
         pack=_deserialize_pack(d["pack"]),
@@ -88,6 +116,9 @@ def _deserialize_debate(d: dict[str, Any]) -> Debate:
         status=d["status"],
         synthesis=_deserialize_answer(d["synthesis"]) if d["synthesis"] else None,
     )
+    for m in d.get("user_messages", []):
+        debate.user_messages.append(_deserialize_user_message(m))
+    return debate
 
 
 def _deserialize_pack(p: dict[str, Any]) -> CouncilPack:
@@ -98,10 +129,27 @@ def _deserialize_pack(p: dict[str, Any]) -> CouncilPack:
     )
 
 
+def _deserialize_user_message(m: dict[str, Any]) -> UserMessage:
+    return UserMessage(
+        text=m["text"],
+        after_round=m["after_round"],
+        created_at=datetime.fromisoformat(m["created_at"]),
+    )
+
+
 def _deserialize_round(r: dict[str, Any]) -> Round:
     return Round(
         number=r["number"],
-        turns=[Turn(elder=t["elder"], answer=_deserialize_answer(t["answer"])) for t in r["turns"]],
+        turns=[
+            Turn(
+                elder=t["elder"],
+                answer=_deserialize_answer(t["answer"]),
+                questions=tuple(
+                    _deserialize_question(q) for q in t.get("questions", [])
+                ),
+            )
+            for t in r["turns"]
+        ],
     )
 
 
@@ -117,4 +165,13 @@ def _deserialize_answer(a: dict[str, Any]) -> ElderAnswer:
         ),
         agreed=a["agreed"],
         created_at=datetime.fromisoformat(a["created_at"]),
+    )
+
+
+def _deserialize_question(q: dict[str, Any]) -> ElderQuestion:
+    return ElderQuestion(
+        from_elder=q["from_elder"],
+        to_elder=q["to_elder"],
+        text=q["text"],
+        round_number=q["round_number"],
     )
