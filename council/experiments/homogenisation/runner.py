@@ -3,13 +3,27 @@ prompt) pair and record debate IDs in a manifest file.
 
 Debates are persisted via the existing JsonFileStore so later phases
 can read full debate objects. Already-completed (roster, prompt)
-pairs are skipped, making the runner safe to restart after a failure
-without double-spending on API calls.
+pairs are skipped, and the elder-factory is not called for rosters
+with no pending work — this keeps restart cost-safe (no HTTP clients
+constructed, no accidental credit use).
+
+Resumption is at PAIR granularity, not round granularity: if a debate
+crashes partway through (e.g. a 429 or timeout in round 2), the
+partial debate JSON remains on disk but has no manifest entry, and a
+restart will re-run the pair from scratch. The earlier rounds' API
+spend is re-paid.
+
+Failure policy is FAIL-FAST: the first unhandled exception from
+_run_one_debate propagates up through run_probe, halting further
+work. The caller is expected to restart manually after investigating.
+This is deliberate — surfacing transient errors is more useful than
+silently skipping prompts in a research experiment.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import uuid
 from collections.abc import Callable
 from pathlib import Path
@@ -39,7 +53,9 @@ def _load_manifest(path: Path) -> dict[str, Any]:
 
 def _write_manifest(path: Path, manifest: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(manifest, indent=2))
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(manifest, indent=2))
+    os.replace(tmp, path)
 
 
 async def _run_one_debate(
@@ -83,6 +99,8 @@ async def run_probe(
     synthesiser: ElderId,
 ) -> Path:
     """Run the debates and write the manifest. Returns the manifest path."""
+    if max_rounds < 2:
+        raise ValueError("max_rounds must be at least 2 (R1+R2 are mandatory)")
     manifest_path = _manifest_path(runs_root, run_id)
     manifest = _load_manifest(manifest_path)
     done: set[tuple[str, str]] = {
