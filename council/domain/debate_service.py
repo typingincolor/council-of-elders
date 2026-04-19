@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
+import logging
+from dataclasses import dataclass, field
 
 from council.domain.convergence import ConvergencePolicy
 from council.domain.events import (
@@ -25,6 +26,9 @@ from council.domain.models import (
 from council.domain.ports import Clock, ElderPort, EventBus, TranscriptStore
 from council.domain.prompting import PromptBuilder
 from council.domain.questions import QuestionParser
+from council.domain.rules import DebateRules, DefaultRules, Violation
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -33,19 +37,30 @@ class DebateService:
     store: TranscriptStore
     clock: Clock
     bus: EventBus
-    prompt_builder: PromptBuilder = PromptBuilder()
-    convergence: ConvergencePolicy = ConvergencePolicy()
-    question_parser: QuestionParser = QuestionParser()
+    rules: DebateRules = field(default_factory=DefaultRules)
+    prompt_builder: PromptBuilder = field(default_factory=PromptBuilder)
+    convergence: ConvergencePolicy = field(default_factory=ConvergencePolicy)
+    question_parser: QuestionParser = field(default_factory=QuestionParser)
+    conversations: dict[ElderId, list[Message]] = field(default_factory=dict)
 
     async def run_round(self, debate: Debate) -> Round:
         round_num = len(debate.rounds) + 1
 
         async def _ask(elder_id: ElderId) -> Turn:
             port = self.elders[elder_id]
-            prompt = self.prompt_builder.build(debate, elder_id, round_num)
+            conv = self.conversations.setdefault(elder_id, [])
+
+            # Append the next user message (and system on first round).
+            if not conv:
+                system_text = self.rules.system_message(debate, elder_id)
+                if system_text:
+                    conv.append(Message("system", system_text))
+            conv.append(Message("user", self.rules.user_message(debate, elder_id, round_num)))
+
             await self.bus.publish(TurnStarted(elder=elder_id, round_number=round_num))
+
             try:
-                raw = await port.ask([Message("user", prompt)])
+                raw = await port.ask(conv)
             except asyncio.TimeoutError:
                 err = ElderError(elder=elder_id, kind="timeout", detail="")
                 ans = self._error_answer(elder_id, err)
@@ -64,12 +79,83 @@ class DebateService:
                 return Turn(elder=elder_id, answer=ans)
 
             cleaned, agreed = self.convergence.parse(raw)
-            cleaned_no_qs, questions = self.question_parser.parse(
+            cleaned2, questions = self.question_parser.parse(
                 cleaned, from_elder=elder_id, round_number=round_num
             )
+            result = self.rules.validate(
+                agreed=agreed,
+                questions=questions,
+                round_num=round_num,
+                from_elder=elder_id,
+            )
+
+            final_raw = raw
+
+            # Retry once on contract violation.
+            if isinstance(result, Violation):
+                conv.append(Message("assistant", raw))
+                conv.append(Message("user", self.rules.retry_reminder(result)))
+                try:
+                    raw2 = await port.ask(conv)
+                except asyncio.TimeoutError:
+                    err = ElderError(elder=elder_id, kind="timeout", detail="")
+                    ans = self._error_answer(elder_id, err)
+                    await self.bus.publish(
+                        TurnFailed(elder=elder_id, round_number=round_num, error=err)
+                    )
+                    return Turn(elder=elder_id, answer=ans)
+                except Exception as ex:
+                    kind = getattr(ex, "kind", "nonzero_exit")
+                    detail = getattr(ex, "detail", repr(ex))
+                    err = ElderError(elder=elder_id, kind=kind, detail=detail)
+                    ans = self._error_answer(elder_id, err)
+                    await self.bus.publish(
+                        TurnFailed(elder=elder_id, round_number=round_num, error=err)
+                    )
+                    return Turn(elder=elder_id, answer=ans)
+                cleaned, agreed = self.convergence.parse(raw2)
+                cleaned2, questions = self.question_parser.parse(
+                    cleaned, from_elder=elder_id, round_number=round_num
+                )
+                final_raw = raw2
+                # Accept whatever; one retry ceiling. Log if still invalid.
+                post_result = self.rules.validate(
+                    agreed=agreed,
+                    questions=questions,
+                    round_num=round_num,
+                    from_elder=elder_id,
+                )
+                if isinstance(post_result, Violation):
+                    log.warning(
+                        "Elder %s round %s still violates contract after retry: %s",
+                        elder_id,
+                        round_num,
+                        post_result.reason,
+                    )
+
+            # Phase-specific drop-with-warn cleanup (DefaultRules conventions).
+            if round_num == 1:
+                if agreed is not None or questions:
+                    log.warning(
+                        "Elder %s round 1 emitted unexpected convergence/questions; dropping.",
+                        elder_id,
+                    )
+                agreed = None
+                questions = ()
+            elif round_num >= 3 and agreed is True and questions:
+                log.warning(
+                    "Elder %s round %s emitted CONVERGED: yes with questions; dropping questions.",
+                    elder_id,
+                    round_num,
+                )
+                questions = ()
+
+            # Record assistant reply in the conversation.
+            conv.append(Message("assistant", final_raw))
+
             ans = ElderAnswer(
                 elder=elder_id,
-                text=cleaned_no_qs,
+                text=cleaned2,
                 error=None,
                 agreed=agreed,
                 created_at=self.clock.now(),
@@ -104,9 +190,6 @@ class DebateService:
                 created_at=self.clock.now(),
             )
         except Exception as ex:
-            # Duck-type on .kind / .detail (as in _ask) so ElderSubprocessError
-            # from adapters preserves its specific kind — cli_missing, auth_failed,
-            # quota_exhausted — rather than being flattened to nonzero_exit.
             kind = getattr(ex, "kind", "nonzero_exit")
             detail = getattr(ex, "detail", repr(ex))
             err = ElderError(elder=by, kind=kind, detail=detail)

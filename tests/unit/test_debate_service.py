@@ -28,17 +28,44 @@ def clock():
 
 @pytest.fixture
 def svc(clock):
+    # R1: silent — replies must have no CONVERGED, no questions (R1 contract).
+    # R2: cross-exam — each elder asks one peer question.
+    # R3: open — CONVERGED: yes drops the debate.
     elders = {
-        "claude": FakeElder(elder_id="claude", replies=["Claude round-1\nCONVERGED: yes"]),
-        "gemini": FakeElder(elder_id="gemini", replies=["Gemini round-1\nCONVERGED: no"]),
-        "chatgpt": FakeElder(elder_id="chatgpt", replies=["ChatGPT round-1\nCONVERGED: yes"]),
+        "claude": FakeElder(
+            elder_id="claude",
+            replies=[
+                "Claude R1",
+                "Claude R2\n\nQUESTIONS:\n@gemini Why?",
+                "Claude R3\nCONVERGED: yes",
+            ],
+        ),
+        "gemini": FakeElder(
+            elder_id="gemini",
+            replies=[
+                "Gemini R1",
+                "Gemini R2\n\nQUESTIONS:\n@claude Why?",
+                "Gemini R3\nCONVERGED: yes",
+            ],
+        ),
+        "chatgpt": FakeElder(
+            elder_id="chatgpt",
+            replies=[
+                "ChatGPT R1",
+                "ChatGPT R2\n\nQUESTIONS:\n@gemini Why?",
+                "ChatGPT R3\nCONVERGED: yes",
+            ],
+        ),
     }
-    return DebateService(
-        elders=elders,
-        store=InMemoryStore(),
-        clock=clock,
-        bus=InMemoryBus(),
-    ), elders
+    return (
+        DebateService(
+            elders=elders,
+            store=InMemoryStore(),
+            clock=clock,
+            bus=InMemoryBus(),
+        ),
+        elders,
+    )
 
 
 class TestRunRound:
@@ -49,22 +76,33 @@ class TestRunRound:
         assert r.number == 1
         assert {t.elder for t in r.turns} == {"claude", "gemini", "chatgpt"}
 
-    async def test_strips_converged_tag_from_answers(self, svc):
+    async def test_r1_drops_any_convergence_tag(self, svc):
+        # R1 contract: agreed MUST be None. Even if a model slipped a
+        # CONVERGED tag in (it hasn't in our fixture — they're silent),
+        # DebateService normalises to None.
         s, _ = svc
         d = _fresh_debate()
         r = await s.run_round(d)
-        claude_turn = next(t for t in r.turns if t.elder == "claude")
-        assert "CONVERGED" not in (claude_turn.answer.text or "")
-        assert claude_turn.answer.agreed is True
+        for t in r.turns:
+            assert t.answer.agreed is None
 
-    async def test_records_agreement_status(self, svc):
+    async def test_r3_records_convergence(self, svc):
         s, _ = svc
         d = _fresh_debate()
-        r = await s.run_round(d)
-        by_elder = {t.elder: t.answer.agreed for t in r.turns}
-        assert by_elder["claude"] is True
-        assert by_elder["gemini"] is False
-        assert by_elder["chatgpt"] is True
+        await s.run_round(d)  # R1
+        await s.run_round(d)  # R2
+        r3 = await s.run_round(d)  # R3
+        by_elder = {t.elder: t.answer.agreed for t in r3.turns}
+        assert by_elder == {"claude": True, "gemini": True, "chatgpt": True}
+
+    async def test_r3_strips_converged_tag_from_text(self, svc):
+        s, _ = svc
+        d = _fresh_debate()
+        await s.run_round(d)  # R1
+        await s.run_round(d)  # R2
+        r3 = await s.run_round(d)
+        for t in r3.turns:
+            assert "CONVERGED" not in (t.answer.text or "")
 
     async def test_appends_round_to_debate(self, svc):
         s, _ = svc
@@ -72,37 +110,22 @@ class TestRunRound:
         await s.run_round(d)
         assert len(d.rounds) == 1
 
-    async def test_runs_multiple_rounds(self, clock):
-        elders = {
-            "claude": FakeElder(
-                elder_id="claude",
-                replies=[
-                    "R1 Claude\nCONVERGED: no",
-                    "R2 Claude\nCONVERGED: yes",
-                ],
-            ),
-            "gemini": FakeElder(
-                elder_id="gemini",
-                replies=[
-                    "R1 Gemini\nCONVERGED: no",
-                    "R2 Gemini\nCONVERGED: yes",
-                ],
-            ),
-            "chatgpt": FakeElder(
-                elder_id="chatgpt",
-                replies=[
-                    "R1 ChatGPT\nCONVERGED: no",
-                    "R2 ChatGPT\nCONVERGED: yes",
-                ],
-            ),
-        }
-        s = DebateService(elders=elders, store=InMemoryStore(), clock=clock, bus=InMemoryBus())
+    async def test_runs_three_rounds_to_convergence(self, svc):
+        s, _ = svc
         d = _fresh_debate()
-        r1 = await s.run_round(d)
-        r2 = await s.run_round(d)
-        assert r1.number == 1
-        assert r2.number == 2
-        assert d.rounds[1].converged() is True
+        await s.run_round(d)  # R1
+        await s.run_round(d)  # R2
+        r3 = await s.run_round(d)  # R3
+        assert r3.number == 3
+        assert d.rounds[2].converged() is True
+
+    async def test_r2_captures_questions(self, svc):
+        s, _ = svc
+        d = _fresh_debate()
+        await s.run_round(d)  # R1
+        r2 = await s.run_round(d)  # R2
+        for t in r2.turns:
+            assert len(t.questions) == 1
 
 
 class TestRunRoundWithFailures:
@@ -156,12 +179,18 @@ class TestRunRoundWithFailures:
 
 
 class TestSynthesize:
-    async def test_produces_synthesis_answer(self, svc):
-        s, _ = svc
+    async def test_produces_synthesis_answer(self, clock):
+        elders = {
+            "claude": FakeElder(
+                elder_id="claude",
+                replies=["Claude R1", "Final synthesized answer."],
+            ),
+            "gemini": FakeElder(elder_id="gemini", replies=["Gemini R1"]),
+            "chatgpt": FakeElder(elder_id="chatgpt", replies=["ChatGPT R1"]),
+        }
+        s = DebateService(elders=elders, store=InMemoryStore(), clock=clock, bus=InMemoryBus())
         d = _fresh_debate()
-        await s.run_round(d)
-        # Prepare a synthesizer elder with a scripted synthesis reply
-        s.elders["claude"].replies.append("Final synthesized answer.")
+        await s.run_round(d)  # R1 uses one reply per elder
         ans = await s.synthesize(d, by="claude")
         assert ans.text == "Final synthesized answer."
         assert ans.elder == "claude"
@@ -212,25 +241,36 @@ class TestAddUserMessage:
 
 
 class TestRunRoundExtractsQuestions:
-    async def test_questions_block_becomes_turn_questions(self, clock):
+    async def test_r2_questions_block_becomes_turn_questions(self, clock):
+        # R2 is where questions first appear. R1 is silent.
         elders = {
             "claude": FakeElder(
                 elder_id="claude",
-                replies=["My reply.\n\nQUESTIONS:\n@gemini Timeline?\n\nCONVERGED: no"],
+                replies=[
+                    "Claude R1",
+                    "My reply.\n\nQUESTIONS:\n@gemini Timeline?",
+                ],
             ),
             "gemini": FakeElder(
                 elder_id="gemini",
-                replies=["Mine\nCONVERGED: yes"],
+                replies=[
+                    "Gemini R1",
+                    "Gemini R2\n\nQUESTIONS:\n@claude Why?",
+                ],
             ),
             "chatgpt": FakeElder(
                 elder_id="chatgpt",
-                replies=["Mine\nCONVERGED: yes"],
+                replies=[
+                    "ChatGPT R1",
+                    "ChatGPT R2\n\nQUESTIONS:\n@gemini Why?",
+                ],
             ),
         }
         s = DebateService(elders=elders, store=InMemoryStore(), clock=clock, bus=InMemoryBus())
         d = _fresh_debate()
-        r = await s.run_round(d)
-        claude_turn = next(t for t in r.turns if t.elder == "claude")
+        await s.run_round(d)  # R1
+        r2 = await s.run_round(d)  # R2
+        claude_turn = next(t for t in r2.turns if t.elder == "claude")
         assert len(claude_turn.questions) == 1
         assert claude_turn.questions[0].to_elder == "gemini"
         assert "QUESTIONS" not in (claude_turn.answer.text or "")

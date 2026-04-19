@@ -2,22 +2,6 @@ from __future__ import annotations
 
 from council.domain.models import Debate, ElderId
 
-_CONVERGED_INSTRUCTION = (
-    "End your reply with exactly one of:\n"
-    "CONVERGED: yes\n"
-    "CONVERGED: no\n\n"
-    "(Use CONVERGED: yes only if you would not change your answer after seeing "
-    "what other advisors say.)"
-)
-
-_QUESTIONS_INSTRUCTION = (
-    "If you have questions for another advisor, optionally include them "
-    "BEFORE the CONVERGED line, as a block like this:\n\n"
-    "QUESTIONS:\n"
-    "@gemini your question here\n"
-    "@chatgpt another question\n"
-)
-
 _ELDER_LABEL: dict[ElderId, str] = {
     "claude": "Claude",
     "gemini": "Gemini",
@@ -26,50 +10,85 @@ _ELDER_LABEL: dict[ElderId, str] = {
 
 
 class PromptBuilder:
-    def build(self, debate: Debate, elder: ElderId, round_num: int) -> str:
+    """Builds the content of user/system messages for a phased conversation.
+
+    These methods produce raw strings; DebateService packages them into
+    Message tuples and accumulates the per-elder conversation. The elder
+    remembers its own prior turns natively (via conversation history), so
+    per-round user messages do NOT re-stuff "your previous answer".
+    """
+
+    # ---- system + per-phase user-message builders -----------------------
+
+    def build_system_message(self, debate: Debate, elder: ElderId) -> str:
+        lines: list[str] = []
+        persona = debate.pack.personas.get(elder)
+        if persona:
+            lines.append(persona.strip())
+        if debate.pack.shared_context:
+            lines.append(debate.pack.shared_context.strip())
+        return "\n\n".join(lines)
+
+    def build_round_1_user(self, debate: Debate) -> str:
+        return (
+            f"Question: {debate.prompt}\n\n"
+            "Give your initial take. Do not tag convergence or ask questions — "
+            "this is a silent initial round before you see the other advisors."
+        )
+
+    def build_round_2_user(self, debate: Debate, elder: ElderId) -> str:
         parts: list[str] = []
-        header = self._header(debate, elder)
-        if header:
-            parts.append(header)
-        parts.append(f"Question: {debate.prompt}")
-
-        if round_num == 1:
-            parts.append("Answer the question.")
-            parts.append(_QUESTIONS_INSTRUCTION)
-            parts.append(_CONVERGED_INSTRUCTION)
-            return "\n\n".join(parts)
-
-        # Round 2+
-        own_prev = self._own_previous_answer(debate, elder, round_num)
-        if own_prev is not None:
-            parts.append(f"Your previous answer:\n{own_prev}")
-
-        others = self._other_advisors_section(debate, elder, round_num)
+        others = self._other_advisors_section(debate, elder, round_num=2)
         if others:
             parts.append(others)
-
         user_section = self._user_messages_section(debate)
         if user_section:
             parts.append(user_section)
+        parts.append(
+            "You have now seen the other advisors. This is the cross-examination round.\n\n"
+            "You MUST end your reply with EXACTLY ONE question of EXACTLY ONE peer, "
+            "formatted as:\n\n"
+            "QUESTIONS:\n"
+            "@<peer> your question here\n\n"
+            "Where <peer> is one of: @claude, @gemini, @chatgpt (but not yourself).\n"
+            "Do NOT emit a CONVERGED tag; convergence is not yet possible."
+        )
+        return "\n\n".join(parts)
 
+    def build_round_n_user(self, debate: Debate, elder: ElderId, round_num: int) -> str:
+        parts: list[str] = []
+        others = self._other_advisors_section(debate, elder, round_num=round_num)
+        if others:
+            parts.append(others)
+        user_section = self._user_messages_section(debate)
+        if user_section:
+            parts.append(user_section)
         directed = self._directed_questions_section(debate, elder, round_num)
         if directed:
             parts.append(directed)
-
-        other_qs = self._other_questions_section(debate, elder, round_num)
-        if other_qs:
-            parts.append(other_qs)
-
+        peer_qs = self._other_questions_section(debate, elder, round_num)
+        if peer_qs:
+            parts.append(peer_qs)
         parts.append(
-            "You may revise your answer if their arguments change your view, or stand by it."
+            "End your reply with EXACTLY ONE of:\n\n"
+            "(a) CONVERGED: yes — if you would not change your position after everything said.\n\n"
+            "(b) CONVERGED: no, followed immediately by a QUESTIONS: block:\n\n"
+            "    QUESTIONS:\n"
+            "    @<peer> your probe here\n\n"
+            "If you emit CONVERGED: no, you MUST ask exactly one question of one peer."
         )
-        parts.append(_QUESTIONS_INSTRUCTION)
-        parts.append(_CONVERGED_INSTRUCTION)
         return "\n\n".join(parts)
+
+    def build_retry_reminder(self, violation_detail: str) -> str:
+        return (
+            "Your previous reply did not follow the required format. "
+            f"{violation_detail} "
+            "Re-send your answer with the correct structure."
+        )
 
     def build_synthesis(self, debate: Debate, by: ElderId) -> str:
         parts: list[str] = []
-        header = self._header(debate, by)
+        header = self.build_system_message(debate, by)
         if header:
             parts.append(header)
         parts.append(f"Original question: {debate.prompt}")
@@ -82,22 +101,7 @@ class PromptBuilder:
         )
         return "\n\n".join(parts)
 
-    # ------------------------------------------------------------------
-    def _header(self, debate: Debate, elder: ElderId) -> str:
-        lines: list[str] = []
-        persona = debate.pack.personas.get(elder)
-        if persona:
-            lines.append(persona.strip())
-        if debate.pack.shared_context:
-            lines.append(debate.pack.shared_context.strip())
-        return "\n\n".join(lines)
-
-    def _own_previous_answer(self, debate: Debate, elder: ElderId, round_num: int) -> str | None:
-        prior = debate.rounds[round_num - 2]
-        for t in prior.turns:
-            if t.elder == elder and t.answer.text:
-                return t.answer.text
-        return None
+    # ---- private helpers (reused across phases) -------------------------
 
     def _other_advisors_section(self, debate: Debate, elder: ElderId, round_num: int) -> str:
         prior = debate.rounds[round_num - 2]
