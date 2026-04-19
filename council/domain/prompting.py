@@ -117,25 +117,45 @@ class PromptBuilder:
             parts.append(header)
         parts.append(f"The user's original question was:\n\n{debate.prompt}")
         parts.append(self._all_rounds_section(debate))
+        # Rewrite origin: produced by the council meta-debate 5142e6fc.
+        # Fixes: aspirational-form wording replaced with pragmatic-brevity
+        # operationalisation; transcript-length mimicry severed explicitly;
+        # authorship-bias rule added ("synthesize, don't select"); draft-label
+        # ban generalised from token-blacklist to category (process
+        # scaffolding of any kind); first-token anchor added; separation-of-
+        # concerns note ("a separate downstream step audits the debate").
         parts.append(
-            "You have seen every advisor's contribution across every round.\n\n"
-            "Produce the final answer the user wants — in exactly the form the "
-            "user asked for. If they asked for one sentence, give one sentence. "
-            "If they asked for a list, give a list. If they asked for a plan, "
-            "give a plan.\n\n"
-            "Rules — follow these strictly:\n"
-            "- Output ONLY the answer. Nothing else.\n"
-            '- No preamble (no "Here is the final answer:"). No section '
-            'headings. No bolded draft labels like "**Defining Goals**" or '
-            '"**Refining the Core Objective**" — those are reasoning traces, '
-            "not output.\n"
-            "- Do NOT describe the debate, the elders' positions, or your "
-            "reasoning process. The user wants the answer, not a summary of "
-            "how you arrived at it.\n"
-            "- Do NOT append a CONVERGED tag.\n"
-            "- If the advisors genuinely agreed, state the consensus answer. "
-            "If they didn't, apply your own best judgement — but output only "
-            "that judgement, not a description of the disagreement."
+            "You have seen every advisor across every round. Write the final "
+            "answer the user receives. A separate downstream step audits the "
+            "debate — that is not your job. Your job is the clean answer.\n\n"
+            "**Form and length.** Match the shape and the brevity the user's "
+            'request implies in normal usage. "One sentence" means one short '
+            'sentence, not a 30-word multi-clause one. "Headline," "slogan," '
+            '"tagline," "one-liner," "tweet," "short answer" all mean '
+            "genuinely punchy, not merely technically compliant. If the user "
+            "gave an example, match its register and length. If the form is "
+            "unspecified, default to the shortest response that fully "
+            "answers. Do not inherit length or structure from the advisors "
+            "when it conflicts with the user's ask — calibrate to the user, "
+            "not the transcript. Add no structure beyond what the user "
+            "requested (no bullets, headings, or sections unless asked).\n\n"
+            "**Synthesize, do not select.** Do not copy any single advisor's "
+            "wording wholesale when others contributed. Take the strongest "
+            "formulation of each component from whichever advisor expressed "
+            "it best, and write it in your own voice. Where advisors "
+            "disagreed, decide based on the strongest argument in the "
+            "transcript — not recency, confidence, or majority — and output "
+            "only your decision.\n\n"
+            "**Output discipline.** Output only the answer itself. No "
+            "preamble, sign-off, framing sentence, section headings, labels, "
+            "markdown scaffolding, tags, or meta-commentary. Do not mention "
+            "the debate, the advisors, agreement, disagreement, or your "
+            "reasoning. Do not emit process scaffolding of any kind — no "
+            "draft markers, phase headings, or iterative-refinement "
+            'structure (e.g. "Goal:", "Approach:", "Synthesis:", "Draft:", '
+            '"Refined:", "**Defining X**", "Step 1:"). Do not append a '
+            "CONVERGED tag.\n\n"
+            "Begin your response with the first word of the answer itself."
         )
         return "\n\n".join(parts)
 

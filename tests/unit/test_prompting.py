@@ -246,15 +246,38 @@ class TestBuildSynthesis:
         assert "What to ship?" in out
 
     def test_anchors_to_user_question_shape(self, builder):
-        # The prompt must explicitly tell the model to answer in the user's
-        # requested form (one sentence / list / plan / etc.) and to output
-        # only the answer — no meta-commentary or draft-labels.
+        # The prompt must tell the model to answer in the user's requested
+        # form and to output only the answer — no meta-commentary or drafts.
         out = builder.build_synthesis(_debate("Give me one sentence."), by="claude")
         low = out.lower()
-        assert "form the user asked" in low or "form the user" in low
+        # Pragmatic-brevity framing — "genuinely punchy, not merely
+        # technically compliant" — replaces the aspirational "form the user
+        # asked for".
+        assert "genuinely punchy" in low or "shortest response that fully answers" in low
         assert "only the answer" in low
-        # No reasoning traces / section headings in output.
-        assert "no section headings" in low or "no preamble" in low
+        # No process scaffolding of any kind.
+        assert "no preamble" in low
+        assert "process scaffolding" in low
+
+    def test_severs_length_from_transcript(self, builder):
+        # Crucial anti-mimicry rule added by the rewrite.
+        out = builder.build_synthesis(_debate(), by="claude")
+        low = out.lower()
+        assert "calibrate to the user" in low
+        assert "not the transcript" in low
+
+    def test_requires_synthesis_not_selection(self, builder):
+        # "Synthesize, do not select" — the authorship-bias fix.
+        out = builder.build_synthesis(_debate(), by="claude")
+        low = out.lower()
+        assert "synthesize, do not select" in low or "synthesise, do not select" in low
+        assert "single advisor's wording wholesale" in low
+
+    def test_first_token_anchor(self, builder):
+        # First-token anchor prevents preamble like "Okay," / "Sure —" /
+        # "Here's the answer:".
+        out = builder.build_synthesis(_debate(), by="claude")
+        assert "Begin your response with the first word of the answer itself" in out
 
     def test_forbids_convergence_tag(self, builder):
         out = builder.build_synthesis(_debate(), by="claude")
