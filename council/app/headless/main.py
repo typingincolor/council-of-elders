@@ -30,6 +30,8 @@ async def run_headless(
     clock: Clock,
     bus: EventBus,
     synthesizer: ElderId,
+    *,
+    using_openrouter: bool = False,
 ) -> None:
     debate = Debate(
         id=str(uuid.uuid4()),
@@ -49,6 +51,31 @@ async def run_headless(
             print(f"[{label}] {t.answer.text}\n")
     synth = await svc.synthesize(debate, by=synthesizer)
     print(f"[Synthesis by {_LABELS[synthesizer]}] {synth.text}")
+    if using_openrouter:
+        from council.adapters.elders.openrouter import (
+            OpenRouterAdapter,
+            format_cost_notice,
+        )
+
+        any_or = next(
+            (e for e in elders.values() if isinstance(e, OpenRouterAdapter)),
+            None,
+        )
+        used, limit = (0.0, None)
+        if any_or is not None:
+            used, limit = await any_or.fetch_credits()
+        total = sum(
+            e.session_cost_usd
+            for e in elders.values()
+            if isinstance(e, OpenRouterAdapter)
+        )
+        line = format_cost_notice(
+            elders=elders,
+            round_cost_delta_usd=total,  # for headless a single "round" = whole session
+            credits_used=used,
+            credits_limit=limit,
+        )
+        print(line)
 
 
 def main() -> None:
@@ -91,7 +118,7 @@ def main() -> None:
         "gemini": args.gemini_model,
         "chatgpt": args.codex_model,
     }
-    elders, _using_openrouter = build_elders(config, cli_models=cli_models)
+    elders, using_openrouter = build_elders(config, cli_models=cli_models)
     asyncio.run(
         run_headless(
             prompt=args.prompt,
@@ -101,5 +128,6 @@ def main() -> None:
             clock=SystemClock(),
             bus=InMemoryBus(),
             synthesizer=args.synthesizer,
+            using_openrouter=using_openrouter,
         )
     )
