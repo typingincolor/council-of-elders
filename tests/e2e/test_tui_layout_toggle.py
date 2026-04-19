@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime, timezone
 
 from council.adapters.clock.fake import FakeClock

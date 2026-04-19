@@ -31,12 +31,8 @@ async def test_full_debate_via_tui(tmp_path):
                 "Final synthesised answer.",
             ],
         ),
-        "gemini": FakeElder(
-            elder_id="gemini", replies=["R1 Gemini\nCONVERGED: yes"]
-        ),
-        "chatgpt": FakeElder(
-            elder_id="chatgpt", replies=["R1 ChatGPT\nCONVERGED: yes"]
-        ),
+        "gemini": FakeElder(elder_id="gemini", replies=["R1 Gemini\nCONVERGED: yes"]),
+        "chatgpt": FakeElder(elder_id="chatgpt", replies=["R1 ChatGPT\nCONVERGED: yes"]),
     }
     app = CouncilApp(
         elders=elders,

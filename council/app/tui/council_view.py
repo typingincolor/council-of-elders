@@ -1,5 +1,6 @@
 """Composite widget: holds the four ElderPaneWidgets and switches between
 three-column and tabbed layouts based on terminal width."""
+
 from __future__ import annotations
 
 from textual.app import ComposeResult
@@ -125,9 +126,7 @@ class CouncilView(Widget):
 
     # --- helpers ---------------------------------------------------------
     def _rebuild_if_needed(self) -> None:
-        desired = pick_layout(
-            self.size.width if self.size else 0, self._forced_mode
-        )
+        desired = pick_layout(self.size.width if self.size else 0, self._forced_mode)
         if desired == self._current_layout:
             return
         # Re-parent by refreshing: remove current children and recompose.

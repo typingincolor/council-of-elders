@@ -8,6 +8,7 @@ label generation.
 This module currently only implements label-generation logic. Full widget
 rendering (history, mount, compose, reactive updates) is added in Task 4.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -134,9 +135,7 @@ from council.app.tui.stream import format_event  # noqa: E402
 from council.app.tui.verbs import RandomVerbChooser  # noqa: E402
 from council.domain.events import TurnCompleted, TurnFailed  # noqa: E402
 
-_SYNTHESIS_PLACEHOLDER = (
-    "[dim]Synthesis runs after you press [bold]s[/] and pick an elder.[/dim]"
-)
+_SYNTHESIS_PLACEHOLDER = "[dim]Synthesis runs after you press [bold]s[/] and pick an elder.[/dim]"
 
 
 class ElderPaneWidget(ElderPane, Widget):
@@ -183,7 +182,9 @@ class ElderPaneWidget(ElderPane, Widget):
         self.display_name = display_name  # public for CouncilView / TabbedContent
         self._last_round_rendered: int | None = None
         self.label_text = display_name
-        self._history_buffer: list[str] = []  # test-observable; immune to RichLog deferred rendering
+        self._history_buffer: list[
+            str
+        ] = []  # test-observable; immune to RichLog deferred rendering
 
     def compose(self) -> ComposeResult:
         yield Static("", id="pane-thinking")
@@ -231,8 +232,10 @@ class ElderPaneWidget(ElderPane, Widget):
             log.clear()  # replace placeholder or previous synthesis
             self._history_buffer.clear()
         else:
-            if self._current_round and self._current_round >= 2 and (
-                self._last_round_rendered != self._current_round
+            if (
+                self._current_round
+                and self._current_round >= 2
+                and (self._last_round_rendered != self._current_round)
             ):
                 divider = f"[dim]─── Round {self._current_round} ───[/dim]"
                 log.write(divider)
@@ -251,8 +254,10 @@ class ElderPaneWidget(ElderPane, Widget):
     def _append_failed(self, error: ElderError) -> None:
         log = self.query_one("#pane-history", RichLog)
         if not self._synthesis:
-            if self._current_round and self._current_round >= 2 and (
-                self._last_round_rendered != self._current_round
+            if (
+                self._current_round
+                and self._current_round >= 2
+                and (self._last_round_rendered != self._current_round)
             ):
                 divider = f"[dim]─── Round {self._current_round} ───[/dim]"
                 log.write(divider)

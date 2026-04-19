@@ -4,6 +4,7 @@ When an elder (or the synthesiser) is mid-turn, its pane label cycles through
 a rotating whimsical verb plus an elapsed-seconds counter. Elder-themed
 vocabulary fits the "council of elders" metaphor.
 """
+
 from __future__ import annotations
 
 import random

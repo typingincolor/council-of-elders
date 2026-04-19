@@ -1,4 +1,5 @@
 """Helpers used by e2e tests."""
+
 from __future__ import annotations
 
 
@@ -10,8 +11,6 @@ def pane_lines(app, elder_key: str) -> str:
     """
     view = getattr(app, "_view", None)
     if view is None:
-        raise AssertionError(
-            "app has no _view attribute; helper expects CouncilApp-shaped apps"
-        )
+        raise AssertionError("app has no _view attribute; helper expects CouncilApp-shaped apps")
     pane = view.pane(elder_key)
     return pane.history_text()

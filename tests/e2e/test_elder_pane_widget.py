@@ -1,5 +1,6 @@
 """E2E tests for the ElderPaneWidget — must run under a Textual App context
 because Widget mount / reactive / query_one all need it."""
+
 from datetime import datetime, timezone
 
 from textual.app import App, ComposeResult

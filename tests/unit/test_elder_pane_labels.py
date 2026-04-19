@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from council.adapters.clock.fake import FakeClock
 from council.app.tui.elder_pane import ElderPane

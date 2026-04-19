@@ -3,6 +3,7 @@
 Three-column mode is used when the terminal is wide enough to give each elder
 at least 80 readable characters. Below that, tabs.
 """
+
 from __future__ import annotations
 
 from typing import Literal
