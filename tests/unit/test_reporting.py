@@ -130,12 +130,37 @@ class TestBuildMetadataSection:
         assert "User messages" not in md
 
 
+class TestBuildFinalPositionsSection:
+    def test_renders_each_elder_with_convergence_label(self, builder):
+        md = builder.build_final_positions_section(_debate_with_history())
+        assert "### Claude — _CONVERGED: yes_" in md
+        assert "### Gemini — _CONVERGED: yes_" in md
+        assert "### ChatGPT — _CONVERGED: yes_" in md
+
+    def test_includes_each_elders_last_round_text(self, builder):
+        md = builder.build_final_positions_section(_debate_with_history())
+        # R3 final-round answers are "C R3", "G R3", "X R3" from the fixture.
+        assert "C R3" in md
+        assert "G R3" in md
+        assert "X R3" in md
+
+    def test_empty_when_no_rounds(self, builder):
+        d = Debate(
+            id="empty",
+            prompt="?",
+            pack=CouncilPack(name="bare", shared_context=None, personas={}),
+            rounds=[],
+            status="in_progress",
+            synthesis=None,
+        )
+        assert builder.build_final_positions_section(d) == ""
+
+
 class TestBuildNarrativePrompt:
-    def test_mentions_narrative_not_answer(self, builder):
+    def test_asks_about_process_not_answer(self, builder):
         d = _debate_with_history()
         out = builder.build_narrative_prompt(d, d.synthesis)
         low = out.lower()
-        assert "narrative" in low or "debate report" in low
         assert "do not repeat" in low or "don't repeat" in low
 
     def test_asks_for_past_tense_third_person(self, builder):
@@ -143,6 +168,15 @@ class TestBuildNarrativePrompt:
         out = builder.build_narrative_prompt(d, d.synthesis)
         assert "past tense" in out.lower()
         assert "third-person" in out.lower() or "third person" in out.lower()
+
+    def test_contains_consensus_check_directive(self, builder):
+        d = _debate_with_history()
+        out = builder.build_narrative_prompt(d, d.synthesis)
+        low = out.lower()
+        # Must explicitly flag that CONVERGED: yes can be false consensus.
+        assert "consensus" in low
+        assert "final-round" in low or "word-for-word" in low
+        assert "procedural" in low or "real consensus" in low
 
 
 class TestAssembleReportMarkdown:
@@ -173,6 +207,20 @@ class TestAssembleReportMarkdown:
         assert "Should we ship?" in md
         assert "Synthesised by:** Gemini" in md
 
+    def test_contains_final_positions_section(self, builder):
+        d = _debate_with_history()
+        md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="claude")
+        assert "Final positions" in md
+        # Each elder's last-round text is rendered.
+        assert "C R3" in md
+        assert "G R3" in md
+        assert "X R3" in md
+
+    def test_narrative_section_is_labelled_consensus_audit(self, builder):
+        d = _debate_with_history()
+        md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="claude")
+        assert "Narrative & consensus audit" in md
+
 
 class TestDebateServiceGenerateReport:
     async def test_uses_synthesiser_elder_for_narrative(self):
@@ -193,9 +241,9 @@ class TestDebateServiceGenerateReport:
         # And the conversation passed to Claude ends with the narrative-request.
         convo = elders["claude"].conversations[-1]
         assert convo[-1].role == "user"
-        assert (
-            "narrative" in convo[-1].content.lower() or "debate report" in convo[-1].content.lower()
-        )
+        low = convo[-1].content.lower()
+        assert "analysis" in low or "debate" in low
+        assert "consensus" in low
 
     async def test_raises_if_no_synthesis(self):
         d = _debate_with_history()

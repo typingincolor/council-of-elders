@@ -91,13 +91,27 @@ class PromptBuilder:
         header = self.build_system_message(debate, by)
         if header:
             parts.append(header)
-        parts.append(f"Original question: {debate.prompt}")
+        parts.append(f"The user's original question was:\n\n{debate.prompt}")
         parts.append(self._all_rounds_section(debate))
         parts.append(
-            "You have seen every advisor's contribution across every round. "
-            "Produce the final synthesised answer that best represents the "
-            "consensus (or, where no consensus exists, your best judgment "
-            "informed by the debate). Do not append a convergence tag."
+            "You have seen every advisor's contribution across every round.\n\n"
+            "Produce the final answer the user wants — in exactly the form the "
+            "user asked for. If they asked for one sentence, give one sentence. "
+            "If they asked for a list, give a list. If they asked for a plan, "
+            "give a plan.\n\n"
+            "Rules — follow these strictly:\n"
+            "- Output ONLY the answer. Nothing else.\n"
+            '- No preamble (no "Here is the final answer:"). No section '
+            'headings. No bolded draft labels like "**Defining Goals**" or '
+            '"**Refining the Core Objective**" — those are reasoning traces, '
+            "not output.\n"
+            "- Do NOT describe the debate, the elders' positions, or your "
+            "reasoning process. The user wants the answer, not a summary of "
+            "how you arrived at it.\n"
+            "- Do NOT append a CONVERGED tag.\n"
+            "- If the advisors genuinely agreed, state the consensus answer. "
+            "If they didn't, apply your own best judgement — but output only "
+            "that judgement, not a description of the disagreement."
         )
         return "\n\n".join(parts)
 

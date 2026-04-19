@@ -198,3 +198,20 @@ class TestBuildSynthesis:
         d = _debate(prompt="What to ship?", rounds=[_r1()])
         out = builder.build_synthesis(d, by="claude")
         assert "What to ship?" in out
+
+    def test_anchors_to_user_question_shape(self, builder):
+        # The prompt must explicitly tell the model to answer in the user's
+        # requested form (one sentence / list / plan / etc.) and to output
+        # only the answer — no meta-commentary or draft-labels.
+        out = builder.build_synthesis(_debate("Give me one sentence."), by="claude")
+        low = out.lower()
+        assert "form the user asked" in low or "form the user" in low
+        assert "only the answer" in low
+        # No reasoning traces / section headings in output.
+        assert "no section headings" in low or "no preamble" in low
+
+    def test_forbids_convergence_tag(self, builder):
+        out = builder.build_synthesis(_debate(), by="claude")
+        assert "converged" in out.lower()
+        # Must explicitly say DO NOT append the tag.
+        assert "do not append" in out.lower() or "not append a converged" in out.lower()

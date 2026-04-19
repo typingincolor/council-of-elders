@@ -61,24 +61,60 @@ class ReportBuilder:
 
         The elder has already seen the full debate (conversation history)
         or, for headless / fresh calls, a transcript; the prompt gives it
-        one more job after synthesis: describe what happened.
+        one more job after synthesis: describe what happened, with an
+        explicit check on whether "CONVERGED: yes" was real consensus or
+        merely procedural agreement to stop.
         """
         return (
             "You have just synthesised a council-of-elders debate. Now write a "
-            "brief debate report (~200 words, markdown) describing HOW the "
-            "debate unfolded — not what the answer is (that's already in the "
-            "synthesis). Cover:\n\n"
+            "brief analysis (~200-300 words, markdown) of HOW the debate "
+            "unfolded and whether the elders really agreed. Cover:\n\n"
             "- Each elder's opening position in round 1, in one sentence each.\n"
             "- The key tensions or disagreements that surfaced in round 2 and beyond.\n"
             "- Any notable concessions or shifts in position across rounds.\n"
-            "- How convergence evolved — who converged first, what probes remained, "
-            "whether dissent was genuine or resolved.\n"
-            "- Whether the synthesis represents the group's real consensus or "
-            "your best judgment where consensus was incomplete.\n\n"
+            "- How convergence evolved — who converged first, what probes remained.\n\n"
+            "**CRITICAL — consensus check. This is the most important part.** "
+            "The elders may all have said `CONVERGED: yes` but still produced "
+            "materially different final answers — a false consensus driven by "
+            "agreement on *philosophy* while disagreeing on *wording*. You MUST:\n\n"
+            "- Compare the elders' FINAL-round answers word-for-word.\n"
+            "- Flag any substantive differences — wording choices that change "
+            "meaning, not stylistic preferences.\n"
+            "- State explicitly: was this *real consensus on the answer*, or "
+            "only *procedural agreement to stop debating*?\n"
+            "- If there is real unresolved divergence, name it plainly and say "
+            "what the user should decide for themselves.\n\n"
             'Write in past tense, third-person (e.g. "Claude argued…", "Gemini '
             'conceded…"). Do NOT repeat the synthesised answer; summarise the '
-            "process. Start directly with the content — no preamble, no heading."
+            "process and audit the consensus. Start directly with the content "
+            "— no preamble, no heading."
         )
+
+    def build_final_positions_section(self, debate: Debate) -> str:
+        """Side-by-side of each elder's final-round answer text.
+
+        Surfaces false-consensus: even when all three said CONVERGED: yes,
+        their final answers may differ in meaning-changing ways. The
+        reader can eyeball the differences directly.
+        """
+        if not debate.rounds:
+            return ""
+        last = debate.rounds[-1]
+        lines = ["## Final positions (each elder's last-round answer)", ""]
+        for t in last.turns:
+            agreed = t.answer.agreed
+            label = (
+                "CONVERGED: yes"
+                if agreed is True
+                else "CONVERGED: no"
+                if agreed is False
+                else "(no convergence tag)"
+            )
+            lines.append(f"### {_ELDER_LABEL[t.elder]} — _{label}_")
+            lines.append("")
+            lines.append(t.answer.text or "_(no text)_")
+            lines.append("")
+        return "\n".join(lines).rstrip()
 
     def assemble_report_markdown(
         self,
@@ -102,7 +138,11 @@ class ReportBuilder:
         parts.append("")
         parts.append(self.build_metadata_section(debate))
         parts.append("")
-        parts.append("## Narrative")
+        final_positions = self.build_final_positions_section(debate)
+        if final_positions:
+            parts.append(final_positions)
+            parts.append("")
+        parts.append("## Narrative & consensus audit")
         parts.append("")
         parts.append(narrative.strip())
         parts.append("")
