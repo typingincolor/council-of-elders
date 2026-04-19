@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import random
 import statistics
 from dataclasses import asdict, dataclass
@@ -100,6 +101,15 @@ def _binomial_ci_90(*, successes: int, n: int) -> tuple[float, float]:
     return (max(0.0, centre - half), min(1.0, centre + half))
 
 
+def _write_scores(scores_path: Path, rows: list[dict[str, Any]]) -> None:
+    """Atomic write of scores.json with fresh summaries from the given rows."""
+    summaries = [asdict(s) for s in _summarise_rosters(rows)]
+    scores_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = scores_path.with_suffix(scores_path.suffix + ".tmp")
+    tmp.write_text(json.dumps({"rows": rows, "summaries": summaries}, indent=2))
+    os.replace(tmp, scores_path)
+
+
 def _summarise_rosters(rows: list[dict[str, Any]]) -> list[RosterSummary]:
     by_roster: dict[str, list[dict[str, Any]]] = {}
     for r in rows:
@@ -151,17 +161,20 @@ async def score_probe(
         debate_id = entry["debate_id"]
         if debate_id in existing:
             rows.append(existing[debate_id])
+            _write_scores(scores_path, rows)
             continue
         debate = store.load(debate_id)
         r1_jaccard, winner = await _score_one_debate(debate, judge_port, rng)
-        row = {
-            "debate_id": debate_id, "roster": entry["roster"],
-            "prompt_id": entry["prompt_id"],
-            "r1_jaccard": r1_jaccard, "preference_winner": winner,
-        }
-        rows.append(row)
-    summaries = [asdict(s) for s in _summarise_rosters(rows)]
-    scores_path.write_text(json.dumps(
-        {"rows": rows, "summaries": summaries}, indent=2,
-    ))
+        row = DebateScoreRow(
+            debate_id=debate_id,
+            roster=entry["roster"],
+            prompt_id=entry["prompt_id"],
+            r1_jaccard=r1_jaccard,
+            preference_winner=winner,
+        )
+        rows.append(asdict(row))
+        _write_scores(scores_path, rows)
+    # Ensure at least one write happens even if manifest is empty:
+    if not manifest["entries"]:
+        _write_scores(scores_path, rows)
     return scores_path
