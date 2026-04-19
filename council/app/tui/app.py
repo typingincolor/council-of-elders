@@ -145,7 +145,12 @@ class CouncilApp(App):
             if isinstance(ev, TurnStarted):
                 self._view.pane(ev.elder).begin_thinking(ev.round_number)
             elif isinstance(ev, TurnCompleted):
-                self._view.pane(ev.elder).end_thinking_completed(ev.answer)
+                self._view.pane(ev.elder).end_thinking_completed(
+                    ev.answer, questions=ev.questions
+                )
+                # Fan each outgoing question into the TARGET elder's pane.
+                for q in ev.questions:
+                    self._view.pane(q.to_elder).on_incoming_question(q)
             elif isinstance(ev, TurnFailed):
                 self._view.pane(ev.elder).end_thinking_failed(ev.error)
             elif isinstance(ev, RoundCompleted):
@@ -158,9 +163,9 @@ class CouncilApp(App):
                 self.is_finished = True
                 self.awaiting_decision = False
             elif isinstance(ev, UserMessageReceived):
-                # UI rendering handled by T8; placeholder no-op for now.
-                # T8 will replace this with fan-out to all elder panes.
-                pass
+                # Dispatch to all three elder panes for inline rendering.
+                for pane_key in ("claude", "gemini", "chatgpt"):
+                    self._view.pane(pane_key).on_user_message(ev.message)
 
     # --- health check ----------------------------------------------------
     async def _run_health_checks(self) -> None:
