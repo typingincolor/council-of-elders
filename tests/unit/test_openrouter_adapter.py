@@ -164,6 +164,68 @@ class TestAskErrorMapping:
         assert ei.value.kind == "nonzero_exit"
 
 
+class TestEmptyContentFallback:
+    async def test_empty_content_falls_back_to_reasoning(self):
+        def handler(_req: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "id": "g",
+                    "choices": [
+                        {
+                            "message": {
+                                "content": "",
+                                "reasoning": "the real answer",
+                            }
+                        }
+                    ],
+                    "usage": {"prompt_tokens": 1, "completion_tokens": 1, "cost": 0.0},
+                },
+            )
+
+        a = _adapter_with_transport(httpx.MockTransport(handler))
+        reply = await a.ask("hi")
+        assert reply == "the real answer"
+
+    async def test_null_content_falls_back_to_reasoning(self):
+        def handler(_req: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "id": "g",
+                    "choices": [
+                        {
+                            "message": {
+                                "content": None,
+                                "reasoning": "the real answer",
+                            }
+                        }
+                    ],
+                    "usage": {"prompt_tokens": 1, "completion_tokens": 1, "cost": 0.0},
+                },
+            )
+
+        a = _adapter_with_transport(httpx.MockTransport(handler))
+        reply = await a.ask("hi")
+        assert reply == "the real answer"
+
+    async def test_both_empty_raises_unparseable(self):
+        def handler(_req: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "id": "g",
+                    "choices": [{"message": {"content": "", "reasoning": ""}}],
+                    "usage": {"prompt_tokens": 1, "completion_tokens": 0, "cost": 0.0},
+                },
+            )
+
+        a = _adapter_with_transport(httpx.MockTransport(handler))
+        with pytest.raises(OpenRouterError) as ei:
+            await a.ask("hi")
+        assert ei.value.kind == "unparseable"
+
+
 class TestCostCapture:
     async def test_accumulates_cost_and_tokens_across_calls(self):
         def handler(_req: httpx.Request) -> httpx.Response:

@@ -79,11 +79,25 @@ class OpenRouterAdapter:
 
             try:
                 data = resp.json()
-                content = data["choices"][0]["message"]["content"]
+                message = data["choices"][0]["message"]
             except (ValueError, KeyError, IndexError, TypeError) as ex:
                 raise OpenRouterError(
                     "unparseable", f"unexpected response shape: {ex}"
                 ) from ex
+
+            # Thinking models (e.g. gemini-2.5-pro) sometimes emit all output
+            # into `reasoning` and leave `content` empty. Fall back so the
+            # elder is never silent; only raise if both are empty.
+            content = (message.get("content") or "").strip()
+            if not content:
+                reasoning = (message.get("reasoning") or "").strip()
+                if reasoning:
+                    content = reasoning
+                else:
+                    raise OpenRouterError(
+                        "unparseable",
+                        f"model returned empty content and no reasoning (model={self.model})",
+                    )
 
             usage = data.get("usage") or {}
             cost = usage.get("cost")
