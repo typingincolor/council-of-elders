@@ -16,7 +16,11 @@ from council.domain.models import (
     Turn,
     UserMessage,
 )
-from council.domain.reporting import ReportBuilder
+from council.domain.reporting import (
+    ReportBuilder,
+    _demote_markdown_headings,
+    _truncate_prompt,
+)
 
 
 def _answer(elder, text="x", agreed=None):
@@ -82,6 +86,64 @@ def _debate_with_history():
 @pytest.fixture
 def builder():
     return ReportBuilder()
+
+
+class TestTruncatePrompt:
+    def test_short_single_line_unchanged(self):
+        short, truncated = _truncate_prompt("Should I ship?")
+        assert short == "Should I ship?"
+        assert truncated is False
+
+    def test_long_multiline_returns_first_sentence(self):
+        p = (
+            "Should I ship the new feature? There's a lot of context below.\n\n"
+            "Here is pasted source material that goes on and on and on..."
+        )
+        short, truncated = _truncate_prompt(p)
+        assert short == "Should I ship the new feature?"
+        assert truncated is True
+
+    def test_first_line_longer_than_limit_gets_ellipsis(self):
+        p = "a" * 500
+        short, truncated = _truncate_prompt(p, limit=50)
+        assert len(short) <= 52  # 50 + "…"
+        assert short.endswith("…")
+        assert truncated is True
+
+    def test_long_single_line_with_no_sentence_break(self):
+        p = "word " * 100
+        short, truncated = _truncate_prompt(p)
+        assert truncated is True
+
+
+class TestDemoteMarkdownHeadings:
+    def test_demotes_two_levels_by_default(self):
+        md = "## Title\ntext\n### Sub\nmore"
+        out = _demote_markdown_headings(md)
+        assert out == "#### Title\ntext\n##### Sub\nmore"
+
+    def test_clamps_at_six(self):
+        md = "##### deeper\n###### deepest"
+        out = _demote_markdown_headings(md)
+        assert out == "###### deeper\n###### deepest"
+
+    def test_leaves_code_fences_alone(self):
+        md = "normal\n```\n## not-a-heading\n```\n## real-heading"
+        out = _demote_markdown_headings(md)
+        lines = out.splitlines()
+        assert lines[2] == "## not-a-heading"  # inside fence — unchanged
+        assert lines[4] == "#### real-heading"  # outside fence — demoted
+
+    def test_ignores_hash_without_space(self):
+        md = "#tag-not-heading\n##also-not\n## but this one yes"
+        out = _demote_markdown_headings(md)
+        assert out.startswith("#tag-not-heading\n##also-not\n")
+        assert "#### but this one yes" in out
+
+    def test_custom_levels(self):
+        md = "# Heading"
+        out = _demote_markdown_headings(md, levels=3)
+        assert out == "#### Heading"
 
 
 class TestBuildMetadataSection:
@@ -220,6 +282,54 @@ class TestAssembleReportMarkdown:
         d = _debate_with_history()
         md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="claude")
         assert "Narrative & consensus audit" in md
+
+    def test_truncates_long_prompt_in_header_and_appends_source(self, builder):
+        d = _debate_with_history()
+        d = Debate(
+            id=d.id,
+            prompt=(
+                "Short question here. Followed by a LOT of pasted source "
+                "material that keeps going for many lines and is a mess."
+                + ("\n\nmore lines\n" * 20)
+            ),
+            pack=d.pack,
+            rounds=d.rounds,
+            status=d.status,
+            synthesis=d.synthesis,
+        )
+        md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="claude")
+        # Header only carries the first sentence.
+        header_block = md.split("## Synthesised answer")[0]
+        assert "Short question here." in header_block
+        assert "more lines" not in header_block
+        # Marker points the reader at the appendix.
+        assert "full source material appears at the end" in header_block
+        # Full text appears in the appendix.
+        assert "## Full question (source material)" in md
+        assert "more lines" in md
+
+    def test_short_prompt_does_not_trigger_appendix(self, builder):
+        d = _debate_with_history()  # prompt is "Should we ship?"
+        md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="claude")
+        assert "## Full question (source material)" not in md
+
+    def test_demotes_headings_in_synthesis_text(self, builder):
+        import re
+
+        d = _debate_with_history()
+        # Synthesis with a heading would normally collide with the
+        # enclosing `## Synthesised answer` section.
+        bad_synth = d.synthesis.__class__(
+            elder=d.synthesis.elder,
+            text="## The answer\nDetails go here.",
+            error=None,
+            agreed=None,
+            created_at=d.synthesis.created_at,
+        )
+        md = builder.assemble_report_markdown(d, bad_synth, "nar", synthesiser="claude")
+        assert "#### The answer" in md
+        # No `##`-level heading line starting "The answer" (demoted to ####).
+        assert not re.search(r"^## The answer", md, flags=re.MULTILINE)
 
 
 class TestDebateServiceGenerateReport:

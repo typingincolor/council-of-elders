@@ -10,7 +10,61 @@ that DebateService consumes (and the prompt it sends to the elder).
 
 from __future__ import annotations
 
+import re
+
 from council.domain.models import Debate, ElderAnswer, ElderId
+
+_PROMPT_HEADER_LIMIT = 200
+
+
+def _truncate_prompt(prompt: str, limit: int = _PROMPT_HEADER_LIMIT) -> tuple[str, bool]:
+    """Return (short_form, was_truncated).
+
+    Prefers the first sentence; falls back to the first `limit` chars with
+    an ellipsis. Used to keep the report header readable when the user has
+    pasted a lot of source material into the original prompt.
+    """
+    stripped = prompt.strip()
+    first_line = stripped.split("\n", 1)[0].strip()
+    if first_line == stripped and len(first_line) <= limit:
+        return stripped, False
+    m = re.search(r"[.!?](?:\s|$)", first_line)
+    if m and m.end() <= limit:
+        short = first_line[: m.end()].strip()
+    elif len(first_line) <= limit:
+        short = first_line
+    else:
+        short = first_line[:limit].rstrip() + "…"
+    return short, True
+
+
+def _demote_markdown_headings(text: str, levels: int = 2) -> str:
+    """Shift ATX-style markdown headings deeper by `levels`, clamped at 6.
+
+    Preserves code fences (lines inside ``` blocks are never rewritten).
+    Used when embedding elder-produced or synthesiser-produced markdown
+    inside a report whose own heading structure uses ##/### — without
+    demotion, a model's `## Response` inside an answer would collide with
+    the report's own outline.
+    """
+    out: list[str] = []
+    in_fence = False
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            out.append(line)
+            continue
+        if in_fence:
+            out.append(line)
+            continue
+        m = re.match(r"^(#{1,6})(\s+.*)$", line)
+        if m:
+            new_level = min(len(m.group(1)) + levels, 6)
+            out.append("#" * new_level + m.group(2))
+        else:
+            out.append(line)
+    return "\n".join(out)
+
 
 _ELDER_LABEL: dict[ElderId, str] = {
     "claude": "Claude",
@@ -96,6 +150,10 @@ class ReportBuilder:
         Surfaces false-consensus: even when all three said CONVERGED: yes,
         their final answers may differ in meaning-changing ways. The
         reader can eyeball the differences directly.
+
+        Elder-emitted markdown headings are demoted by two levels so a
+        model's own `## Foo` inside the answer doesn't collide with the
+        report's outline (where each elder gets a `###` heading).
         """
         if not debate.rounds:
             return ""
@@ -112,7 +170,8 @@ class ReportBuilder:
             )
             lines.append(f"### {_ELDER_LABEL[t.elder]} — _{label}_")
             lines.append("")
-            lines.append(t.answer.text or "_(no text)_")
+            body = t.answer.text or "_(no text)_"
+            lines.append(_demote_markdown_headings(body))
             lines.append("")
         return "\n".join(lines).rstrip()
 
@@ -125,16 +184,22 @@ class ReportBuilder:
         synthesiser: ElderId,
     ) -> str:
         """Combine everything into the final markdown file content."""
+        short_prompt, prompt_truncated = _truncate_prompt(debate.prompt)
+
         parts: list[str] = []
         parts.append(f"# Council of Elders — debate `{debate.id}`")
         parts.append("")
-        parts.append(f"**Question:** {debate.prompt}")
+        parts.append(f"**Question:** {short_prompt}")
+        if prompt_truncated:
+            parts.append("")
+            parts.append("_(full source material appears at the end of this report)_")
         parts.append("")
         parts.append(f"**Synthesised by:** {_ELDER_LABEL[synthesiser]}")
         parts.append("")
         parts.append("## Synthesised answer")
         parts.append("")
-        parts.append(synthesis.text or "_(no text)_")
+        synth_text = synthesis.text or "_(no text)_"
+        parts.append(_demote_markdown_headings(synth_text))
         parts.append("")
         parts.append(self.build_metadata_section(debate))
         parts.append("")
@@ -144,8 +209,13 @@ class ReportBuilder:
             parts.append("")
         parts.append("## Narrative & consensus audit")
         parts.append("")
-        parts.append(narrative.strip())
+        parts.append(_demote_markdown_headings(narrative.strip()))
         parts.append("")
+        if prompt_truncated:
+            parts.append("## Full question (source material)")
+            parts.append("")
+            parts.append(debate.prompt.strip())
+            parts.append("")
         return "\n".join(parts)
 
     # ---- helpers --------------------------------------------------------
