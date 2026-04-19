@@ -2,9 +2,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Literal
+from typing import Literal, NamedTuple
 
 ElderId = Literal["claude", "gemini", "chatgpt"]
+
+Role = Literal["system", "user", "assistant"]
+
+
+class Message(NamedTuple):
+    role: Role
+    content: str
+
+
 ErrorKind = Literal[
     "timeout",
     "cli_missing",
