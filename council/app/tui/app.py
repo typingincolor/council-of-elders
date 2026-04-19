@@ -261,7 +261,14 @@ class CouncilApp(App):
         if choice is None:
             return
         self.awaiting_decision = False
+        # Disable the input so keystrokes don't get swallowed by the TextArea
+        # while the user is waiting for synthesis.
+        self.query_one("#input", CouncilInput).disabled = True
+        # Reveal the synthesis pane in columns mode (no-op in tabs mode) and
+        # focus it so the ticker is immediately visible to the user.
+        self._view.show_synthesis_pane()
         self._view.pane("synthesis").begin_thinking(round_number=1)
+        self._view.pane("synthesis").focus()
         self._spawn(self._service.synthesize(self._debate, by=choice))
 
     async def action_toggle_layout(self) -> None:
