@@ -35,7 +35,7 @@ The council today reaches each elder by shelling out to a vendor CLI (`claude`, 
 | Activation | OpenRouter is used when an API key is resolvable from any source; otherwise the CLI adapters are used. |
 | Key sources (highest wins) | `OPENROUTER_API_KEY` env var > `openrouter.api_key` in `~/.council/config.toml` |
 | Model sources per elder (highest wins) | `--<elder>-model` CLI flag > `COUNCIL_<ELDER>_MODEL` env var > `[openrouter.models].<elder>` in TOML > hard-coded default |
-| Hard-coded model defaults | `claude = anthropic/claude-sonnet-4.5`, `gemini = google/gemini-2.5-pro`, `chatgpt = openai/gpt-5` |
+| Hard-coded model defaults | `claude = anthropic/claude-sonnet-4.5`, `gemini = google/gemini-2.5-flash`, `chatgpt = openai/gpt-5` |
 | Config format | TOML (`~/.council/config.toml`), read via stdlib `tomllib`. No new parsing dependency. |
 | HTTP client | `httpx>=0.27` as a new runtime dependency. |
 | Streaming | No. Non-streaming chat completion. |
@@ -43,7 +43,7 @@ The council today reaches each elder by shelling out to a vendor CLI (`claude`, 
 | Error mapping | `401/403 → auth_failed`, `429 → quota_exhausted`, `httpx.TimeoutException → timeout`, malformed JSON → `unparseable`, other → `nonzero_exit`. |
 | Cost tracking | Adapter captures `usage.cost` per response; exposes `session_cost_usd`, `session_tokens`, and `fetch_credits()`. |
 | Cost surfacing (TUI) | After each `RoundCompleted`, write a line to the `#notices` area: `[openrouter] round: $X · session: $X` followed by `· credits remaining: $X` when the key has a known limit, or `· credits used: $X` otherwise. |
-| Cost surfacing (headless) | After synthesis, print `[openrouter] total spent: $X`. |
+| Cost surfacing (headless) | After synthesis, print the same `[openrouter] round: $X · session: $X · credits remaining/used: $X` line as the TUI (one-shot, no per-round delta). |
 | Empty env key (`OPENROUTER_API_KEY=`) | Treated as absent — does not activate OpenRouter mode. |
 | Malformed TOML | Raise with a clear message at startup; do not fall back silently. |
 | Unreadable TOML (permissions) | Log a warning on stderr, treat as absent. |
@@ -105,7 +105,7 @@ The council today reaches each elder by shelling out to a vendor CLI (`claude`, 
   - `POST https://openrouter.ai/api/v1/chat/completions`
   - Headers: `Authorization: Bearer <key>`, `Content-Type: application/json`, `HTTP-Referer: https://github.com/typingincolor/council-of-elders`, `X-Title: council-of-elders`.
   - Body: `{"model": <model>, "messages": [{"role": "user", "content": prompt}], "usage": {"include": true}}`.
-  - On success: extract `choices[0].message.content`, capture `usage.cost` (may be missing for some providers) into `self.session_cost_usd`, accumulate `usage.prompt_tokens`/`completion_tokens` into `self.session_tokens`.
+  - On success: extract `choices[0].message.content`; if it is empty or `null`, fall back to `choices[0].message.reasoning` (thinking models such as `gemini-2.5-pro` sometimes emit all output into the reasoning field). Capture `usage.cost` (may be missing for some providers) into `self.session_cost_usd`, accumulate `usage.prompt_tokens`/`completion_tokens` into `self.session_tokens`. Raise `OpenRouterError("unparseable", ...)` only when both fields are empty.
   - On failure: raise `OpenRouterError(kind, detail)` — a new exception class with `.kind: ErrorKind` and `.detail: str` attributes, matching the duck-typing already in `DebateService`.
 - `health_check()`: return `True` if `api_key` is non-empty.
 - `fetch_credits() -> tuple[float, float | None]`: `GET /api/v1/credits` returning `(used_usd, limit_usd_or_None)`. Swallows errors (returns best-effort; missing data → `(0.0, None)`) — credit display is advisory, not load-bearing.
@@ -134,7 +134,7 @@ The council today reaches each elder by shelling out to a vendor CLI (`claude`, 
 | HTTP 429 | `OpenRouterError("quota_exhausted", body-tail)` | `quota_exhausted` |
 | Other 4xx, 5xx | `OpenRouterError("nonzero_exit", f"HTTP {status}: {body-tail}")` | `nonzero_exit` |
 | `httpx.TimeoutException` | re-raised as `OpenRouterError("timeout", ...)` | `timeout` |
-| JSON missing `choices[0].message.content` | `OpenRouterError("unparseable", ...)` | `unparseable` |
+| JSON missing `choices[0].message`, or both `content` and `reasoning` empty | `OpenRouterError("unparseable", ...)` | `unparseable` |
 | Network error (DNS, refused, TLS) | `OpenRouterError("nonzero_exit", ...)` | `nonzero_exit` |
 
 `DebateService` duck-types on `.kind` / `.detail`, so no change is needed there.

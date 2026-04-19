@@ -7,6 +7,7 @@ FakeElder always runs. Real-CLI adapters are parameterized with the
 
 from __future__ import annotations
 
+import httpx
 import pytest
 
 from council.adapters.elders.fake import FakeElder
@@ -19,7 +20,30 @@ def _fake_elder():
     )
 
 
-# Real adapter factories import lazily — they're only imported when selected.
+def _openrouter_mocked():
+    from council.adapters.elders.openrouter import OpenRouterAdapter
+
+    def handler(_req: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "gen-contract",
+                "choices": [{"message": {"content": "ok"}}],
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1, "cost": 0.0},
+            },
+        )
+
+    return OpenRouterAdapter(
+        elder_id="claude",
+        model="anthropic/claude-sonnet-4.5",
+        api_key="sk-or-contract",
+        client=httpx.AsyncClient(
+            transport=httpx.MockTransport(handler),
+            base_url="https://openrouter.ai",
+        ),
+    )
+
+
 def _claude_real():
     from council.adapters.elders.claude_code import ClaudeCodeAdapter
 
@@ -40,6 +64,7 @@ def _codex_real():
 
 ELDERS_UNDER_CONTRACT = [
     pytest.param(_fake_elder, id="fake"),
+    pytest.param(_openrouter_mocked, id="openrouter-mocked"),
     pytest.param(_claude_real, id="claude-real", marks=pytest.mark.integration),
     pytest.param(_gemini_real, id="gemini-real", marks=pytest.mark.integration),
     pytest.param(_codex_real, id="codex-real", marks=pytest.mark.integration),

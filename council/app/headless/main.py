@@ -7,11 +7,10 @@ from pathlib import Path
 
 from council.adapters.bus.in_memory import InMemoryBus
 from council.adapters.clock.system import SystemClock
-from council.adapters.elders.claude_code import ClaudeCodeAdapter
-from council.adapters.elders.codex_cli import CodexCLIAdapter
-from council.adapters.elders.gemini_cli import GeminiCLIAdapter
 from council.adapters.packs.filesystem import FilesystemPackLoader
 from council.adapters.storage.json_file import JsonFileStore
+from council.app.bootstrap import build_elders
+from council.app.config import load_config
 from council.domain.debate_service import DebateService
 from council.domain.models import CouncilPack, Debate, ElderId
 from council.domain.ports import Clock, ElderPort, EventBus, TranscriptStore
@@ -31,6 +30,8 @@ async def run_headless(
     clock: Clock,
     bus: EventBus,
     synthesizer: ElderId,
+    *,
+    using_openrouter: bool = False,
 ) -> None:
     debate = Debate(
         id=str(uuid.uuid4()),
@@ -50,6 +51,31 @@ async def run_headless(
             print(f"[{label}] {t.answer.text}\n")
     synth = await svc.synthesize(debate, by=synthesizer)
     print(f"[Synthesis by {_LABELS[synthesizer]}] {synth.text}")
+    if using_openrouter:
+        from council.adapters.elders.openrouter import (
+            OpenRouterAdapter,
+            format_cost_notice,
+        )
+
+        any_or = next(
+            (e for e in elders.values() if isinstance(e, OpenRouterAdapter)),
+            None,
+        )
+        used, limit = (0.0, None)
+        if any_or is not None:
+            used, limit = await any_or.fetch_credits()
+        total = sum(
+            e.session_cost_usd
+            for e in elders.values()
+            if isinstance(e, OpenRouterAdapter)
+        )
+        line = format_cost_notice(
+            elders=elders,
+            round_cost_delta_usd=total,  # for headless a single "round" = whole session
+            credits_used=used,
+            credits_limit=limit,
+        )
+        print(line)
 
 
 def main() -> None:
@@ -86,11 +112,13 @@ def main() -> None:
         else CouncilPack(name=args.pack, shared_context=None, personas={})
     )
 
-    elders: dict[ElderId, ElderPort] = {
-        "claude": ClaudeCodeAdapter(model=args.claude_model),
-        "gemini": GeminiCLIAdapter(model=args.gemini_model),
-        "chatgpt": CodexCLIAdapter(model=args.codex_model),
+    config = load_config()
+    cli_models: dict[ElderId, str | None] = {
+        "claude": args.claude_model,
+        "gemini": args.gemini_model,
+        "chatgpt": args.codex_model,
     }
+    elders, using_openrouter = build_elders(config, cli_models=cli_models)
     asyncio.run(
         run_headless(
             prompt=args.prompt,
@@ -100,5 +128,6 @@ def main() -> None:
             clock=SystemClock(),
             bus=InMemoryBus(),
             synthesizer=args.synthesizer,
+            using_openrouter=using_openrouter,
         )
     )
