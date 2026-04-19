@@ -175,6 +175,52 @@ class TestBuildRoundNUser:
         assert "CONVERGED: no" in out
         assert "QUESTIONS:" in out
 
+    def test_requires_substantive_body_before_tag(self, builder):
+        # Rewrite forbids a reply that is only the tag (fixes empty-body bug).
+        d = _debate(rounds=[_r1(), _r2_with_questions()])
+        out = builder.build_round_n_user(d, "claude", 3)
+        low = out.lower()
+        assert "substantive reply first" in low or "substantive reply" in low
+        assert "never reply with only a tag" in low or "only a tag" in low
+
+    def test_uses_operational_convergence_criterion(self, builder):
+        # Rewrite replaces introspective "would not change your position"
+        # with operational "no further peer answer needed".
+        d = _debate(rounds=[_r1(), _r2_with_questions()])
+        out = builder.build_round_n_user(d, "claude", 3)
+        low = out.lower()
+        assert "further answer from a peer" in low or "further peer answer" in low
+        # The old introspective phrasing must be gone.
+        assert "would not change your position" not in low
+
+    def test_bans_literal_tag_strings_in_body(self, builder):
+        # Prevents stray-header shadowing when the model quotes a peer's tag.
+        d = _debate(rounds=[_r1(), _r2_with_questions()])
+        out = builder.build_round_n_user(d, "claude", 3)
+        assert "reserve those headers for the closing block" in out
+
+    def test_illustrative_tag_lines_are_flush_left(self, builder):
+        # Prevents indent mimicry. The illustrative CONVERGED/QUESTIONS lines
+        # in the prompt must appear at column 0, not indented.
+        d = _debate(rounds=[_r1(), _r2_with_questions()])
+        out = builder.build_round_n_user(d, "claude", 3)
+        lines = out.splitlines()
+        # The three-line closing template must appear as three consecutive
+        # flush-left lines.
+        assert "CONVERGED: no" in lines
+        assert "QUESTIONS:" in lines
+        # And explicitly no indented versions.
+        assert "    QUESTIONS:" not in out
+        assert "    CONVERGED:" not in out
+
+    def test_forbids_text_after_tag(self, builder):
+        # Prevents trailing sign-offs breaking the last-non-blank-line parse.
+        d = _debate(rounds=[_r1(), _r2_with_questions()])
+        out = builder.build_round_n_user(d, "claude", 3)
+        low = out.lower()
+        assert "absolute final lines" in low
+        assert "no sign-offs" in low or "do not add sign-offs" in low or "sign-offs" in low
+
 
 class TestBuildRetryReminder:
     def test_contains_violation_reason(self, builder):

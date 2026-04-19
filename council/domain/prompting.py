@@ -69,13 +69,37 @@ class PromptBuilder:
         peer_qs = self._other_questions_section(debate, elder, round_num)
         if peer_qs:
             parts.append(peer_qs)
+        # Rewrite origin: produced by the council meta-debate 46c48a09.
+        # Fixes: empty-body permissiveness, introspective convergence
+        # criterion, tag-mimicry, stray-header shadowing, ordering
+        # ambiguity, indent mimicry, positional ambiguity of the tag,
+        # underspecified question format.
         parts.append(
-            "End your reply with EXACTLY ONE of:\n\n"
-            "(a) CONVERGED: yes — if you would not change your position after everything said.\n\n"
-            "(b) CONVERGED: no, followed immediately by a QUESTIONS: block:\n\n"
-            "    QUESTIONS:\n"
-            "    @<peer> your probe here\n\n"
-            "If you emit CONVERGED: no, you MUST ask exactly one question of one peer."
+            "Write a substantive reply first. Never reply with only a tag, "
+            "and do not use the exact strings `QUESTIONS:` or `CONVERGED:` "
+            "anywhere in your reasoning body — reserve those headers for the "
+            "closing block described below.\n\n"
+            "Then close your reply using EXACTLY ONE of these two formats, "
+            "as the final lines of your output, with no indentation, bullets, "
+            "code fences, or text after them.\n\n"
+            "If you do not need any further answer from a peer to finalize "
+            "your position, close with a single flush-left line:\n\n"
+            "CONVERGED: yes\n\n"
+            "If you are not yet settled, close with three flush-left lines in "
+            "this exact order:\n\n"
+            "CONVERGED: no\n"
+            "QUESTIONS:\n"
+            "@<peer> <one direct, specific question>\n\n"
+            "Rules:\n"
+            "- If `CONVERGED: no`, ask exactly one question addressed to "
+            "exactly one peer by name with a leading `@`, on a single line.\n"
+            "- If `CONVERGED: yes`, include no question and no `QUESTIONS:` "
+            "header.\n"
+            "- The closing block must be the absolute final lines of your "
+            "reply. Do not add sign-offs, commentary, or blank-line padding "
+            "after it.\n"
+            "- Use this exact capitalization and spelling: `CONVERGED: yes`, "
+            "`CONVERGED: no`, `QUESTIONS:`."
         )
         return "\n\n".join(parts)
 
