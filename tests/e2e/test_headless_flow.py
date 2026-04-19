@@ -212,6 +212,93 @@ async def test_headless_generates_and_saves_debate_report(tmp_path, capsys):
     assert "Claude took position A" in content
 
 
+async def test_headless_warns_when_max_rounds_hit_without_convergence(capsys):
+    # Elders never converge; --max-rounds=3 stops the loop; a warning is emitted
+    # before synthesis runs.
+    elders = {
+        "claude": _fake(
+            "claude",
+            [
+                "R1 Claude",
+                "R2 Claude\n\nQUESTIONS:\n@gemini Why?",
+                "R3 Claude\nCONVERGED: no\n\nQUESTIONS:\n@gemini Why?",
+                "Synth.",
+            ],
+        ),
+        "gemini": _fake(
+            "gemini",
+            [
+                "R1 Gemini",
+                "R2 Gemini\n\nQUESTIONS:\n@claude Why?",
+                "R3 Gemini\nCONVERGED: no\n\nQUESTIONS:\n@claude Why?",
+            ],
+        ),
+        "chatgpt": _fake(
+            "chatgpt",
+            [
+                "R1 ChatGPT",
+                "R2 ChatGPT\n\nQUESTIONS:\n@gemini Why?",
+                "R3 ChatGPT\nCONVERGED: no\n\nQUESTIONS:\n@gemini Why?",
+            ],
+        ),
+    }
+    await run_headless(
+        prompt="Q?",
+        pack=_pack(),
+        elders=elders,
+        store=InMemoryStore(),
+        clock=_clock(),
+        bus=InMemoryBus(),
+        synthesizer="claude",
+        max_rounds=3,
+    )
+    out = capsys.readouterr().out
+    assert "Hit --max-rounds=3 without all elders converging" in out
+    assert "best-effort" in out
+
+
+async def test_headless_does_not_warn_when_convergence_reached(capsys):
+    elders = {
+        "claude": _fake(
+            "claude",
+            [
+                "R1 Claude",
+                "R2 Claude\n\nQUESTIONS:\n@gemini Why?",
+                "R3 Claude\nCONVERGED: yes",
+                "Synth.",
+            ],
+        ),
+        "gemini": _fake(
+            "gemini",
+            [
+                "R1 Gemini",
+                "R2 Gemini\n\nQUESTIONS:\n@claude Why?",
+                "R3 Gemini\nCONVERGED: yes",
+            ],
+        ),
+        "chatgpt": _fake(
+            "chatgpt",
+            [
+                "R1 ChatGPT",
+                "R2 ChatGPT\n\nQUESTIONS:\n@gemini Why?",
+                "R3 ChatGPT\nCONVERGED: yes",
+            ],
+        ),
+    }
+    await run_headless(
+        prompt="Q?",
+        pack=_pack(),
+        elders=elders,
+        store=InMemoryStore(),
+        clock=_clock(),
+        bus=InMemoryBus(),
+        synthesizer="claude",
+        max_rounds=3,
+    )
+    out = capsys.readouterr().out
+    assert "without all elders converging" not in out
+
+
 async def test_headless_rejects_max_rounds_below_2():
     with pytest.raises(ValueError):
         await run_headless(

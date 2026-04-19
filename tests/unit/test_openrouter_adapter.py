@@ -295,6 +295,40 @@ class TestFormatCostNotice:
         assert "credits used: $3.25" in line
         assert "remaining" not in line
 
+    def test_includes_per_elder_breakdown(self):
+        a = OpenRouterAdapter(elder_id="claude", model="x", api_key="k")
+        a.session_cost_usd = 0.1234
+        b = OpenRouterAdapter(elder_id="gemini", model="x", api_key="k")
+        b.session_cost_usd = 0.0500
+        c = OpenRouterAdapter(elder_id="chatgpt", model="x", api_key="k")
+        c.session_cost_usd = 0.2000
+        line = format_cost_notice(
+            elders={"claude": a, "gemini": b, "chatgpt": c},
+            round_cost_delta_usd=0.07,
+            credits_used=1.0,
+            credits_limit=10.0,
+        )
+        # Session total + breakdown, in known order.
+        assert "session: $0.3734" in line
+        assert "C:$0.1234" in line
+        assert "G:$0.0500" in line
+        assert "X:$0.2000" in line
+
+    def test_breakdown_omits_non_openrouter_adapters(self):
+        # Non-OpenRouterAdapter elders (no session_cost_usd attr) should be
+        # silently skipped, not crash.
+        class _Stub:
+            pass
+
+        line = format_cost_notice(
+            elders={"claude": _Stub(), "gemini": _Stub(), "chatgpt": _Stub()},
+            round_cost_delta_usd=0.0,
+            credits_used=0.0,
+            credits_limit=None,
+        )
+        # No breakdown parentheses when no adapter exposes the field.
+        assert "C:$" not in line
+
 
 class TestFetchCredits:
     async def test_returns_used_and_limit(self):

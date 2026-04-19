@@ -240,6 +240,20 @@ class TestBuildNarrativePrompt:
         assert "final-round" in low
         assert "procedural" in low or "real consensus" in low
 
+    def test_contains_task_fidelity_check(self, builder):
+        # Task drift was flagged as the #1 failure mode in the design-level
+        # meta-debate (44e04e1e). The narrative audit now explicitly checks
+        # that the synthesis answered the user's original question in the
+        # shape they asked for.
+        d = _debate_with_history()
+        out = builder.build_narrative_prompt(d, d.synthesis)
+        low = out.lower()
+        assert "task-fidelity" in low or "task fidelity" in low
+        # The check should mention "shape" as a thing to grade against.
+        assert "shape" in low
+        # The prompt should explicitly give "drift" as a named failure mode.
+        assert "drift" in low
+
     def test_bans_all_markdown_heading_levels(self, builder):
         # The rewrite bans #, ##, ### — not just a leading heading.
         d = _debate_with_history()

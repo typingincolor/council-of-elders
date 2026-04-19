@@ -132,6 +132,22 @@ class OpenRouterAdapter:
         return bool(self.api_key)
 
 
+_ELDER_ABBREV = {"claude": "C", "gemini": "G", "chatgpt": "X"}
+
+
+def _per_elder_breakdown(elders: dict) -> str:
+    bits: list[str] = []
+    for elder_id, abbrev in _ELDER_ABBREV.items():
+        adapter = elders.get(elder_id)
+        cost = getattr(adapter, "session_cost_usd", None)
+        if cost is None:
+            continue
+        bits.append(f"{abbrev}:${cost:.4f}")
+    if not bits:
+        return ""
+    return "(" + " ".join(bits) + ")"
+
+
 def format_cost_notice(
     elders: dict,  # dict[ElderId, ElderPort]
     round_cost_delta_usd: float,
@@ -139,10 +155,14 @@ def format_cost_notice(
     credits_limit: float | None,
 ) -> str:
     session_total = sum(getattr(e, "session_cost_usd", 0.0) for e in elders.values())
+    breakdown = _per_elder_breakdown(elders)
+    session_label = f"session: ${session_total:.4f}"
+    if breakdown:
+        session_label = f"{session_label} {breakdown}"
     parts = [
         "[openrouter]",
         f"round: ${round_cost_delta_usd:.4f}",
-        f"session: ${session_total:.4f}",
+        session_label,
     ]
     if credits_limit is not None:
         remaining = max(credits_limit - credits_used, 0.0)

@@ -62,6 +62,14 @@ async def run_headless(
     while len(debate.rounds) < max_rounds and not svc.rules.is_converged(debate.rounds[-1]):
         await svc.run_round(debate)
 
+    # Flag when we hit the cap without full convergence — the synthesis
+    # that follows is best-effort over an unresolved debate.
+    if len(debate.rounds) >= max_rounds and not svc.rules.is_converged(debate.rounds[-1]):
+        print(
+            f"[warning] Hit --max-rounds={max_rounds} without all elders converging. "
+            "Synthesising best-effort; read the narrative audit for unresolved points."
+        )
+
     # Print each round's turns in order.
     for r in debate.rounds:
         print(f"--- Round {r.number} ---")
