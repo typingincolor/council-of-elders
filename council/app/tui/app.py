@@ -40,17 +40,25 @@ from council.domain.ports import (
 
 
 class CouncilInput(TextArea):
-    """A TextArea that emits a Submitted message on Ctrl+Enter."""
+    """A TextArea where Enter submits and Ctrl+Enter inserts a newline."""
 
     class Submitted(Message):
         def __init__(self, value: str) -> None:
             super().__init__()
             self.value = value
 
-    BINDINGS = [Binding("ctrl+enter", "submit", "Submit", show=False)]
+    BINDINGS = [
+        # priority=True so our Enter handler runs BEFORE TextArea's built-in
+        # enter-inserts-newline binding.
+        Binding("enter", "submit", "Submit", show=False, priority=True),
+        Binding("ctrl+enter", "newline", "Insert newline", show=False),
+    ]
 
     def action_submit(self) -> None:
         self.post_message(self.Submitted(self.text))
+
+    def action_newline(self) -> None:
+        self.insert("\n")
 
 
 class SynthesizerModal(ModalScreen[ElderId]):

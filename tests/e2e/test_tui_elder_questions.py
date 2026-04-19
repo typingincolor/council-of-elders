@@ -38,7 +38,7 @@ async def test_elder_question_surfaces_in_both_asker_and_target_panes(tmp_path):
     )
     async with app.run_test() as pilot:
         await pilot.press(*"Go")
-        await pilot.press("ctrl+enter")
+        await pilot.press("enter")
         await _wait_until(pilot, lambda: app.awaiting_decision)
 
         # Claude's pane should show the outgoing question.

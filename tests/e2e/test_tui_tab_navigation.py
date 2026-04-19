@@ -38,7 +38,7 @@ async def test_number_key_focuses_correct_pane(tmp_path):
     app = _app(tmp_path)
     async with app.run_test(size=(80, 40)) as pilot:  # narrow → tabs
         await pilot.press(*"Any question")
-        await pilot.press("ctrl+enter")
+        await pilot.press("enter")
         await _wait_until(pilot, lambda: app.awaiting_decision)
 
         for key, elder in [("2", "gemini"), ("3", "chatgpt"), ("4", "synthesis"), ("1", "claude")]:

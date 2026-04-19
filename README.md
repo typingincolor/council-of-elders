@@ -36,7 +36,7 @@ export COUNCIL_GEMINI_MODEL=gemini-2.5-flash
 
 ### Participating in the debate
 
-Between rounds, the input at the bottom is re-enabled. Type a clarifying question or comment and press **Ctrl+Enter** to send it to the elders — they'll see it in the next round's prompt. Plain **Enter** just inserts a newline so you can write longer messages.
+Between rounds, the input at the bottom is re-enabled. Type a clarifying question or comment and press **Enter** to send it to the elders — they'll see it in the next round's prompt. Use **Ctrl+Enter** to insert a newline if you want to write a longer, multi-line message.
 
 Elders can also pose questions to each other by ending their reply with a block like:
 

@@ -44,14 +44,14 @@ async def test_user_message_appears_in_all_elder_panes(tmp_path):
     )
     async with app.run_test() as pilot:
         await pilot.press(*"Initial question")
-        await pilot.press("ctrl+enter")
+        await pilot.press("enter")
         await _wait_until(pilot, lambda: app.awaiting_decision)
 
         # Type a user message and submit.
         # Input is re-enabled at awaiting_decision; focus it first.
         app.query_one("#input").focus()
         await pilot.press(*"please focus on timeline")
-        await pilot.press("ctrl+enter")
+        await pilot.press("enter")
         await pilot.pause()
 
         for elder in ("claude", "gemini", "chatgpt"):
