@@ -17,6 +17,7 @@ from council.domain.models import (
     ElderAnswer,
     ElderError,
     ElderId,
+    Message,
     Round,
     Turn,
     UserMessage,
@@ -44,7 +45,7 @@ class DebateService:
             prompt = self.prompt_builder.build(debate, elder_id, round_num)
             await self.bus.publish(TurnStarted(elder=elder_id, round_number=round_num))
             try:
-                raw = await port.ask(prompt)
+                raw = await port.ask([Message("user", prompt)])
             except asyncio.TimeoutError:
                 err = ElderError(elder=elder_id, kind="timeout", detail="")
                 ans = self._error_answer(elder_id, err)
@@ -94,7 +95,7 @@ class DebateService:
         port = self.elders[by]
         prompt = self.prompt_builder.build_synthesis(debate, by=by)
         try:
-            raw = await port.ask(prompt)
+            raw = await port.ask([Message("user", prompt)])
             ans = ElderAnswer(
                 elder=by,
                 text=raw.strip(),

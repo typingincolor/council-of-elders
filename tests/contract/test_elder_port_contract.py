@@ -11,6 +11,7 @@ import httpx
 import pytest
 
 from council.adapters.elders.fake import FakeElder
+from council.domain.models import Message
 
 
 def _fake_elder():
@@ -79,7 +80,7 @@ def elder_factory(request):
 class TestElderPortContract:
     async def test_ask_returns_nonempty_string(self, elder_factory):
         elder = elder_factory()
-        reply = await elder.ask("Say hello.", timeout_s=60)
+        reply = await elder.ask([Message("user", "Say hello.")], timeout_s=60)
         assert isinstance(reply, str)
         assert reply.strip()
 

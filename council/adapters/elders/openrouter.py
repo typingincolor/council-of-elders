@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 import httpx
 
-from council.domain.models import ElderId, ErrorKind
+from council.domain.models import ElderId, ErrorKind, Message
 
 
 class OpenRouterError(Exception):
@@ -24,9 +24,10 @@ async def _post_chat(
     client: httpx.AsyncClient,
     api_key: str,
     model: str,
-    prompt: str,
+    conversation: list[Message],
     timeout_s: float,
 ) -> httpx.Response:
+    messages = [{"role": role, "content": content} for role, content in conversation]
     return await client.post(
         _CHAT_PATH,
         headers={
@@ -37,7 +38,7 @@ async def _post_chat(
         },
         json={
             "model": model,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "usage": {"include": True},
         },
         timeout=timeout_s,
@@ -53,12 +54,14 @@ class OpenRouterAdapter:
     session_cost_usd: float = 0.0
     session_tokens: dict[str, int] = field(default_factory=lambda: {"prompt": 0, "completion": 0})
 
-    async def ask(self, prompt: str, *, timeout_s: float = 45.0) -> str:
+    async def ask(self, conversation: list[Message], *, timeout_s: float = 45.0) -> str:
+        if not conversation:
+            raise ValueError("conversation must be non-empty")
         client = self.client or httpx.AsyncClient(base_url=_BASE_URL)
         owned = self.client is None
         try:
             try:
-                resp = await _post_chat(client, self.api_key, self.model, prompt, timeout_s)
+                resp = await _post_chat(client, self.api_key, self.model, conversation, timeout_s)
             except httpx.TimeoutException as ex:
                 raise OpenRouterError("timeout", str(ex)) from ex
             except httpx.HTTPError as ex:

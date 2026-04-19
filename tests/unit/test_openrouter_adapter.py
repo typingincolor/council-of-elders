@@ -10,6 +10,11 @@ from council.adapters.elders.openrouter import (
     OpenRouterError,
     format_cost_notice,
 )
+from council.domain.models import Message
+
+
+def _conv(text: str = "hi") -> list[Message]:
+    return [Message("user", text)]
 
 
 class TestConstructorAndHealth:
@@ -62,7 +67,7 @@ class TestAskHappyPath:
             )
 
         a = _adapter_with_transport(httpx.MockTransport(handler))
-        reply = await a.ask("hi")
+        reply = await a.ask(_conv("hi"))
         assert reply == "hello"
 
     async def test_sends_expected_request(self):
@@ -80,7 +85,7 @@ class TestAskHappyPath:
             )
 
         a = _adapter_with_transport(httpx.MockTransport(handler))
-        await a.ask("hello world")
+        await a.ask(_conv("hello world"))
 
         import json as _json
 
@@ -103,7 +108,7 @@ class TestAskErrorMapping:
 
         a = _adapter_with_transport(httpx.MockTransport(handler))
         with pytest.raises(OpenRouterError) as ei:
-            await a.ask("hi")
+            await a.ask(_conv("hi"))
         assert ei.value.kind == "auth_failed"
 
     async def test_403_maps_to_auth_failed(self):
@@ -112,7 +117,7 @@ class TestAskErrorMapping:
 
         a = _adapter_with_transport(httpx.MockTransport(handler))
         with pytest.raises(OpenRouterError) as ei:
-            await a.ask("hi")
+            await a.ask(_conv("hi"))
         assert ei.value.kind == "auth_failed"
 
     async def test_429_maps_to_quota_exhausted(self):
@@ -121,7 +126,7 @@ class TestAskErrorMapping:
 
         a = _adapter_with_transport(httpx.MockTransport(handler))
         with pytest.raises(OpenRouterError) as ei:
-            await a.ask("hi")
+            await a.ask(_conv("hi"))
         assert ei.value.kind == "quota_exhausted"
 
     async def test_500_maps_to_nonzero_exit(self):
@@ -130,7 +135,7 @@ class TestAskErrorMapping:
 
         a = _adapter_with_transport(httpx.MockTransport(handler))
         with pytest.raises(OpenRouterError) as ei:
-            await a.ask("hi")
+            await a.ask(_conv("hi"))
         assert ei.value.kind == "nonzero_exit"
         assert "500" in ei.value.detail
 
@@ -140,7 +145,7 @@ class TestAskErrorMapping:
 
         a = _adapter_with_transport(httpx.MockTransport(handler))
         with pytest.raises(OpenRouterError) as ei:
-            await a.ask("hi")
+            await a.ask(_conv("hi"))
         assert ei.value.kind == "unparseable"
 
     async def test_timeout_maps_to_timeout(self):
@@ -149,7 +154,7 @@ class TestAskErrorMapping:
 
         a = _adapter_with_transport(httpx.MockTransport(handler))
         with pytest.raises(OpenRouterError) as ei:
-            await a.ask("hi", timeout_s=0.1)
+            await a.ask(_conv("hi"), timeout_s=0.1)
         assert ei.value.kind == "timeout"
 
     async def test_network_error_maps_to_nonzero_exit(self):
@@ -158,7 +163,7 @@ class TestAskErrorMapping:
 
         a = _adapter_with_transport(httpx.MockTransport(handler))
         with pytest.raises(OpenRouterError) as ei:
-            await a.ask("hi")
+            await a.ask(_conv("hi"))
         assert ei.value.kind == "nonzero_exit"
 
 
@@ -182,7 +187,7 @@ class TestEmptyContentFallback:
             )
 
         a = _adapter_with_transport(httpx.MockTransport(handler))
-        reply = await a.ask("hi")
+        reply = await a.ask(_conv("hi"))
         assert reply == "the real answer"
 
     async def test_null_content_falls_back_to_reasoning(self):
@@ -204,7 +209,7 @@ class TestEmptyContentFallback:
             )
 
         a = _adapter_with_transport(httpx.MockTransport(handler))
-        reply = await a.ask("hi")
+        reply = await a.ask(_conv("hi"))
         assert reply == "the real answer"
 
     async def test_both_empty_raises_unparseable(self):
@@ -220,7 +225,7 @@ class TestEmptyContentFallback:
 
         a = _adapter_with_transport(httpx.MockTransport(handler))
         with pytest.raises(OpenRouterError) as ei:
-            await a.ask("hi")
+            await a.ask(_conv("hi"))
         assert ei.value.kind == "unparseable"
 
 
@@ -241,8 +246,8 @@ class TestCostCapture:
             )
 
         a = _adapter_with_transport(httpx.MockTransport(handler))
-        await a.ask("one")
-        await a.ask("two")
+        await a.ask(_conv("one"))
+        await a.ask(_conv("two"))
         assert a.session_cost_usd == pytest.approx(0.002)
         assert a.session_tokens == {"prompt": 20, "completion": 10}
 
@@ -258,7 +263,7 @@ class TestCostCapture:
             )
 
         a = _adapter_with_transport(httpx.MockTransport(handler))
-        await a.ask("hi")
+        await a.ask(_conv("hi"))
         assert a.session_cost_usd == 0.0
         assert a.session_tokens == {"prompt": 1, "completion": 1}
 

@@ -2,6 +2,7 @@ from unittest.mock import patch
 import pytest
 
 from council.adapters.elders._subprocess import SubprocessElder
+from council.domain.models import Message
 
 
 async def test_ask_kills_subprocess_when_wait_for_raises_arbitrary_error(tmp_path):
@@ -21,5 +22,5 @@ async def test_ask_kills_subprocess_when_wait_for_raises_arbitrary_error(tmp_pat
 
     with patch("council.adapters.elders._subprocess.asyncio.wait_for", fake_wait_for):
         with pytest.raises(BoomError):
-            await elder.ask("anything")
+            await elder.ask([Message("user", "anything")])
     # If we got here without the event loop hanging, the process was killed.

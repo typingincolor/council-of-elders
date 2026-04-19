@@ -4,13 +4,13 @@ from datetime import datetime
 from typing import AsyncIterator, Protocol
 
 from council.domain.events import DebateEvent
-from council.domain.models import CouncilPack, Debate, ElderId
+from council.domain.models import CouncilPack, Debate, ElderId, Message
 
 
 class ElderPort(Protocol):
     elder_id: ElderId
 
-    async def ask(self, prompt: str, *, timeout_s: float = 45.0) -> str: ...
+    async def ask(self, conversation: list[Message], *, timeout_s: float = 45.0) -> str: ...
 
     async def health_check(self) -> bool: ...
 

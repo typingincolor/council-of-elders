@@ -5,7 +5,8 @@ import shutil
 from dataclasses import dataclass
 from typing import Callable
 
-from council.domain.models import ElderId
+from council.adapters.elders._flatten import flatten_conversation
+from council.domain.models import ElderId, Message
 
 
 class ElderSubprocessError(Exception):
@@ -21,6 +22,11 @@ class SubprocessElder:
 
     Concrete adapters fill in `binary`, `build_args`, and
     `classify_stderr` (to distinguish auth_failed from other nonzero exits).
+
+    `ask` takes a multi-turn conversation and flattens it into a single
+    role-tagged prompt (SYSTEM:/USER:/ASSISTANT:) before shelling out. The
+    vendor CLIs' non-interactive modes are one-shot; flattening gives the
+    model the same content as a true multi-turn history.
     """
 
     elder_id: ElderId
@@ -29,9 +35,10 @@ class SubprocessElder:
     classify_stderr: Callable[[str], str] = lambda s: "nonzero_exit"
     sanitize_stdout: Callable[[str], str] = lambda s: s
 
-    async def ask(self, prompt: str, *, timeout_s: float = 45.0) -> str:
+    async def ask(self, conversation: list[Message], *, timeout_s: float = 45.0) -> str:
         if shutil.which(self.binary) is None:
             raise ElderSubprocessError("cli_missing", self.binary)
+        prompt = flatten_conversation(conversation)
         proc = await asyncio.create_subprocess_exec(
             self.binary,
             *self.build_args(prompt),

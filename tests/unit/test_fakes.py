@@ -6,7 +6,7 @@ from council.adapters.clock.fake import FakeClock
 from council.adapters.elders.fake import FakeElder
 from council.adapters.storage.in_memory import InMemoryStore
 from council.domain.events import TurnCompleted
-from council.domain.models import CouncilPack, Debate, ElderAnswer
+from council.domain.models import CouncilPack, Debate, ElderAnswer, Message
 
 
 @pytest.fixture
@@ -32,17 +32,21 @@ def debate():
     )
 
 
+def _c(text: str) -> list[Message]:
+    return [Message("user", text)]
+
+
 class TestFakeElder:
     async def test_ask_returns_scripted_reply_in_order(self):
         e = FakeElder(elder_id="claude", replies=["first", "second"])
-        assert await e.ask("q1") == "first"
-        assert await e.ask("q2") == "second"
+        assert await e.ask(_c("q1")) == "first"
+        assert await e.ask(_c("q2")) == "second"
 
     async def test_ask_raises_when_out_of_replies(self):
         e = FakeElder(elder_id="claude", replies=["only"])
-        await e.ask("q")
+        await e.ask(_c("q"))
         with pytest.raises(AssertionError):
-            await e.ask("q again")
+            await e.ask(_c("q again"))
 
     async def test_health_check_defaults_true(self):
         e = FakeElder(elder_id="claude", replies=[])
@@ -52,11 +56,11 @@ class TestFakeElder:
         e = FakeElder(elder_id="claude", replies=[], healthy=False)
         assert await e.health_check() is False
 
-    async def test_records_prompts(self):
+    async def test_records_conversations(self):
         e = FakeElder(elder_id="claude", replies=["a", "b"])
-        await e.ask("P1")
-        await e.ask("P2")
-        assert e.prompts == ["P1", "P2"]
+        await e.ask(_c("P1"))
+        await e.ask(_c("P2"))
+        assert e.conversations == [[Message("user", "P1")], [Message("user", "P2")]]
 
 
 class TestInMemoryStore:

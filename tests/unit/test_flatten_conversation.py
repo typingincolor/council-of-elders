@@ -17,10 +17,7 @@ def test_system_user_assistant_user():
         Message("user", "Explain gravity."),
     ]
     expected = (
-        "SYSTEM:\nYou are helpful.\n\n"
-        "USER:\nHi\n\n"
-        "ASSISTANT:\nHello!\n\n"
-        "USER:\nExplain gravity."
+        "SYSTEM:\nYou are helpful.\n\nUSER:\nHi\n\nASSISTANT:\nHello!\n\nUSER:\nExplain gravity."
     )
     assert flatten_conversation(conv) == expected
 
