@@ -107,6 +107,7 @@ class CouncilApp(App):
         pack_loader: CouncilPackLoader,
         pack_name: str,
         using_openrouter: bool = False,
+        report_store=None,  # ReportFileStore | None
     ) -> None:
         super().__init__()
         self._elders = elders
@@ -124,6 +125,7 @@ class CouncilApp(App):
         self.rendered_lines: list[str] = []  # test-observable notice buffer
         self._tasks: set[asyncio.Task] = set()
         self._view = CouncilView(clock=clock)
+        self._report_store = report_store
 
     def _spawn(self, coro) -> asyncio.Task:
         task = asyncio.create_task(coro)
@@ -177,6 +179,9 @@ class CouncilApp(App):
                 self._view.pane("synthesis").focus()
                 self.is_finished = True
                 self.awaiting_decision = False
+                # Auto-generate a debate report and write it to disk.
+                if ev.answer.elder:
+                    self._spawn(self._generate_and_write_report(ev.answer.elder))
             elif isinstance(ev, UserMessageReceived):
                 # Dispatch to all three elder panes for inline rendering.
                 for pane_key in ("claude", "gemini", "chatgpt"):
@@ -273,6 +278,23 @@ class CouncilApp(App):
                 return
             self._spawn(self._service.add_user_message(self._debate, text))
 
+    async def _generate_and_write_report(self, by: ElderId) -> None:
+        """Generate the debate report and render/save it."""
+        if self._debate is None:
+            return
+        try:
+            markdown = await self._service.generate_report(self._debate, by=by)
+        except Exception as ex:
+            self._write_notice(f"[yellow]Report generation failed: {ex}[/yellow]")
+            return
+        self._view.pane("synthesis").append_report(markdown)
+        if self._report_store is not None:
+            try:
+                path = self._report_store.save(debate_id=self._debate.id, markdown=markdown)
+                self._write_notice(f"[blue]Debate report saved to {path}[/blue]")
+            except Exception as ex:
+                self._write_notice(f"[yellow]Report file write failed: {ex}[/yellow]")
+
     async def _opening_exchange(self) -> None:
         """Run R1 (silent initial) then R2 (cross-exam) back-to-back.
 
@@ -348,6 +370,7 @@ def main() -> None:
     parser.add_argument("--pack", default="bare")
     parser.add_argument("--packs-root", default=str(Path.home() / ".council" / "packs"))
     parser.add_argument("--store-root", default=str(Path.home() / ".council" / "debates"))
+    parser.add_argument("--reports-root", default=str(Path.home() / ".council" / "reports"))
     parser.add_argument(
         "--claude-model",
         default=os.environ.get("COUNCIL_CLAUDE_MODEL"),
@@ -377,6 +400,8 @@ def main() -> None:
     }
     elders, using_openrouter = build_elders(config, cli_models=cli_models)
 
+    from council.adapters.storage.report_file import ReportFileStore
+
     app = CouncilApp(
         elders=elders,
         store=JsonFileStore(root=Path(args.store_root)),
@@ -384,5 +409,6 @@ def main() -> None:
         pack_loader=FilesystemPackLoader(root=packs_root),
         pack_name=args.pack,
         using_openrouter=using_openrouter,
+        report_store=ReportFileStore(root=Path(args.reports_root)),
     )
     app.run()

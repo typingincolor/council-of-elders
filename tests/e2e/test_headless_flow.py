@@ -161,6 +161,57 @@ async def test_headless_respects_max_rounds(capsys):
     assert "Round 5" not in out
 
 
+async def test_headless_generates_and_saves_debate_report(tmp_path, capsys):
+    from council.adapters.storage.report_file import ReportFileStore
+
+    reports_dir = tmp_path / "reports"
+    elders = {
+        "claude": _fake(
+            "claude",
+            [
+                "R1 Claude",
+                "R2 Claude\n\nQUESTIONS:\n@gemini Why?",
+                "The final answer.",
+                "Claude took position A, Gemini probed on scope, all converged.",
+            ],
+        ),
+        "gemini": _fake(
+            "gemini",
+            [
+                "R1 Gemini",
+                "R2 Gemini\n\nQUESTIONS:\n@claude Why?",
+            ],
+        ),
+        "chatgpt": _fake(
+            "chatgpt",
+            [
+                "R1 ChatGPT",
+                "R2 ChatGPT\n\nQUESTIONS:\n@claude Why?",
+            ],
+        ),
+    }
+    await run_headless(
+        prompt="Q?",
+        pack=_pack(),
+        elders=elders,
+        store=InMemoryStore(),
+        clock=_clock(),
+        bus=InMemoryBus(),
+        synthesizer="claude",
+        max_rounds=2,
+        report_store=ReportFileStore(root=reports_dir),
+    )
+    out = capsys.readouterr().out
+    assert "--- Debate report ---" in out
+    assert "Claude took position A" in out
+
+    files = list(reports_dir.glob("*.md"))
+    assert len(files) == 1
+    content = files[0].read_text(encoding="utf-8")
+    assert "## Narrative" in content
+    assert "Claude took position A" in content
+
+
 async def test_headless_rejects_max_rounds_below_2():
     with pytest.raises(ValueError):
         await run_headless(

@@ -33,6 +33,7 @@ async def run_headless(
     *,
     using_openrouter: bool = False,
     max_rounds: int = 3,
+    report_store=None,  # ReportFileStore | None
 ) -> None:
     """Headless one-shot debate.
 
@@ -73,6 +74,17 @@ async def run_headless(
 
     synth = await svc.synthesize(debate, by=synthesizer)
     print(f"[Synthesis by {_LABELS[synthesizer]}] {synth.text}")
+
+    # Generate the debate report and print + optionally save it.
+    try:
+        report_md = await svc.generate_report(debate, by=synthesizer)
+        print("\n--- Debate report ---\n")
+        print(report_md)
+        if report_store is not None:
+            path = report_store.save(debate_id=debate.id, markdown=report_md)
+            print(f"\nReport saved to {path}")
+    except Exception as ex:
+        print(f"\n[warning] Report generation failed: {ex}")
     if using_openrouter:
         from council.adapters.elders.openrouter import (
             OpenRouterAdapter,
@@ -133,6 +145,11 @@ def main() -> None:
         default=3,
         help="Upper bound on total rounds (R1+R2 + optional R3+). Minimum 2; default 3.",
     )
+    parser.add_argument(
+        "--reports-root",
+        default=str(Path.home() / ".council" / "reports"),
+        help="Directory where debate reports are saved as markdown.",
+    )
     args = parser.parse_args()
 
     packs_root = Path(args.packs_root)
@@ -150,6 +167,8 @@ def main() -> None:
         "chatgpt": args.codex_model,
     }
     elders, using_openrouter = build_elders(config, cli_models=cli_models)
+    from council.adapters.storage.report_file import ReportFileStore
+
     asyncio.run(
         run_headless(
             prompt=args.prompt,
@@ -161,5 +180,6 @@ def main() -> None:
             synthesizer=args.synthesizer,
             using_openrouter=using_openrouter,
             max_rounds=args.max_rounds,
+            report_store=ReportFileStore(root=Path(args.reports_root)),
         )
     )

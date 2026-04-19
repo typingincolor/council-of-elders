@@ -321,6 +321,14 @@ class ElderPaneWidget(ElderPane, Widget):
     def on_incoming_question(self, question: ElderQuestion) -> None:
         self._append_to_line(f"[dim][From {_display(question.from_elder)}][/] {question.text}")
 
+    def append_report(self, markdown: str) -> None:
+        """Append a debate report to the pane, below the synthesis."""
+        self._append_to_line("")
+        self._append_to_line("[bold]--- Debate report ---[/bold]")
+        self._append_to_line("")
+        for line in markdown.splitlines():
+            self._append_to_line(line)
+
     def _append_to_line(self, line: str) -> None:
         self._history_buffer.append(line)
         self.query_one("#pane-history", RichLog).write(line)

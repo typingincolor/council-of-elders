@@ -26,6 +26,7 @@ from council.domain.models import (
 from council.domain.ports import Clock, ElderPort, EventBus, TranscriptStore
 from council.domain.prompting import PromptBuilder
 from council.domain.questions import QuestionParser
+from council.domain.reporting import ReportBuilder
 from council.domain.rules import DebateRules, DefaultRules, Violation
 
 log = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ class DebateService:
     prompt_builder: PromptBuilder = field(default_factory=PromptBuilder)
     convergence: ConvergencePolicy = field(default_factory=ConvergencePolicy)
     question_parser: QuestionParser = field(default_factory=QuestionParser)
+    report_builder: ReportBuilder = field(default_factory=ReportBuilder)
     conversations: dict[ElderId, list[Message]] = field(default_factory=dict)
 
     async def run_round(self, debate: Debate) -> Round:
@@ -199,6 +201,46 @@ class DebateService:
         self.store.save(debate)
         await self.bus.publish(SynthesisCompleted(answer=ans))
         return ans
+
+    async def generate_report(self, debate: Debate, *, by: ElderId) -> str:
+        """Produce a markdown debate report (metadata + narrative).
+
+        Called after `synthesize`. Appends a narrative-request turn to the
+        synthesiser's conversation and asks for a ~200-word report on how
+        the debate unfolded. Returns the assembled markdown.
+        """
+        if debate.synthesis is None:
+            raise ValueError("generate_report requires a prior successful synthesize()")
+
+        port = self.elders[by]
+        narrative_prompt = self.report_builder.build_narrative_prompt(debate, debate.synthesis)
+
+        # Use a one-shot conversation here. The synthesiser's per-elder
+        # conversation in `self.conversations` has the full debate history;
+        # we could reuse it, but reporting is distinct from the debate
+        # turn-taking, and keeping it single-shot keeps the semantics clean
+        # (the report doesn't belong in the elder's debate memory).
+        conversation = [
+            Message("user", self.prompt_builder.build_synthesis(debate, by=by)),
+            Message("assistant", debate.synthesis.text or ""),
+            Message("user", narrative_prompt),
+        ]
+        try:
+            narrative = await port.ask(conversation)
+        except Exception as ex:  # pragma: no cover - exception path bubbles up
+            log.warning(
+                "Report narrative generation failed for debate %s: %s",
+                debate.id,
+                ex,
+            )
+            narrative = "_(narrative unavailable: the reporter elder failed to respond.)_"
+
+        return self.report_builder.assemble_report_markdown(
+            debate,
+            debate.synthesis,
+            narrative,
+            synthesiser=by,
+        )
 
     async def add_user_message(self, debate: Debate, text: str) -> UserMessage:
         msg = UserMessage(
