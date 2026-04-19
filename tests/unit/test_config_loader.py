@@ -44,3 +44,25 @@ chatgpt = "openai/gpt-5"
         cfg = load_config(path=cfg_path)
         assert cfg.openrouter_api_key is None
         assert cfg.openrouter_models == {}
+
+
+class TestKeyPrecedence:
+    def test_env_overrides_toml_key(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setenv("OPENROUTER_API_KEY", "env-wins")
+        cfg_path = tmp_path / "config.toml"
+        cfg_path.write_text('[openrouter]\napi_key = "toml-loses"\n')
+        cfg = load_config(path=cfg_path)
+        assert cfg.openrouter_api_key == "env-wins"
+
+    def test_empty_env_value_treated_as_absent(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setenv("OPENROUTER_API_KEY", "")
+        cfg_path = tmp_path / "config.toml"
+        cfg_path.write_text('[openrouter]\napi_key = "from-toml"\n')
+        cfg = load_config(path=cfg_path)
+        assert cfg.openrouter_api_key == "from-toml"
+
+    def test_env_only_no_file(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setenv("OPENROUTER_API_KEY", "env-only")
+        cfg = load_config(path=tmp_path / "missing.toml")
+        assert cfg.openrouter_api_key == "env-only"
+        assert cfg.openrouter_models == {}
