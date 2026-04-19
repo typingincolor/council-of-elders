@@ -63,8 +63,11 @@ def rules():
 class TestDefaultRulesDispatch:
     def test_user_message_dispatches_on_round_1(self, rules):
         out = rules.user_message(_debate(), "claude", 1)
-        assert "initial take" in out.lower()
-        assert "CONVERGED" not in out
+        # R1 prompt asks for a substantive answer in the independent first
+        # round — positive framing after the 2e1d4cda rewrite.
+        low = out.lower()
+        assert "first round" in low
+        assert "fully and directly" in low or "substantive answer" in low
 
     def test_user_message_dispatches_on_round_2(self, rules):
         out = rules.user_message(_debate([_filled_r1()]), "claude", 2)

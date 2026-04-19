@@ -30,10 +30,29 @@ class PromptBuilder:
         return "\n\n".join(lines)
 
     def build_round_1_user(self, debate: Debate) -> str:
+        # Rewrite origin: council meta-debate 2e1d4cda (bundled with R2).
+        # Fixes: "silent"/"initial take" priming brevity; purely negative
+        # framing; "do not ask questions" over-suppressing rhetorical
+        # interrogatives in reasoning; "convergence" word priming the
+        # CONVERGED token; no substantive-body requirement; no explanation
+        # of why depth matters. Also aligned with R3+ patterns: first-word
+        # anchor, scaffolding ban, reserved literal tag strings.
         return (
             f"Question: {debate.prompt}\n\n"
-            "Give your initial take. Do not tag convergence or ask questions — "
-            "this is a silent initial round before you see the other advisors."
+            "Answer the question fully and directly, using your normal level "
+            "of reasoning and detail. This is the independent first round, "
+            "before you see the other advisors, so give your real substantive "
+            "answer rather than a sketch, preview, or hedge. Your answer "
+            "will be shown to the other advisors next round for cross-"
+            "examination, so give them something of substance to engage "
+            "with.\n\n"
+            "Begin with the first word of your answer. Do not include "
+            "preamble, sign-offs, meta-commentary, section headings, draft "
+            "labels, or other process scaffolding of any kind.\n\n"
+            "Do not include the literal strings CONVERGED: or QUESTIONS: "
+            "anywhere in your reply. Do not address any peer or ask any "
+            "peer-directed question in this round. Ordinary interrogative "
+            "sentences inside your own reasoning are fine."
         )
 
     def build_round_2_user(self, debate: Debate, elder: ElderId) -> str:
@@ -44,14 +63,38 @@ class PromptBuilder:
         user_section = self._user_messages_section(debate)
         if user_section:
             parts.append(user_section)
+        # Rewrite origin: council meta-debate 2e1d4cda (bundled with R1).
+        # Fixes: <peer> placeholder mimicry; question register not enforced;
+        # no body-engagement criterion; self-targeting only caught by
+        # validator; re-priming of CONVERGED token; compound-question
+        # ambiguity; no "nothing after the block" rule. Aligned with R3+
+        # patterns: first-word anchor, scaffolding ban, reserved literal
+        # strings in body, flush-left example with exact format.
         parts.append(
-            "You have now seen the other advisors. This is the cross-examination round.\n\n"
-            "You MUST end your reply with EXACTLY ONE question of EXACTLY ONE peer, "
-            "formatted as:\n\n"
+            "You have now seen the other advisors' first-round answers. "
+            "Respond with substantive analysis that engages at least one "
+            "specific load-bearing claim, assumption, or omission in a "
+            "peer's answer, then end by asking exactly one direct question "
+            "to exactly one peer.\n\n"
+            "Begin with the first word of your answer. Do not include "
+            "preamble, sign-offs, meta-commentary, section headings, or "
+            "other process scaffolding of any kind. Do not include the "
+            "literal strings CONVERGED: or QUESTIONS: anywhere in the body "
+            "of your reasoning.\n\n"
+            "Your reply must end with this exact closing block, flush left, "
+            "with exact capitalization, and with nothing after it:\n\n"
             "QUESTIONS:\n"
-            "@<peer> your question here\n\n"
-            "Where <peer> is one of: @claude, @gemini, @chatgpt (but not yourself).\n"
-            "Do NOT emit a CONVERGED tag; convergence is not yet possible."
+            "@claude your direct question here\n\n"
+            "Replace @claude with exactly one of @claude, @gemini, or "
+            "@chatgpt, but not yourself. Use the exact lowercase handle "
+            "with @, not variants such as Claude:, To Claude —, or "
+            "@Claude. Ask exactly one real, direct interrogative sentence "
+            'ending in "?", addressed to that one peer, and targeting a '
+            "specific load-bearing element of that peer's answer. Do not "
+            "give advice phrased as a question, do not ask a rhetorical "
+            'question, and do not chain multiple questions with "and also" '
+            "or similar. Convergence is not assessed this round; do not "
+            "emit any convergence tag."
         )
         return "\n\n".join(parts)
 

@@ -103,14 +103,35 @@ class TestBuildRoundOneUser:
         out = builder.build_round_1_user(_debate("Should I ship?"))
         assert "Should I ship?" in out
 
-    def test_forbids_convergence_and_questions(self, builder):
+    def test_forbids_peer_questions_but_allows_reasoning_interrogatives(self, builder):
+        # Rewrite replaces the overbroad "do not ask questions" with a
+        # peer-directed ban while carving out ordinary interrogatives used
+        # inside the model's own reasoning.
         out = builder.build_round_1_user(_debate())
-        assert "CONVERGED" not in out
-        assert "QUESTIONS:" not in out
+        low = out.lower()
+        assert "peer-directed question" in low
+        assert "interrogative sentences inside your own reasoning" in low
 
-    def test_instructs_initial_take(self, builder):
+    def test_reserves_literal_tag_strings(self, builder):
+        # New rule: the reply must not contain `CONVERGED:` or `QUESTIONS:`
+        # as literal strings. The instruction itself uses them to reserve
+        # the strings — so they ARE present in the prompt (correct), just
+        # not as a directive to emit.
         out = builder.build_round_1_user(_debate())
-        assert "initial take" in out.lower()
+        assert "literal strings CONVERGED:" in out or "CONVERGED: or QUESTIONS:" in out
+
+    def test_positive_framing_asks_for_substantive_depth(self, builder):
+        # Rewrite replaces the brevity-priming "silent initial take" with
+        # a positive request for depth at natural reasoning length.
+        out = builder.build_round_1_user(_debate())
+        low = out.lower()
+        assert "fully and directly" in low or "real substantive answer" in low
+        assert "normal level of reasoning" in low or "cross-examination" in low
+
+    def test_first_token_anchor(self, builder):
+        # Consistency with R3+ pattern.
+        out = builder.build_round_1_user(_debate())
+        assert "Begin with the first word" in out
 
 
 class TestBuildRoundTwoUser:
