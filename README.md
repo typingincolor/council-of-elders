@@ -5,7 +5,7 @@
 [![CI](https://github.com/typingincolor/council-of-elders/actions/workflows/ci.yml/badge.svg)](https://github.com/typingincolor/council-of-elders/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Send one prompt to Claude, Gemini, and ChatGPT simultaneously, watch them debate, and get one synthesised answer, all using your existing paid subscriptions (no API charges).
+Send one prompt to Claude, Gemini, and ChatGPT simultaneously, watch them debate, and get one synthesised answer. Use your existing paid vendor subscriptions by default, or route through OpenRouter with a single API key.
 
 > **Full user guide:** [`docs/USAGE.md`](docs/USAGE.md) — covers what the tool is for, how the debate mechanic works, writing council packs, model selection, troubleshooting, and how to get real value from it.
 
@@ -33,6 +33,26 @@ If Gemini hits quota (common on AI Pro), set once:
 ```bash
 export COUNCIL_GEMINI_MODEL=gemini-2.5-flash
 ```
+
+### Using OpenRouter
+
+If you'd rather not install all three vendor CLIs, put an OpenRouter key in `~/.council/config.toml`:
+
+```toml
+[openrouter]
+api_key = "sk-or-v1-..."
+
+[openrouter.models]
+claude = "anthropic/claude-sonnet-4.5"
+gemini = "google/gemini-2.5-pro"
+chatgpt = "openai/gpt-5"
+```
+
+Or export `OPENROUTER_API_KEY` in your shell (wins over the TOML file).
+
+When a key is resolvable, all three elders go through OpenRouter and the vendor CLIs are not touched. After each round the TUI shows `[openrouter] round: $X · session: $X · credits remaining: $X`. Headless mode prints the equivalent line once after synthesis.
+
+If no key is set, the council falls back to the existing vendor-CLI behaviour with no change.
 
 ### Participating in the debate
 

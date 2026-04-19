@@ -217,3 +217,48 @@ No. Rerun the whole round with `c`.
 - **Pay attention to dissent.** A single `(dissenting)` elder on a prompt everyone else converged on is worth reading carefully. It's often catching something the other two missed.
 - **Keep the pack tight.** Over-long packs dilute the models' attention. Two pages of clear instructions beat ten pages of vague guidance.
 - **Iterate on the question.** If the first round produces three vague answers, the question was vague. Press `a`, refine, try again.
+
+## Using OpenRouter
+
+The council can route all three elders through [OpenRouter](https://openrouter.ai/) instead of the vendor CLIs. This is useful when you don't want to install and authenticate each vendor CLI separately, or when you're running the council in an environment (server, container) where those CLIs aren't available.
+
+### Activation
+
+OpenRouter mode turns on automatically when an API key is resolvable. The resolution order is:
+
+1. `OPENROUTER_API_KEY` environment variable
+2. `openrouter.api_key` in `~/.council/config.toml`
+
+If neither source yields a non-empty string, the council uses the vendor CLIs as before.
+
+### Config file
+
+`~/.council/config.toml`:
+
+```toml
+[openrouter]
+api_key = "sk-or-v1-..."
+
+[openrouter.models]
+claude = "anthropic/claude-sonnet-4.5"
+gemini = "google/gemini-2.5-pro"
+chatgpt = "openai/gpt-5"
+```
+
+OpenRouter model ids are namespaced as `provider/model`. See [OpenRouter's model list](https://openrouter.ai/models) for what's available.
+
+### Model precedence (per elder)
+
+Highest wins:
+
+1. `--claude-model` / `--gemini-model` / `--codex-model` CLI flag
+2. `COUNCIL_CLAUDE_MODEL` / `COUNCIL_GEMINI_MODEL` / `COUNCIL_CODEX_MODEL` env var
+3. `[openrouter.models].<elder>` in `~/.council/config.toml`
+4. Hard-coded default (`anthropic/claude-sonnet-4.5`, `google/gemini-2.5-pro`, `openai/gpt-5`)
+
+Note: in OpenRouter mode the CLI flag and env var values are passed verbatim as OpenRouter model ids. A CLI-flavoured alias like `sonnet` will not resolve through OpenRouter — use the full OpenRouter id (`anthropic/claude-sonnet-4.5`) when that transport is active.
+
+### Cost visibility
+
+- **TUI:** after each round, a notice appears: `[openrouter] round: $X · session: $X · credits remaining: $X` (or `credits used: $X` for pay-as-you-go keys without a hard limit).
+- **Headless:** a single summary line is printed after the synthesis.
