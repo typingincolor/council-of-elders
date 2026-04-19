@@ -219,11 +219,11 @@ class TestBuildFinalPositionsSection:
 
 
 class TestBuildNarrativePrompt:
-    def test_asks_about_process_not_answer(self, builder):
+    def test_forbids_restating_the_synthesis(self, builder):
         d = _debate_with_history()
         out = builder.build_narrative_prompt(d, d.synthesis)
         low = out.lower()
-        assert "do not repeat" in low or "don't repeat" in low
+        assert "do not restate" in low or "don't restate" in low
 
     def test_asks_for_past_tense_third_person(self, builder):
         d = _debate_with_history()
@@ -237,8 +237,46 @@ class TestBuildNarrativePrompt:
         low = out.lower()
         # Must explicitly flag that CONVERGED: yes can be false consensus.
         assert "consensus" in low
-        assert "final-round" in low or "word-for-word" in low
+        assert "final-round" in low
         assert "procedural" in low or "real consensus" in low
+
+    def test_bans_all_markdown_heading_levels(self, builder):
+        # The rewrite bans #, ##, ### — not just a leading heading.
+        d = _debate_with_history()
+        out = builder.build_narrative_prompt(d, d.synthesis)
+        low = out.lower()
+        assert "headings of any level" in low or "any level" in low
+        assert "`#`" in out and "`##`" in out
+
+    def test_hedges_against_manufactured_tension(self, builder):
+        # The rewrite adds an explicit hedge for genuinely harmonious
+        # debates so the model doesn't invent disagreement to look diligent.
+        d = _debate_with_history()
+        out = builder.build_narrative_prompt(d, d.synthesis)
+        low = out.lower()
+        assert "harmonious" in low
+        assert (
+            "inventing tension" in low
+            or "without inventing" in low
+            or "without manufacturing" in low
+        )
+
+    def test_uses_substitution_test_for_material_divergence(self, builder):
+        # The rewrite replaces "materially different vs stylistic" with a
+        # concrete substitution heuristic.
+        d = _debate_with_history()
+        out = builder.build_narrative_prompt(d, d.synthesis)
+        low = out.lower()
+        assert "substituting" in low
+        assert "careful technical user" in low
+
+    def test_forces_binary_concluding_sentence(self, builder):
+        # The rewrite forces a binary concluding sentence in one of two
+        # explicit forms.
+        d = _debate_with_history()
+        out = builder.build_narrative_prompt(d, d.synthesis)
+        assert "This was real consensus on the answer" in out
+        assert "This was procedural agreement with unresolved divergence" in out
 
 
 class TestAssembleReportMarkdown:

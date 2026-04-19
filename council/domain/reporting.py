@@ -113,35 +113,51 @@ class ReportBuilder:
     def build_narrative_prompt(self, debate: Debate, synthesis: ElderAnswer) -> str:
         """The prompt sent to the elder asking for the narrative section.
 
-        The elder has already seen the full debate (conversation history)
-        or, for headless / fresh calls, a transcript; the prompt gives it
-        one more job after synthesis: describe what happened, with an
-        explicit check on whether "CONVERGED: yes" was real consensus or
-        merely procedural agreement to stop.
+        Rewrite origin: produced by running the council on the previous
+        version of this prompt (debate 8b60d9dc). The rewrite replaces
+        mechanical instructions like "word-for-word" with an operational
+        substitution test, bans ATX headings at every level (not just
+        leading), adds an explicit hedge for genuinely harmonious debates
+        to avoid manufactured tension, softens the quotation requirement
+        to reduce fabrication risk on weaker-retrieval models, and forces
+        a binary concluding sentence.
         """
         return (
             "You have just synthesised a council-of-elders debate. Now write a "
-            "brief analysis (~200-300 words, markdown) of HOW the debate "
-            "unfolded and whether the elders really agreed. Cover:\n\n"
-            "- Each elder's opening position in round 1, in one sentence each.\n"
-            "- The key tensions or disagreements that surfaced in round 2 and beyond.\n"
-            "- Any notable concessions or shifts in position across rounds.\n"
-            "- How convergence evolved — who converged first, what probes remained.\n\n"
-            "**CRITICAL — consensus check. This is the most important part.** "
-            "The elders may all have said `CONVERGED: yes` but still produced "
-            "materially different final answers — a false consensus driven by "
-            "agreement on *philosophy* while disagreeing on *wording*. You MUST:\n\n"
-            "- Compare the elders' FINAL-round answers word-for-word.\n"
-            "- Flag any substantive differences — wording choices that change "
-            "meaning, not stylistic preferences.\n"
-            "- State explicitly: was this *real consensus on the answer*, or "
-            "only *procedural agreement to stop debating*?\n"
-            "- If there is real unresolved divergence, name it plainly and say "
-            "what the user should decide for themselves.\n\n"
-            'Write in past tense, third-person (e.g. "Claude argued…", "Gemini '
-            'conceded…"). Do NOT repeat the synthesised answer; summarise the '
-            "process and audit the consensus. Start directly with the content "
-            "— no preamble, no heading."
+            "process-and-audit note for a technical user who will decide "
+            "whether to trust the synthesised answer or investigate "
+            "divergences.\n\n"
+            "Length: 200-350 words. Format: plain prose paragraphs and short "
+            "bullets permitted. Do NOT use markdown headings of any level — "
+            "no `#`, `##`, or `###`. Bold and inline code are fine. Start "
+            "directly with the content; no preamble, no title.\n\n"
+            'Voice: past tense, third person. Name elders explicitly ("Claude '
+            'argued…", "Gemini conceded…"). If you are one of the elders, '
+            "refer to your past turns in the third person by your own name.\n\n"
+            "Cover, in roughly this order:\n\n"
+            "1. Each elder's round-1 opening stance in one sentence.\n"
+            "2. The real points of friction from round 2 onward — disagreements "
+            "that moved the debate, not every minor quibble. If the debate was "
+            "largely harmonious, say so plainly rather than inventing tension.\n"
+            "3. Concessions, shifts, or holdouts. Do not assume convergence was "
+            "linear; if it was partial or non-monotonic, describe that.\n\n"
+            "Then perform the consensus audit. The elders may have all "
+            "declared `CONVERGED: yes` while their final-round answers still "
+            "differ in ways that matter. Apply this test:\n\n"
+            "> Treat wording as stylistic only if substituting one elder's "
+            "wording for another would not change what a careful technical "
+            "user would do. If any difference would change action, "
+            "interpretation, scope, caveats, confidence, or edge-case "
+            "handling, it is a material divergence.\n\n"
+            "For any material divergence, name the specific differing claim "
+            "and, where you can do so faithfully from the transcript, include "
+            "a short quoted span with attribution. Do not paraphrase the "
+            "difference away and do not restate the synthesised answer.\n\n"
+            'Conclude with one explicit sentence of the form: "This was real '
+            'consensus on the answer" OR "This was procedural agreement with '
+            'unresolved divergence on X," where X is named concretely. In the '
+            "latter case, add one sentence on what the user needs to inspect "
+            "or decide."
         )
 
     def build_final_positions_section(self, debate: Debate) -> str:
