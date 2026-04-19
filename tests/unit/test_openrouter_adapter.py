@@ -94,3 +94,69 @@ class TestAskHappyPath:
         assert body["model"] == "anthropic/claude-sonnet-4.5"
         assert body["messages"] == [{"role": "user", "content": "hello world"}]
         assert body["usage"] == {"include": True}
+
+
+class TestAskErrorMapping:
+    async def test_401_maps_to_auth_failed(self):
+        def handler(_req: httpx.Request) -> httpx.Response:
+            return httpx.Response(401, json={"error": {"message": "invalid key"}})
+
+        a = _adapter_with_transport(httpx.MockTransport(handler))
+        with pytest.raises(OpenRouterError) as ei:
+            await a.ask("hi")
+        assert ei.value.kind == "auth_failed"
+
+    async def test_403_maps_to_auth_failed(self):
+        def handler(_req: httpx.Request) -> httpx.Response:
+            return httpx.Response(403, text="forbidden")
+
+        a = _adapter_with_transport(httpx.MockTransport(handler))
+        with pytest.raises(OpenRouterError) as ei:
+            await a.ask("hi")
+        assert ei.value.kind == "auth_failed"
+
+    async def test_429_maps_to_quota_exhausted(self):
+        def handler(_req: httpx.Request) -> httpx.Response:
+            return httpx.Response(429, text="slow down")
+
+        a = _adapter_with_transport(httpx.MockTransport(handler))
+        with pytest.raises(OpenRouterError) as ei:
+            await a.ask("hi")
+        assert ei.value.kind == "quota_exhausted"
+
+    async def test_500_maps_to_nonzero_exit(self):
+        def handler(_req: httpx.Request) -> httpx.Response:
+            return httpx.Response(500, text="server exploded")
+
+        a = _adapter_with_transport(httpx.MockTransport(handler))
+        with pytest.raises(OpenRouterError) as ei:
+            await a.ask("hi")
+        assert ei.value.kind == "nonzero_exit"
+        assert "500" in ei.value.detail
+
+    async def test_malformed_json_maps_to_unparseable(self):
+        def handler(_req: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"weird": True})
+
+        a = _adapter_with_transport(httpx.MockTransport(handler))
+        with pytest.raises(OpenRouterError) as ei:
+            await a.ask("hi")
+        assert ei.value.kind == "unparseable"
+
+    async def test_timeout_maps_to_timeout(self):
+        def handler(_req: httpx.Request) -> httpx.Response:
+            raise httpx.TimeoutException("slow")
+
+        a = _adapter_with_transport(httpx.MockTransport(handler))
+        with pytest.raises(OpenRouterError) as ei:
+            await a.ask("hi", timeout_s=0.1)
+        assert ei.value.kind == "timeout"
+
+    async def test_network_error_maps_to_nonzero_exit(self):
+        def handler(_req: httpx.Request) -> httpx.Response:
+            raise httpx.ConnectError("no route")
+
+        a = _adapter_with_transport(httpx.MockTransport(handler))
+        with pytest.raises(OpenRouterError) as ei:
+            await a.ask("hi")
+        assert ei.value.kind == "nonzero_exit"

@@ -59,9 +59,31 @@ class OpenRouterAdapter:
         client = self.client or httpx.AsyncClient(base_url=_BASE_URL)
         owned = self.client is None
         try:
-            resp = await _post_chat(client, self.api_key, self.model, prompt, timeout_s)
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
+            try:
+                resp = await _post_chat(
+                    client, self.api_key, self.model, prompt, timeout_s
+                )
+            except httpx.TimeoutException as ex:
+                raise OpenRouterError("timeout", str(ex)) from ex
+            except httpx.HTTPError as ex:
+                raise OpenRouterError("nonzero_exit", f"network error: {ex}") from ex
+
+            if resp.status_code in (401, 403):
+                raise OpenRouterError("auth_failed", resp.text[-400:])
+            if resp.status_code == 429:
+                raise OpenRouterError("quota_exhausted", resp.text[-400:])
+            if resp.status_code >= 400:
+                raise OpenRouterError(
+                    "nonzero_exit", f"HTTP {resp.status_code}: {resp.text[-400:]}"
+                )
+
+            try:
+                data = resp.json()
+                return data["choices"][0]["message"]["content"]
+            except (ValueError, KeyError, IndexError, TypeError) as ex:
+                raise OpenRouterError(
+                    "unparseable", f"unexpected response shape: {ex}"
+                ) from ex
         finally:
             if owned:
                 await client.aclose()
