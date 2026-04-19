@@ -127,3 +127,50 @@ def test_resolve_preference_winner_handles_all_cases() -> None:
     assert _resolve_preference_winner("X", "best_r1") == "best_r1"
     assert _resolve_preference_winner("Y", "best_r1") == "synthesis"
     assert _resolve_preference_winner("TIE", "synthesis") == "tie"
+
+
+import pytest
+
+from council.adapters.elders.fake import FakeElder
+from council.experiments.homogenisation.judges import (
+    judge_best_r1,
+    judge_claim_overlap,
+    judge_preference,
+)
+
+
+@pytest.mark.asyncio
+async def test_judge_claim_overlap_formats_prompt_and_parses_reply() -> None:
+    judge = FakeElder(
+        elder_id="claude",  # elder_id is arbitrary for judges
+        replies=["shared_count: 4\na_only_count: 1\nb_only_count: 1\nnote: ok\n"],
+    )
+    obs = await judge_claim_overlap(
+        question="Q?", answer_a="alpha", answer_b="beta", judge_port=judge,
+    )
+    assert obs.shared == 4 and obs.jaccard == 4 / 6
+    conv = judge.conversations[0]
+    assert "Q?" in conv[0][1]  # prompt body contains the question
+    assert "alpha" in conv[0][1] and "beta" in conv[0][1]
+
+
+@pytest.mark.asyncio
+async def test_judge_best_r1_returns_parsed_obs() -> None:
+    judge = FakeElder(elder_id="claude", replies=["best: 2\nreason: fewer hedges.\n"])
+    obs = await judge_best_r1(
+        question="Q?", answers=("a1", "a2", "a3"), judge_port=judge,
+    )
+    assert obs.best_index == 2
+
+
+@pytest.mark.asyncio
+async def test_judge_preference_uses_shuffle_and_resolves_winner() -> None:
+    judge = FakeElder(elder_id="claude", replies=["winner: X\nreason: tighter.\n"])
+    rng = random.Random(0)  # rng.random() >= 0.5 → best_r1 goes to X
+    obs = await judge_preference(
+        question="Q?", best_r1="r1-text", synthesis="synth-text",
+        judge_port=judge, rng=rng,
+    )
+    # With seed 0, best_r1 is in X slot; winner X resolves to best_r1.
+    assert obs.winner == "best_r1"
+    assert obs.x_was == "best_r1"

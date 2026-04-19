@@ -21,6 +21,9 @@ import random
 import re
 from dataclasses import dataclass
 
+from council.domain.models import Message
+from council.domain.ports import ElderPort
+
 
 # ---- Claim-overlap judge --------------------------------------------
 
@@ -226,3 +229,49 @@ def _parse_preference(raw: str, *, x_was: str) -> PreferenceObservation:
         raw=raw,
         x_was=x_was,
     )
+
+
+# ---- Judge call dispatch --------------------------------------------
+
+
+async def judge_claim_overlap(
+    *, question: str, answer_a: str, answer_b: str, judge_port: ElderPort
+) -> JaccardObservation:
+    prompt = CLAIM_OVERLAP_PROMPT.format(
+        question=question.strip(),
+        answer_a=answer_a.strip(),
+        answer_b=answer_b.strip(),
+    )
+    raw = await judge_port.ask([Message("user", prompt)])
+    return _parse_claim_overlap(raw)
+
+
+async def judge_best_r1(
+    *, question: str, answers: tuple[str, str, str], judge_port: ElderPort
+) -> BestR1Observation:
+    prompt = BEST_R1_PROMPT.format(
+        question=question.strip(),
+        answer_1=answers[0].strip(),
+        answer_2=answers[1].strip(),
+        answer_3=answers[2].strip(),
+    )
+    raw = await judge_port.ask([Message("user", prompt)])
+    return _parse_best_r1(raw)
+
+
+async def judge_preference(
+    *,
+    question: str,
+    best_r1: str,
+    synthesis: str,
+    judge_port: ElderPort,
+    rng: random.Random,
+) -> PreferenceObservation:
+    answer_x, answer_y, x_was = _shuffle_xy(synthesis, best_r1, rng)
+    prompt = PREFERENCE_PROMPT.format(
+        question=question.strip(),
+        answer_x=answer_x.strip(),
+        answer_y=answer_y.strip(),
+    )
+    raw = await judge_port.ask([Message("user", prompt)])
+    return _parse_preference(raw, x_was=x_was)
