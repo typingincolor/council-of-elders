@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from dataclasses import replace
 from pathlib import Path
 
 from textual import on
@@ -10,7 +9,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.screen import ModalScreen
-from textual.widgets import Footer, Header, Input, Static
+from textual.widgets import Footer, Header, Input, RichLog, Static
 
 from council.adapters.bus.in_memory import InMemoryBus
 from council.adapters.clock.system import SystemClock
@@ -19,17 +18,16 @@ from council.adapters.elders.codex_cli import CodexCLIAdapter
 from council.adapters.elders.gemini_cli import GeminiCLIAdapter
 from council.adapters.packs.filesystem import FilesystemPackLoader
 from council.adapters.storage.json_file import JsonFileStore
-from council.app.tui.stream import ChronologicalStream, format_event
+from council.app.tui.council_view import CouncilView
 from council.domain.debate_service import DebateService
 from council.domain.events import (
     RoundCompleted,
     SynthesisCompleted,
+    TurnCompleted,
+    TurnFailed,
+    TurnStarted,
 )
-from council.domain.models import (
-    Debate,
-    ElderId,
-    Turn,
-)
+from council.domain.models import Debate, ElderId
 from council.domain.ports import (
     Clock,
     CouncilPackLoader,
@@ -58,22 +56,23 @@ class SynthesizerModal(ModalScreen[ElderId]):
 
 class CouncilApp(App):
     CSS = """
-    #stream { height: 1fr; }
+    #notices { height: auto; max-height: 6; padding: 0 1; }
+    #view { height: 1fr; }
     #input { dock: bottom; }
     """
+
     BINDINGS = [
         Binding("ctrl+c", "quit", "Quit"),
         Binding("c", "continue_round", "Continue", show=False),
         Binding("s", "synthesize", "Synthesize", show=False),
         Binding("a", "abandon", "Abandon", show=False),
         Binding("o", "override", "Override convergence", show=False),
+        Binding("f", "toggle_layout", "Toggle layout", show=False),
+        Binding("1", "focus_pane('claude')", "Claude", show=False),
+        Binding("2", "focus_pane('gemini')", "Gemini", show=False),
+        Binding("3", "focus_pane('chatgpt')", "ChatGPT", show=False),
+        Binding("4", "focus_pane('synthesis')", "Synthesis", show=False),
     ]
-
-    def _spawn(self, coro) -> asyncio.Task:
-        task = asyncio.create_task(coro)
-        self._tasks.add(task)
-        task.add_done_callback(self._tasks.discard)
-        return task
 
     def __init__(
         self,
@@ -95,12 +94,20 @@ class CouncilApp(App):
         self._debate: Debate | None = None
         self.awaiting_decision: bool = False
         self.is_finished: bool = False
-        self.rendered_lines: list[str] = []
+        self.rendered_lines: list[str] = []  # test-observable notice buffer
         self._tasks: set[asyncio.Task] = set()
+        self._view = CouncilView(clock=clock)
+
+    def _spawn(self, coro) -> asyncio.Task:
+        task = asyncio.create_task(coro)
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+        return task
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield ChronologicalStream(id="stream")
+        yield RichLog(id="notices", markup=True, wrap=True, highlight=False)
+        yield self._view
         yield Input(placeholder="Ask the council…", id="input")
         yield Footer()
 
@@ -109,9 +116,31 @@ class CouncilApp(App):
         self.query_one("#input", Input).focus()
         self._spawn(self._run_health_checks())
 
+    async def on_unmount(self) -> None:
+        if hasattr(self, "_stream_task"):
+            self._stream_task.cancel()
+        for task in list(self._tasks):
+            task.cancel()
+
+    # --- event fan-out ---------------------------------------------------
+    async def _consume_events(self) -> None:
+        async for ev in self._bus.subscribe():
+            if isinstance(ev, TurnStarted):
+                self._view.pane(ev.elder).begin_thinking(ev.round_number)
+            elif isinstance(ev, TurnCompleted):
+                self._view.pane(ev.elder).end_thinking_completed(ev.answer)
+            elif isinstance(ev, TurnFailed):
+                self._view.pane(ev.elder).end_thinking_failed(ev.error)
+            elif isinstance(ev, RoundCompleted):
+                self.awaiting_decision = True
+            elif isinstance(ev, SynthesisCompleted):
+                self._view.pane("synthesis").end_thinking_completed(ev.answer)
+                self._view.pane("synthesis").focus()
+                self.is_finished = True
+                self.awaiting_decision = False
+
+    # --- health check ----------------------------------------------------
     async def _run_health_checks(self) -> None:
-        """Probe each elder's CLI at startup so missing/unauthenticated vendors
-        surface immediately rather than only after the user has typed a prompt."""
         labels: dict[ElderId, str] = {
             "claude": "Claude",
             "gemini": "Gemini",
@@ -142,30 +171,10 @@ class CouncilApp(App):
             )
 
     def _write_notice(self, line: str) -> None:
-        """Write an app-level notice (not a DebateEvent) to the stream AND the
-        test-observable rendered_lines buffer."""
         self.rendered_lines.append(line)
-        self.query_one("#stream", ChronologicalStream).write(line)
+        self.query_one("#notices", RichLog).write(line)
 
-    async def on_unmount(self) -> None:
-        if hasattr(self, "_stream_task"):
-            self._stream_task.cancel()
-        for task in list(self._tasks):
-            task.cancel()
-
-    async def _consume_events(self) -> None:
-        async for ev in self._bus.subscribe():
-            stream = self.query_one("#stream", ChronologicalStream)
-            line = format_event(ev)
-            if line:
-                self.rendered_lines.append(line)
-                stream.write(line)
-            if isinstance(ev, RoundCompleted):
-                self.awaiting_decision = True
-            if isinstance(ev, SynthesisCompleted):
-                self.is_finished = True
-                self.awaiting_decision = False
-
+    # --- user actions ----------------------------------------------------
     @on(Input.Submitted, "#input")
     async def _on_prompt_submitted(self, event: Input.Submitted) -> None:
         prompt = event.value.strip()
@@ -182,8 +191,8 @@ class CouncilApp(App):
         )
         input_widget = self.query_one("#input", Input)
         input_widget.disabled = True
-        # Move focus off the disabled Input so app-level keybindings (c/s/a/o) fire.
-        self.query_one("#stream", ChronologicalStream).focus()
+        # Move focus onto the first elder pane.
+        self._view.pane("claude").focus()
         self._spawn(self._service.run_round(self._debate))
 
     async def action_continue_round(self) -> None:
@@ -203,7 +212,10 @@ class CouncilApp(App):
     async def action_override(self) -> None:
         if not self.awaiting_decision or not self._debate or not self._debate.rounds:
             return
-        # Force all turns to agreed=True for the most recent round
+        from dataclasses import replace
+
+        from council.domain.models import Turn
+
         r = self._debate.rounds[-1]
         r.turns = [Turn(elder=t.elder, answer=replace(t.answer, agreed=True)) for t in r.turns]
 
@@ -219,7 +231,18 @@ class CouncilApp(App):
         if choice is None:
             return
         self.awaiting_decision = False
+        self._view.show_synthesis_pane()
+        self._view.pane("synthesis").begin_thinking(round_number=1)
         self._spawn(self._service.synthesize(self._debate, by=choice))
+
+    async def action_toggle_layout(self) -> None:
+        self._view.toggle_forced_mode()
+
+    async def action_focus_pane(self, key: str) -> None:
+        try:
+            self._view.pane(key).focus()
+        except KeyError:
+            pass
 
 
 def main() -> None:
