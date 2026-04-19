@@ -44,7 +44,7 @@ api_key = "sk-or-v1-..."
 
 [openrouter.models]
 claude = "anthropic/claude-sonnet-4.5"
-gemini = "google/gemini-2.5-pro"
+gemini = "google/gemini-2.5-flash"
 chatgpt = "openai/gpt-5"
 ```
 

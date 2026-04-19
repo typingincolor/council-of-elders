@@ -56,7 +56,7 @@ class TestOpenRouterBranch:
             },
         )
         assert elders["claude"].model == "cli/claude-model"  # CLI wins
-        assert elders["gemini"].model == "google/gemini-2.5-pro"  # default
+        assert elders["gemini"].model == "google/gemini-2.5-flash"  # default
         assert elders["chatgpt"].model == "openai/gpt-5"  # default
 
     def test_toml_model_wins_over_default(self):

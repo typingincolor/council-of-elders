@@ -10,7 +10,7 @@ from council.domain.ports import ElderPort
 
 _DEFAULT_OPENROUTER_MODELS: dict[ElderId, str] = {
     "claude": "anthropic/claude-sonnet-4.5",
-    "gemini": "google/gemini-2.5-pro",
+    "gemini": "google/gemini-2.5-flash",
     "chatgpt": "openai/gpt-5",
 }
 
