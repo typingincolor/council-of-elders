@@ -71,3 +71,23 @@ def test_render_report_interprets_small_diversity_gap() -> None:
             scores_path=p, corpus=corpus, rosters=rosters, run_id="2026-04-19-test",
         )
     assert "negligible" in md.lower() or "doesn't matter" in md.lower()
+
+
+def test_render_report_flags_unexpected_negative_preference_gap(tmp_path: Path) -> None:
+    """When mixed_baseline.preference_rate is >0.10 below homogeneous, the
+    interpretation must flag it rather than silently emit no bullet."""
+    fixture = _fixture_scores()
+    # homogeneous=1.0, mixed=0.0 → pref_gap = mix - hom = -1.0
+    fixture["summaries"][0]["preference_rate"] = 1.0
+    fixture["summaries"][1]["preference_rate"] = 0.0
+    scores_path = tmp_path / "scores.json"
+    scores_path.write_text(json.dumps(fixture))
+    corpus = [CorpusPrompt(id="p1", shape="headline", prompt="Q?")]
+    rosters = (
+        RosterSpec(name="homogeneous", models={"claude": "m1", "gemini": "m1", "chatgpt": "m1"}),
+        RosterSpec(name="mixed_baseline", models={"claude": "m2", "gemini": "m3", "chatgpt": "m4"}),
+    )
+    md = render_report(
+        scores_path=scores_path, corpus=corpus, rosters=rosters, run_id="2026-04-19-test",
+    )
+    assert "unexpected" in md.lower()

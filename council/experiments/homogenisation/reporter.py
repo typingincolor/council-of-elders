@@ -68,6 +68,13 @@ def _interpret(summaries: list[dict[str, Any]]) -> list[str]:
                 f"Debate protocol alone does most of the work — homogeneous "
                 f"and mixed preference rates are within ±0.10 ({pref_gap:+.3f})."
             )
+        else:
+            # pref_gap < -0.10: unexpected direction (mixed < homogeneous).
+            bullets.append(
+                f"Unexpected result: homogeneous roster's synthesis-preference "
+                f"exceeds mixed baseline by {-pref_gap:+.3f} — inspect judge "
+                f"behaviour or corpus shape before interpreting."
+            )
     return bullets
 
 
