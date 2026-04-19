@@ -20,19 +20,29 @@ async def _wait_until(pilot, predicate, *, timeout_s=5.0, tick=0.05):
 
 
 async def test_two_rounds_appear_in_each_elder_pane_with_divider(tmp_path):
+    # R1+R2 auto-chain produces both rounds without user interaction.
     (tmp_path / "bare").mkdir()
     elders = {
         "claude": FakeElder(
             elder_id="claude",
-            replies=["R1 Claude text\nCONVERGED: no", "R2 Claude text\nCONVERGED: yes"],
+            replies=[
+                "R1 Claude text",
+                "R2 Claude text\n\nQUESTIONS:\n@gemini Why?",
+            ],
         ),
         "gemini": FakeElder(
             elder_id="gemini",
-            replies=["R1 Gemini text\nCONVERGED: no", "R2 Gemini text\nCONVERGED: yes"],
+            replies=[
+                "R1 Gemini text",
+                "R2 Gemini text\n\nQUESTIONS:\n@claude Why?",
+            ],
         ),
         "chatgpt": FakeElder(
             elder_id="chatgpt",
-            replies=["R1 ChatGPT text\nCONVERGED: no", "R2 ChatGPT text\nCONVERGED: yes"],
+            replies=[
+                "R1 ChatGPT text",
+                "R2 ChatGPT text\n\nQUESTIONS:\n@gemini Why?",
+            ],
         ),
     }
     app = CouncilApp(
@@ -45,13 +55,9 @@ async def test_two_rounds_appear_in_each_elder_pane_with_divider(tmp_path):
     async with app.run_test(size=(80, 40)) as pilot:
         await pilot.press(*"Two rounds?")
         await pilot.press("enter")
+        # Wait for the auto-chained R1+R2 opening exchange to complete.
         await _wait_until(pilot, lambda: app.awaiting_decision)
-        # First round landed.  action_continue_round sets awaiting_decision=False
-        # before spawning round 2; the bus consumer flips it back to True
-        # when RoundCompleted for round 2 fires.
-        await pilot.press("c")
-        await pilot.pause()
-        await _wait_until(pilot, lambda: len(app._debate.rounds) > 1 if app._debate else False)
+        await _wait_until(pilot, lambda: len(app._debate.rounds) >= 2 if app._debate else False)
 
         for elder, r1_text, r2_text in [
             ("claude", "R1 Claude text", "R2 Claude text"),

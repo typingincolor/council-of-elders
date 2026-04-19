@@ -162,9 +162,14 @@ class CouncilApp(App):
             elif isinstance(ev, TurnFailed):
                 self._view.pane(ev.elder).end_thinking_failed(ev.error)
             elif isinstance(ev, RoundCompleted):
-                self.awaiting_decision = True
-                # Re-enable input so the user can type a follow-up.
-                self.query_one("#input", CouncilInput).disabled = False
+                # Opening exchange (R1+R2) runs back-to-back; only re-enable
+                # input and surface decision state after round 2 completes.
+                if ev.round.number >= 2:
+                    self.awaiting_decision = True
+                    self.query_one("#input", CouncilInput).disabled = False
+                    # Auto-synth modal when all three elders converge (R3+).
+                    if ev.round.number >= 3 and self._service.rules.is_converged(ev.round):
+                        self.run_worker(self._synthesize_worker(), exclusive=True)
                 if self._using_openrouter:
                     self._spawn(self._write_cost_notice())
             elif isinstance(ev, SynthesisCompleted):
@@ -261,12 +266,26 @@ class CouncilApp(App):
             )
             input_widget.disabled = True
             self._view.focus()
-            self._spawn(self._service.run_round(self._debate))
+            self._spawn(self._opening_exchange())
         else:
             # Between-round user message.
             if not self.awaiting_decision:
                 return
             self._spawn(self._service.add_user_message(self._debate, text))
+
+    async def _opening_exchange(self) -> None:
+        """Run R1 (silent initial) then R2 (cross-exam) back-to-back.
+
+        Between R1 and R2, the RoundCompleted handler keeps the input
+        disabled and awaiting_decision=False (that check is gated on
+        round.number >= 2). After R2 completes the user can interact.
+        """
+        if self._debate is None:
+            return
+        await self._service.run_round(self._debate)  # R1
+        if self._debate.status != "in_progress":
+            return
+        await self._service.run_round(self._debate)  # R2
 
     async def action_continue_round(self) -> None:
         if not self.awaiting_decision or self._debate is None:

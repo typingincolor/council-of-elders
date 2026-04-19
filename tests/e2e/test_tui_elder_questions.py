@@ -20,14 +20,30 @@ async def _wait_until(pilot, predicate, *, timeout_s=5.0, tick=0.05):
 
 
 async def test_elder_question_surfaces_in_both_asker_and_target_panes(tmp_path):
+    # Questions first appear in R2 (cross-examination). R1 is silent.
     (tmp_path / "bare").mkdir()
     elders = {
         "claude": FakeElder(
             elder_id="claude",
-            replies=["My answer.\n\nQUESTIONS:\n@gemini Timeline?\n\nCONVERGED: no"],
+            replies=[
+                "R1 Claude",
+                "My answer.\n\nQUESTIONS:\n@gemini Timeline?",
+            ],
         ),
-        "gemini": FakeElder(elder_id="gemini", replies=["mine\nCONVERGED: no"]),
-        "chatgpt": FakeElder(elder_id="chatgpt", replies=["mine\nCONVERGED: no"]),
+        "gemini": FakeElder(
+            elder_id="gemini",
+            replies=[
+                "R1 Gemini",
+                "Gemini R2\n\nQUESTIONS:\n@claude Why?",
+            ],
+        ),
+        "chatgpt": FakeElder(
+            elder_id="chatgpt",
+            replies=[
+                "R1 ChatGPT",
+                "ChatGPT R2\n\nQUESTIONS:\n@claude Why?",
+            ],
+        ),
     }
     app = CouncilApp(
         elders=elders,
@@ -39,9 +55,10 @@ async def test_elder_question_surfaces_in_both_asker_and_target_panes(tmp_path):
     async with app.run_test() as pilot:
         await pilot.press(*"Go")
         await pilot.press("enter")
+        # awaiting_decision flips True only after R2 completes (post-auto-chain).
         await _wait_until(pilot, lambda: app.awaiting_decision)
 
-        # Claude's pane should show the outgoing question.
+        # Claude's pane should show the outgoing question (emitted in R2).
         claude_text = pane_lines(app, "claude")
         assert "To Gemini" in claude_text
         assert "Timeline?" in claude_text
@@ -51,6 +68,6 @@ async def test_elder_question_surfaces_in_both_asker_and_target_panes(tmp_path):
         assert "From Claude" in gemini_text
         assert "Timeline?" in gemini_text
 
-        # ChatGPT's pane should NOT show this question (not directed at it).
+        # ChatGPT's pane should NOT show the claude→gemini question.
         chatgpt_text = pane_lines(app, "chatgpt")
         assert "Timeline?" not in chatgpt_text

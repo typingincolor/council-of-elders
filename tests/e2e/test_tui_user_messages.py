@@ -21,18 +21,19 @@ async def _wait_until(pilot, predicate, *, timeout_s=5.0, tick=0.05):
 
 async def test_user_message_appears_in_all_elder_panes(tmp_path):
     (tmp_path / "bare").mkdir()
+    # R1+R2 auto-chain runs before awaiting_decision flips to True.
     elders = {
         "claude": FakeElder(
             elder_id="claude",
-            replies=["R1 c\nCONVERGED: no", "R2 c\nCONVERGED: yes"],
+            replies=["R1 c", "R2 c\n\nQUESTIONS:\n@gemini Why?"],
         ),
         "gemini": FakeElder(
             elder_id="gemini",
-            replies=["R1 g\nCONVERGED: no", "R2 g\nCONVERGED: yes"],
+            replies=["R1 g", "R2 g\n\nQUESTIONS:\n@claude Why?"],
         ),
         "chatgpt": FakeElder(
             elder_id="chatgpt",
-            replies=["R1 x\nCONVERGED: no", "R2 x\nCONVERGED: yes"],
+            replies=["R1 x", "R2 x\n\nQUESTIONS:\n@gemini Why?"],
         ),
     }
     app = CouncilApp(
@@ -57,4 +58,5 @@ async def test_user_message_appears_in_all_elder_panes(tmp_path):
         for elder in ("claude", "gemini", "chatgpt"):
             text = pane_lines(app, elder)
             assert "please focus on timeline" in text
-            assert "You after round 1" in text
+            # after_round reflects the most recent completed round (R2 here).
+            assert "You after round 2" in text
