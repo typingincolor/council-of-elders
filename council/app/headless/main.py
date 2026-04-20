@@ -12,15 +12,43 @@ from council.adapters.storage.json_file import JsonFileStore
 from council.app.bootstrap import build_elders
 from council.app.config import load_config
 from council.domain.best_r1 import LLMJudgedBestR1Selector
+from council.domain.debate_policy import DebatePolicy, PolicyMode, policy_for
 from council.domain.debate_service import DebateService
+from council.domain.diversity import score_roster
 from council.domain.models import CouncilPack, Debate, ElderId
 from council.domain.ports import Clock, ElderPort, EventBus, TranscriptStore
+from council.domain.roster import RosterSpec
 
 _LABELS: dict[ElderId, str] = {
     "claude": "Claude",
     "gemini": "Gemini",
     "chatgpt": "ChatGPT",
 }
+
+
+def _resolve_policy(
+    *,
+    user_override: DebatePolicy | None,
+    roster_spec: RosterSpec | None,
+    fallback_max_rounds: int,
+) -> DebatePolicy:
+    """Pick the effective policy for this run.
+
+    Priority: explicit user override > diversity-derived default > a
+    conservative full-debate fallback (used when no roster spec is
+    available, e.g. subprocess/CLI mode where model ids are unknown).
+    """
+    if user_override is not None:
+        return user_override
+    if roster_spec is not None and roster_spec.models:
+        return policy_for(score_roster(roster_spec))
+    return DebatePolicy(
+        mode="full_debate",
+        max_rounds=fallback_max_rounds,
+        synthesise=True,
+        always_compute_best_r1=True,
+        warning=None,
+    )
 
 
 async def run_headless(
@@ -36,15 +64,27 @@ async def run_headless(
     max_rounds: int = 3,
     report_store=None,  # ReportFileStore | None
     best_r1_judge: ElderPort | None = None,
+    policy: DebatePolicy | None = None,
+    roster_spec: RosterSpec | None = None,
 ) -> None:
     """Headless one-shot debate.
 
-    Always runs R1 (silent initial) + R2 (cross-exam). Then optionally
-    continues rounds until all elders converge or max_rounds is hit.
-    max_rounds counts R1+R2 + any additional rounds; must be >= 2.
+    Under the adaptive policy: low-diversity rosters skip debate and
+    skip synthesis (best-R1-only); medium run R1+R2 + synthesis; high
+    run full debate + synthesis. ``max_rounds`` is only consulted as
+    the fallback when no policy and no roster_spec is supplied.
     """
     if max_rounds < 2:
         raise ValueError("max_rounds must be at least 2 (R1+R2 are mandatory)")
+
+    effective_policy = _resolve_policy(
+        user_override=policy,
+        roster_spec=roster_spec,
+        fallback_max_rounds=max_rounds,
+    )
+
+    if effective_policy.warning:
+        print(f"[warning] {effective_policy.warning}")
 
     debate = Debate(
         id=str(uuid.uuid4()),
@@ -56,21 +96,25 @@ async def run_headless(
     )
     svc = DebateService(elders=elders, store=store, clock=clock, bus=bus)
 
-    # Opening exchange — always R1 + R2.
-    await svc.run_round(debate)  # R1
-    await svc.run_round(debate)  # R2
+    # Always run R1 — every pipeline mode needs initial answers.
+    await svc.run_round(debate)
 
-    # R3+ until convergence or max-rounds.
-    while len(debate.rounds) < max_rounds and not svc.rules.is_converged(debate.rounds[-1]):
+    if effective_policy.mode != "best_r1_only":
+        # R2 is the cross-examination round; every non-skip mode uses it.
         await svc.run_round(debate)
-
-    # Flag when we hit the cap without full convergence — the synthesis
-    # that follows is best-effort over an unresolved debate.
-    if len(debate.rounds) >= max_rounds and not svc.rules.is_converged(debate.rounds[-1]):
-        print(
-            f"[warning] Hit --max-rounds={max_rounds} without all elders converging. "
-            "Synthesising best-effort; read the narrative audit for unresolved points."
-        )
+        if effective_policy.mode == "full_debate":
+            # R3+ until policy budget spent or elders converge early.
+            while len(debate.rounds) < effective_policy.max_rounds and not svc.rules.is_converged(
+                debate.rounds[-1]
+            ):
+                await svc.run_round(debate)
+            if len(debate.rounds) >= effective_policy.max_rounds and not svc.rules.is_converged(
+                debate.rounds[-1]
+            ):
+                print(
+                    f"[warning] Hit policy max_rounds={effective_policy.max_rounds} "
+                    "without full convergence. Synthesising best-effort."
+                )
 
     # Print each round's turns in order.
     for r in debate.rounds:
@@ -82,33 +126,49 @@ async def run_headless(
             else:
                 print(f"[{label}] {t.answer.text}\n")
 
-    # Best-R1 baseline — mandatory comparison point against the synthesis.
+    # Best-R1 baseline — mandatory comparison point against synthesis.
     # Only runs when a judge is wired in (OpenRouter path); subprocess mode
     # prints a notice and skips, since we have no cheap judge available.
+    best_r1_text: str | None = None
     if best_r1_judge is not None:
         pick = await LLMJudgedBestR1Selector(judge_port=best_r1_judge).select(debate)
         if pick is not None:
             debate.best_r1_elder = pick.elder
             store.save(debate)
-            print(
-                f"\n[Best R1 (judge-picked): {_LABELS[pick.elder]}] {pick.reason}\n"
+            best_r1_text = next(
+                (t.answer.text for t in debate.rounds[0].turns if t.elder == pick.elder),
+                None,
             )
+            print(f"\n[Best R1 (judge-picked): {_LABELS[pick.elder]}] {pick.reason}\n")
     else:
         print("\n[Best-R1 baseline unavailable (no OpenRouter judge configured).]\n")
 
-    synth = await svc.synthesize(debate, by=synthesizer)
-    print(f"[Synthesis by {_LABELS[synthesizer]}] {synth.text}")
+    if effective_policy.synthesise:
+        synth = await svc.synthesize(debate, by=synthesizer)
+        print(f"[Synthesis by {_LABELS[synthesizer]}] {synth.text}")
 
-    # Generate the debate report and print + optionally save it.
-    try:
-        report_md = await svc.generate_report(debate, by=synthesizer)
-        print("\n--- Debate report ---\n")
-        print(report_md)
-        if report_store is not None:
-            path = report_store.save(debate_id=debate.id, markdown=report_md)
-            print(f"\nReport saved to {path}")
-    except Exception as ex:
-        print(f"\n[warning] Report generation failed: {ex}")
+        # Generate the debate report and print + optionally save it.
+        try:
+            report_md = await svc.generate_report(debate, by=synthesizer)
+            print("\n--- Debate report ---\n")
+            print(report_md)
+            if report_store is not None:
+                path = report_store.save(debate_id=debate.id, markdown=report_md)
+                print(f"\nReport saved to {path}")
+        except Exception as ex:
+            print(f"\n[warning] Report generation failed: {ex}")
+    else:
+        # best-R1-only mode: emit the judge-picked answer as the deliverable.
+        if debate.best_r1_elder is not None and best_r1_text:
+            print(
+                f"[Answer (best-R1, {_LABELS[debate.best_r1_elder]})] {best_r1_text}"
+            )
+        else:
+            print(
+                "[warning] best-R1-only mode but no judge available — "
+                "no deliverable produced."
+            )
+
     if using_openrouter:
         from council.adapters.elders.openrouter import (
             OpenRouterAdapter,
@@ -139,6 +199,21 @@ def _max_rounds_type(value: str) -> int:
     return n
 
 
+def _policy_override_from_args(
+    mode: str, max_rounds: int
+) -> DebatePolicy | None:
+    if mode == "auto":
+        return None
+    pm: PolicyMode = mode  # type: ignore[assignment]
+    return DebatePolicy(
+        mode=pm,
+        max_rounds=max_rounds if mode == "full_debate" else {"best_r1_only": 1, "single_critique": 2}[mode],
+        synthesise=mode != "best_r1_only",
+        always_compute_best_r1=True,
+        warning=None,
+    )
+
+
 def main() -> None:
     import os
 
@@ -166,8 +241,20 @@ def main() -> None:
     parser.add_argument(
         "--max-rounds",
         type=_max_rounds_type,
-        default=3,
-        help="Upper bound on total rounds (R1+R2 + optional R3+). Minimum 2; default 3.",
+        default=6,
+        help=(
+            "Upper bound on rounds for full_debate mode. Ignored in other "
+            "policy modes. Minimum 2; default 6."
+        ),
+    )
+    parser.add_argument(
+        "--policy",
+        choices=["auto", "best_r1_only", "single_critique", "full_debate"],
+        default="auto",
+        help=(
+            "Pipeline mode. 'auto' (default) picks best_r1_only / "
+            "single_critique / full_debate based on roster diversity."
+        ),
     )
     parser.add_argument(
         "--reports-root",
@@ -190,7 +277,7 @@ def main() -> None:
         "gemini": args.gemini_model,
         "chatgpt": args.codex_model,
     }
-    elders, using_openrouter, _roster_spec = build_elders(config, cli_models=cli_models)
+    elders, using_openrouter, roster_spec = build_elders(config, cli_models=cli_models)
     from council.adapters.storage.report_file import ReportFileStore
 
     best_r1_judge: ElderPort | None = None
@@ -216,5 +303,7 @@ def main() -> None:
             max_rounds=args.max_rounds,
             report_store=ReportFileStore(root=Path(args.reports_root)),
             best_r1_judge=best_r1_judge,
+            policy=_policy_override_from_args(args.policy, args.max_rounds),
+            roster_spec=roster_spec,
         )
     )

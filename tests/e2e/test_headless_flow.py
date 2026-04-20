@@ -253,7 +253,7 @@ async def test_headless_warns_when_max_rounds_hit_without_convergence(capsys):
         max_rounds=3,
     )
     out = capsys.readouterr().out
-    assert "Hit --max-rounds=3 without all elders converging" in out
+    assert "Hit policy max_rounds=3 without full convergence" in out
     assert "best-effort" in out
 
 
