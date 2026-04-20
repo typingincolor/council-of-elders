@@ -25,12 +25,23 @@ _QUESTION_VERBATIM = (
 
 
 def _interpret(summaries: list[dict[str, Any]]) -> list[str]:
-    """Turn per-roster summaries into verdict bullets."""
+    """Turn per-roster summaries into verdict bullets.
+
+    Bullets are grouped by the kind of claim they support. Jaccard-based
+    bullets speak to ROSTER DIVERSITY and replicate under judge changes
+    (see docs/experiments/2026-04-20-judge-replication.md). Preference-rate
+    bullets are SINGLE-JUDGE DIRECTIONAL ONLY — the 2026-04-20 replication
+    showed the ordering of preference rates across rosters is not
+    judge-robust at this n. Preference bullets here are labelled as such
+    and should not be cited as confirmed findings.
+    """
     by_name = {s["roster"]: s for s in summaries}
     bullets: list[str] = []
     hom = by_name.get("homogeneous")
     mix = by_name.get("mixed_baseline")
     sub = by_name.get("substituted")
+
+    # ---- Jaccard / diversity bullets (judge-robust under replication) ----
 
     if hom and mix:
         gap = hom["mean_r1_jaccard"] - mix["mean_r1_jaccard"]
@@ -49,31 +60,37 @@ def _interpret(summaries: list[dict[str, Any]]) -> list[str]:
         if gap > 0.10:
             bullets.append(
                 f"Open-weights substitution adds meaningful diversity beyond the "
-                f"same-lineage trio (mixed−substituted gap = {gap:+.3f})."
+                f"same-lineage trio in R1 claim-overlap (mixed−substituted gap "
+                f"= {gap:+.3f}). Note: Jaccard only; does NOT imply better "
+                f"synthesis — see preference bullet below."
             )
         else:
             bullets.append(
                 f"Open-weights substitution does not measurably widen diversity "
                 f"(mixed−substituted gap = {gap:+.3f}; threshold 0.10)."
             )
+
+    # ---- Preference bullets (SINGLE-JUDGE DIRECTIONAL ONLY) ----
+
     if hom and mix:
         pref_gap = mix["preference_rate"] - hom["preference_rate"]
         if pref_gap > 0.10:
             bullets.append(
-                f"Tool's value appears to depend on both mechanisms — mixed "
-                f"synthesis-preference exceeds homogeneous by {pref_gap:+.3f}."
+                f"[single-judge] Mixed synthesis-preference exceeds homogeneous "
+                f"by {pref_gap:+.3f}. Replicate with a second judge before "
+                f"treating this as evidence of a roster-choice effect."
             )
         elif abs(pref_gap) <= 0.10:
             bullets.append(
-                f"Debate protocol alone does most of the work — homogeneous "
-                f"and mixed preference rates are within ±0.10 ({pref_gap:+.3f})."
+                f"[single-judge] Homogeneous and mixed preference rates are "
+                f"within ±0.10 ({pref_gap:+.3f}) — no signal at this judge."
             )
         else:
             # pref_gap < -0.10: unexpected direction (mixed < homogeneous).
             bullets.append(
-                f"Unexpected result: homogeneous roster's synthesis-preference "
-                f"exceeds mixed baseline by {-pref_gap:+.3f} — inspect judge "
-                f"behaviour or corpus shape before interpreting."
+                f"[single-judge] Unexpected: homogeneous roster's synthesis-"
+                f"preference exceeds mixed by {-pref_gap:+.3f}. Inspect judge "
+                f"behaviour or corpus shape; do not architect on this."
             )
     return bullets
 

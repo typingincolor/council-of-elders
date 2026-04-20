@@ -9,13 +9,22 @@ from council.domain.models import ElderId
 from council.domain.ports import ElderPort
 from council.domain.roster import RosterSpec
 
-# The `gemini` slot defaults to an open-weights Llama model rather than
-# a Gemini-family model deliberately: a same-lineage trio (all three of
-# Anthropic, Google, OpenAI) produces R1 answers that overlap more than
-# a mixed-lineage trio does, and the debate protocol only beats picking
-# the best R1 when the roster has genuine architectural diversity. See
-# `docs/experiments/2026-04-19-9288-homogenisation.md`. The slot label
-# is just a label — the debate protocol is slot-keyed, not model-keyed.
+# Default roster ships three distinct providers (Anthropic, Meta,
+# OpenAI) so the adaptive policy picks full_debate mode instead of the
+# low-diversity warning path on a fresh install. The slot labels
+# (ada/kai/mei) are positional only; the debate protocol is slot-keyed,
+# not model-keyed, and this mapping is one reasonable configuration
+# among many — no claim is made that this specific trio is best-performing.
+#
+# Evidence caveat: the probe at
+# `docs/experiments/2026-04-19-9288-homogenisation.md` initially
+# suggested this Llama-substituted roster outperformed a big-three
+# trio on synthesis preference. Judge-swap replication
+# (`docs/experiments/2026-04-20-judge-replication.md`) showed that
+# ordering was judge-family-specific and does not survive a switch
+# to Sonnet or GPT-5 as judge. The roster choice stands because three
+# distinct providers is still a reasonable default; the preference-rate
+# justification is retracted.
 _DEFAULT_OPENROUTER_MODELS: dict[ElderId, str] = {
     "ada": "anthropic/claude-sonnet-4.5",
     "kai": "meta-llama/llama-3.1-70b-instruct",

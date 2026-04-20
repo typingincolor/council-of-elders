@@ -63,6 +63,10 @@ class OpenRouterAdapter:
     client: httpx.AsyncClient | None = None
     session_cost_usd: float = 0.0
     session_tokens: dict[str, int] = field(default_factory=lambda: {"prompt": 0, "completion": 0})
+    # Per-instance default used when a caller of ``ask()`` doesn't supply
+    # its own ``timeout_s``. Raise this for thinking-heavy judges
+    # (e.g. GPT-5) where the standard 45s bound is too tight.
+    default_timeout_s: float = 45.0
 
     def __post_init__(self) -> None:
         # Warn (don't raise) when the model ID doesn't look like an
@@ -80,14 +84,17 @@ class OpenRouterAdapter:
                 self.model,
             )
 
-    async def ask(self, conversation: list[Message], *, timeout_s: float = 45.0) -> str:
+    async def ask(self, conversation: list[Message], *, timeout_s: float | None = None) -> str:
         if not conversation:
             raise ValueError("conversation must be non-empty")
+        effective_timeout = self.default_timeout_s if timeout_s is None else timeout_s
         client = self.client or httpx.AsyncClient(base_url=_BASE_URL)
         owned = self.client is None
         try:
             try:
-                resp = await _post_chat(client, self.api_key, self.model, conversation, timeout_s)
+                resp = await _post_chat(
+                    client, self.api_key, self.model, conversation, effective_timeout
+                )
             except httpx.TimeoutException as ex:
                 raise OpenRouterError("timeout", str(ex)) from ex
             except httpx.HTTPError as ex:

@@ -271,12 +271,14 @@ If neither source yields a non-empty string, the council uses the vendor CLIs as
 api_key = "sk-or-v1-..."
 
 [openrouter.models]
-claude = "anthropic/claude-sonnet-4.5"
-gemini = "meta-llama/llama-3.1-70b-instruct"
-chatgpt = "openai/gpt-5"
+ada = "anthropic/claude-sonnet-4.5"
+kai = "meta-llama/llama-3.1-70b-instruct"
+mei = "openai/gpt-5"
 ```
 
-The `gemini` slot deliberately runs an open-weights Llama model rather than a Gemini-family one. The slot is just a label — the debate protocol is slot-keyed, not model-keyed. A same-lineage trio (Anthropic + Google + OpenAI) overlaps more at R1 than a mixed-lineage trio, and the debate mechanic only beats picking the best R1 when the roster has genuine architectural diversity. See [`docs/experiments/2026-04-19-9288-homogenisation.md`](experiments/2026-04-19-9288-homogenisation.md) for the supporting evidence.
+(Legacy keys `claude` / `gemini` / `chatgpt` still work and are mapped automatically to `ada` / `kai` / `mei`, with a deprecation warning.)
+
+**Roster guidance.** The default ships three distinct providers (Anthropic + Meta + OpenAI) so the adaptive policy picks `full_debate` mode out of the box. This is one reasonable configuration among many — not a claim that this specific trio is best-performing. The tool's strongest evidence is **negative**: a homogeneous roster (three copies of one model, or three from one provider) reduces synthesis quality below the best individual answer, and the tool will warn you and degrade to `best_r1_only` on such rosters. The positive claim (which diverse roster is *best*) is not established — see [`docs/experiments/2026-04-20-judge-replication.md`](experiments/2026-04-20-judge-replication.md) for why the earlier-looking-best "substituted" roster turned out to be judge-family-specific. Pick three different providers; don't pick three of the same.
 
 Tip: Gemini thinking models (e.g. `gemini-2.5-pro`, `gemini-3.1-pro-preview`) occasionally emit their whole answer into the `reasoning` field with empty `content`. The adapter falls back to `reasoning` in that case so the elder isn't silent, but the fallback text is the model's scratchpad rather than a polished reply. Prefer non-thinking models like `gemini-2.5-flash` if you want the cleanest output.
 

@@ -201,6 +201,13 @@ async def run_headless(
         diversity: DiversityScore | None = (
             score_roster(roster_spec) if roster_spec is not None and roster_spec.models else None
         )
+        # Record which model produced the preference verdict so consumers
+        # know its basis. Single-judge verdicts are judge-family-biased
+        # (see docs/experiments/2026-04-20-judge-replication.md); Stage 9
+        # of the plan rotates multiple judges here.
+        preference_judge_model: str | None = None
+        if preference is not None and preference_judge is not None:
+            preference_judge_model = getattr(preference_judge, "model", None)
         summary = build_run_summary(
             debate=debate,
             roster_spec=roster_spec,
@@ -208,6 +215,7 @@ async def run_headless(
             policy=effective_policy,
             synthesis=structured,
             preference=preference,
+            preference_judge_model=preference_judge_model,
         )
         summary_path = write_run_summary(summary, root=run_summary_root)
         print(f"\n[run summary] {summary_path}")

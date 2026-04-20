@@ -48,6 +48,7 @@ def build_run_summary(
     policy: DebatePolicy,
     synthesis: SynthesisOutput | None,
     preference: PreferenceVerdict | None,
+    preference_judge_model: str | None = None,
 ) -> RunSummary:
     roster_payload: dict[str, Any] = (
         {"name": roster_spec.name, "models": dict(roster_spec.models)}
@@ -84,6 +85,12 @@ def build_run_summary(
         preference_payload = {
             "winner": preference.winner,
             "reason": preference.reason,
+            # Single-judge verdict metadata — consumers should know which
+            # judge emitted this verdict, since the 2026-04-20 replication
+            # showed judge-family effects on preference. When
+            # preference_judge_model is None the judge is unknown/unlabelled.
+            "judge_model": preference_judge_model,
+            "single_judge": True,
         }
     return RunSummary(
         debate_id=debate.id,

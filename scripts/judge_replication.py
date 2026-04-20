@@ -55,7 +55,15 @@ def _require_key() -> str:
 async def _run_for_judge(
     *, run_id: str, runs_root: Path, debate_store_root: Path, api_key: str, judge_model: str
 ) -> Path:
-    judge = OpenRouterAdapter(elder_id="ada", model=judge_model, api_key=api_key)
+    # Thinking-heavy judges (GPT-5, Sonnet) routinely exceed the 45-second
+    # default on dense three-way claim-overlap prompts, so raise the
+    # per-instance default before the first call.
+    judge = OpenRouterAdapter(
+        elder_id="ada",
+        model=judge_model,
+        api_key=api_key,
+        default_timeout_s=180.0,
+    )
     slug = _slug(judge_model)
     # Point the scorer at an alternate scores path so the original scores.json
     # for the gemini-flash judge stays intact.

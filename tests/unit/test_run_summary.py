@@ -104,7 +104,26 @@ class TestBuildRunSummary:
             "why": "ok.",
             "disagreements": [],
         }
-        assert s.preference == {"winner": "synthesis", "reason": "clearer"}
+        assert s.preference == {
+            "winner": "synthesis",
+            "reason": "clearer",
+            "judge_model": None,
+            "single_judge": True,
+        }
+
+    def test_records_preference_judge_model_when_provided(self):
+        pref = PreferenceVerdict(winner="synthesis", reason="clearer", raw="")
+        s = build_run_summary(
+            debate=_debate_with_one_round(),
+            roster_spec=_ROSTER,
+            diversity=_HIGH_DIVERSITY,
+            policy=_FULL_POLICY,
+            synthesis=SynthesisOutput(answer="A", why="", disagreements=(), raw=""),
+            preference=pref,
+            preference_judge_model="google/gemini-2.5-flash",
+        )
+        assert s.preference["judge_model"] == "google/gemini-2.5-flash"
+        assert s.preference["single_judge"] is True
 
     def test_handles_missing_synthesis_and_preference(self):
         s = build_run_summary(
