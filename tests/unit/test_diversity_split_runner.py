@@ -1,10 +1,8 @@
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 
-from council.adapters.clock.fake import FakeClock
 from council.adapters.elders.fake import FakeElder
 from council.domain.models import ElderId
 from council.experiments.diversity_split.conditions import CONDITIONS

@@ -1,6 +1,5 @@
 import random
 
-import pytest
 
 from council.adapters.elders.fake import FakeElder
 from council.domain.preference import PreferenceVerdict, judge_preference

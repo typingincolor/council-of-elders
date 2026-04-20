@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 
-import pytest
 
 from council.adapters.elders.fake import FakeElder
 from council.domain.best_r1 import BestR1Selection, LLMJudgedBestR1Selector
