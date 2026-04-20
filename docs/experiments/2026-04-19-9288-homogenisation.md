@@ -55,15 +55,17 @@ Fraction of debates where the judge preferred the final synthesis over the stron
 - Open-weights substitution adds meaningful diversity beyond the same-lineage trio (mixed−substituted gap = +0.109).
 - Debate protocol alone does most of the work — homogeneous and mixed preference rates are within ±0.10 (-0.062).
 
+> **Revised 2026-04-20 after judge-swap replication.** The diversity / R1-Jaccard finding replicates under GPT-5 and Sonnet judges. The **substituted > mixed** preference-rate ordering does **not** — Sonnet ranks mixed ahead of substituted, and the 0.625 substituted preference rate under gemini-flash appears to be inflated by judge-family affinity. See [`2026-04-20-judge-replication.md`](2026-04-20-judge-replication.md). The "homogeneous underperforms" claim is robust; the "substituted is the strongest roster" claim should be treated as single-judge evidence only.
+
 ## Caveats
 
 - Small n (8 prompts); results directional, not significance-tested.
-- Single judge model (gemini-2.5-flash). Internally consistent; absolute numbers not portable to other judges.
+- Single judge model (gemini-2.5-flash) at the time of this run. Subsequent replication with GPT-5 and Sonnet judges (see [`2026-04-20-judge-replication.md`](2026-04-20-judge-replication.md)) confirmed the Jaccard ordering but **refuted the substituted > mixed preference ranking**.
 - One open-weights substitute (Llama-3.1-70B), one homogeneous model (gpt-5-mini). Other choices could give different numbers.
 - gemini slot substituted; other slots not swept.
 - Round cap 6 may truncate debates; reported, not mitigated.
-- Judge family proximity — gemini-flash may bias toward gemini-slot content in mixed/substituted rosters.
-- Persona priming: homogeneous elders still see peers labelled as "Claude"/"Gemini"/"ChatGPT" via the existing prompt pack, so this is not a clean model-equivalence test — it is the operational behaviour a user configuring 3× same-model would see.
+- Judge family proximity — gemini-flash appears to bias toward non-gemini content, inflating the substituted roster's preference rate. Confirmed by judge-swap replication.
+- Persona priming: homogeneous elders still see peers labelled as "Ada"/"Kai"/"Mei" via the existing prompt pack, so this is not a clean model-equivalence test — it is the operational behaviour a user configuring 3× same-model would see.
 
 ## Appendix A — per-debate details
 
