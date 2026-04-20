@@ -76,14 +76,17 @@ def _interpret(summaries: list[dict[str, Any]]) -> list[str]:
         pref_gap = mix["preference_rate"] - hom["preference_rate"]
         if pref_gap > 0.10:
             bullets.append(
-                f"[single-judge] Mixed synthesis-preference exceeds homogeneous "
-                f"by {pref_gap:+.3f}. Replicate with a second judge before "
-                f"treating this as evidence of a roster-choice effect."
+                f"Mixed synthesis-preference exceeds homogeneous by "
+                f"{pref_gap:+.3f}, consistent with the 2026-04-20 judge-swap "
+                f"replication finding that homogeneous rosters land last on "
+                f"synthesis preference under every judge tested."
             )
         elif abs(pref_gap) <= 0.10:
             bullets.append(
-                f"[single-judge] Homogeneous and mixed preference rates are "
-                f"within ±0.10 ({pref_gap:+.3f}) — no signal at this judge."
+                f"Homogeneous and mixed preference rates are within ±0.10 "
+                f"({pref_gap:+.3f}) at this single judge. Cross-judge evidence "
+                f"(see 2026-04-20 replication) still places homogeneous last "
+                f"on average."
             )
         else:
             # pref_gap < -0.10: unexpected direction (mixed < homogeneous).

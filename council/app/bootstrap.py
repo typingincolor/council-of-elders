@@ -13,18 +13,18 @@ from council.domain.roster import RosterSpec
 # OpenAI) so the adaptive policy picks full_debate mode instead of the
 # low-diversity warning path on a fresh install. The slot labels
 # (ada/kai/mei) are positional only; the debate protocol is slot-keyed,
-# not model-keyed, and this mapping is one reasonable configuration
-# among many — no claim is made that this specific trio is best-performing.
+# not model-keyed.
 #
-# Evidence caveat: the probe at
-# `docs/experiments/2026-04-19-9288-homogenisation.md` initially
-# suggested this Llama-substituted roster outperformed a big-three
-# trio on synthesis preference. Judge-swap replication
-# (`docs/experiments/2026-04-20-judge-replication.md`) showed that
-# ordering was judge-family-specific and does not survive a switch
-# to Sonnet or GPT-5 as judge. The roster choice stands because three
-# distinct providers is still a reasonable default; the preference-rate
-# justification is retracted.
+# Two separate evidence claims, worth distinguishing:
+#   1. Don't ship homogeneous. Under every judge tested in the 2026-04-20
+#      judge-swap replication (`docs/experiments/2026-04-20-judge-
+#      replication.md`) a homogeneous roster landed last on synthesis
+#      preference. A non-homogeneous default is evidence-backed.
+#   2. The specific "substituted > mixed" ordering that the 2026-04-19
+#      probe (`docs/experiments/2026-04-19-9288-homogenisation.md`)
+#      initially reported was judge-family-specific and did not survive
+#      judge swap. This mapping is therefore ONE reasonable non-homogeneous
+#      default — not a claim that this specific trio is best-performing.
 _DEFAULT_OPENROUTER_MODELS: dict[ElderId, str] = {
     "ada": "anthropic/claude-sonnet-4.5",
     "kai": "meta-llama/llama-3.1-70b-instruct",

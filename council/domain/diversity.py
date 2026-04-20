@@ -5,12 +5,20 @@ Provider is inferred from the OpenRouter model-id prefix. Vendor-CLI
 aliases (no slash, e.g. "sonnet") count as "unknown" — the heuristic is
 only meaningful when OpenRouter is in use.
 
-Treat as hypothesis-grade: the thresholds are directional, pulled from
-the n=8 homogenisation probe
-(`docs/experiments/2026-04-19-9288-homogenisation.md`). Calibration
-against replicated probes with alternative judges is scaffolded
-separately; until then, branch on this score as a warning signal, not
-as settled truth.
+The low-diversity branch (single provider or all-identical models) is
+evidence-backed: the n=8 homogenisation probe
+(`docs/experiments/2026-04-19-9288-homogenisation.md`) found homogeneous
+rosters landed last on synthesis preference under every judge tested in
+the 2026-04-20 judge-swap replication
+(`docs/experiments/2026-04-20-judge-replication.md`). Routing those
+rosters to best-R1-first is a defensible safety default.
+
+The specific ordering among diverse rosters (medium vs high) is NOT
+established — the probe's "substituted > mixed" ranking was judge-
+family-specific. The medium / high distinction here is a cost / depth
+trade-off, not a quality claim: high-diversity runs get more rounds
+because they're more likely to surface useful disagreement, not because
+they're guaranteed better synthesis.
 """
 
 from __future__ import annotations
