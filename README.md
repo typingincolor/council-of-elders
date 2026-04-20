@@ -5,6 +5,28 @@
 [![CI](https://github.com/typingincolor/council-of-elders/actions/workflows/ci.yml/badge.svg)](https://github.com/typingincolor/council-of-elders/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+> ## ⚠️ This is a failed experiment.
+>
+> The premise was "three diverse LLMs debate, then synthesise a better answer than any one of them alone could produce". Rigorous testing showed **the debate mechanic actively makes the output worse**.
+>
+> - In 32 debates across four roster configurations scored by two independent judges, the synthesised answer *never* beat the strongest individual R1 answer. Zero wins.
+> - Removing the debate entirely — three models write independently, one synthesises their three parallel answers with no cross-examination — produced synthesis wins 2 out of 8 times.
+> - The single round of cross-examination (R2) dropped judged-preference quality by ~0.19. Adding further rounds doesn't recover.
+>
+> So: parallel sampling across different models was doing useful work. The automated back-and-forth between them was the value-destroying part — the part the tool's name is built around.
+>
+> **Caveat:** all of the above is for *automated* model-to-model debate. Human-in-the-loop multi-model consultation (a human picking which thread to pull, rephrasing, directing follow-ups) wasn't tested and may well work — that's how the author was using models by hand before building this.
+>
+> Full methodology and per-debate results: [`docs/experiments/`](docs/experiments/). Key reads:
+> - [`2026-04-19-9288-homogenisation.md`](docs/experiments/2026-04-19-9288-homogenisation.md) — first probe
+> - [`2026-04-20-judge-replication.md`](docs/experiments/2026-04-20-judge-replication.md) — judge-family bias
+> - [`2026-04-20-f294-results.md`](docs/experiments/2026-04-20-f294-results.md) — 2×2 diversity experiment
+> - [`2026-04-20-226f-results.md`](docs/experiments/2026-04-20-226f-results.md) — debate-depth ablation (the decisive one)
+>
+> The code below still runs. It's kept as an archive of the experiment, not a recommendation.
+>
+> ---
+
 Send one prompt to Claude, Gemini, and ChatGPT simultaneously, watch them debate, and get one synthesised answer. Use your existing paid vendor subscriptions by default, or route through OpenRouter with a single API key.
 
 > **Full user guide:** [`docs/USAGE.md`](docs/USAGE.md) — covers what the tool is for, how the debate mechanic works, writing council packs, model selection, troubleshooting, and how to get real value from it.
