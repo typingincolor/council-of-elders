@@ -9,6 +9,7 @@ against it.
 
 See ``docs/superpowers/plans/2026-04-20-diversity-engine-refactor.md``.
 """
+
 from __future__ import annotations
 
 import re

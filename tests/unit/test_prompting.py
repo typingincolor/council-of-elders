@@ -51,9 +51,7 @@ def _r1():
 
 def _r2_with_questions():
     q = ElderQuestion(from_elder="kai", to_elder="ada", text="Why SSE?", round_number=2)
-    q2 = ElderQuestion(
-        from_elder="mei", to_elder="kai", text="What about growth?", round_number=2
-    )
+    q2 = ElderQuestion(from_elder="mei", to_elder="kai", text="What about growth?", round_number=2)
     return Round(
         number=2,
         turns=[

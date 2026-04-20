@@ -82,8 +82,7 @@ def _rosters_table(rosters: tuple[RosterSpec, ...]) -> str:
     rows = ["| Roster | ada slot | kai slot | mei slot |", "|---|---|---|---|"]
     for r in rosters:
         rows.append(
-            f"| `{r.name}` | `{r.models['ada']}` | "
-            f"`{r.models['kai']}` | `{r.models['mei']}` |"
+            f"| `{r.name}` | `{r.models['ada']}` | `{r.models['kai']}` | `{r.models['mei']}` |"
         )
     return "\n".join(rows)
 

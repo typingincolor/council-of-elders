@@ -95,9 +95,7 @@ class TestRunExperiment:
             elder_factory=exploding,  # type: ignore[arg-type]
             max_rounds=3,
         )
-        manifest = json.loads(
-            (tmp_path / "runs" / "test" / "manifest.json").read_text()
-        )
+        manifest = json.loads((tmp_path / "runs" / "test" / "manifest.json").read_text())
         assert len(manifest["entries"]) == 4  # unchanged
 
     async def test_rejects_insufficient_max_rounds(self, tmp_path: Path):

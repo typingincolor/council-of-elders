@@ -19,7 +19,10 @@ from council.domain.synthesis_output import SynthesisOutput
 
 def _ans(elder, text="x"):
     return ElderAnswer(
-        elder=elder, text=text, error=None, agreed=None,
+        elder=elder,
+        text=text,
+        error=None,
+        agreed=None,
         created_at=datetime(2026, 4, 20, tzinfo=timezone.utc),
     )
 
@@ -34,22 +37,30 @@ def _debate_with_one_round(best_r1: str | None = "kai"):
         ],
     )
     return Debate(
-        id="debate-xyz", prompt="What should I do?",
+        id="debate-xyz",
+        prompt="What should I do?",
         pack=CouncilPack(name="bare", shared_context=None, personas={}),
-        rounds=[r1], status="synthesized",
+        rounds=[r1],
+        status="synthesized",
         synthesis=_ans("ada", "ANSWER:\nShip.\n\nWHY:\nok.\n\nDISAGREEMENTS:\n(none)\n"),
         best_r1_elder=best_r1,  # type: ignore[arg-type]
     )
 
 
 _HIGH_DIVERSITY = DiversityScore(
-    classification="high", provider_count=3, identical_model_count=0,
-    flags=(), rationale="three distinct providers",
+    classification="high",
+    provider_count=3,
+    identical_model_count=0,
+    flags=(),
+    rationale="three distinct providers",
 )
 
 _FULL_POLICY = DebatePolicy(
-    mode="full_debate", max_rounds=6,
-    synthesise=True, always_compute_best_r1=True, warning=None,
+    mode="full_debate",
+    max_rounds=6,
+    synthesise=True,
+    always_compute_best_r1=True,
+    warning=None,
 )
 
 _ROSTER = RosterSpec(
@@ -65,7 +76,10 @@ _ROSTER = RosterSpec(
 class TestBuildRunSummary:
     def test_captures_all_inputs(self):
         synth = SynthesisOutput(
-            answer="Ship.", why="ok.", disagreements=(), raw="",
+            answer="Ship.",
+            why="ok.",
+            disagreements=(),
+            raw="",
         )
         pref = PreferenceVerdict(winner="synthesis", reason="clearer", raw="")
         s = build_run_summary(
@@ -86,7 +100,9 @@ class TestBuildRunSummary:
         assert s.best_r1_elder == "kai"
         assert s.synthesis_generated is True
         assert s.synthesis_structured == {
-            "answer": "Ship.", "why": "ok.", "disagreements": [],
+            "answer": "Ship.",
+            "why": "ok.",
+            "disagreements": [],
         }
         assert s.preference == {"winner": "synthesis", "reason": "clearer"}
 
@@ -138,7 +154,10 @@ class TestWriteRunSummary:
             diversity=_HIGH_DIVERSITY,
             policy=_FULL_POLICY,
             synthesis=SynthesisOutput(
-                answer="Ship.", why="ok.", disagreements=("one minor point",), raw="",
+                answer="Ship.",
+                why="ok.",
+                disagreements=("one minor point",),
+                raw="",
             ),
             preference=PreferenceVerdict(winner="best_r1", reason="less bloat.", raw=""),
         )

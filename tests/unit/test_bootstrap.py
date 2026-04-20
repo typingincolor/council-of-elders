@@ -65,16 +65,12 @@ class TestOpenRouterBranch:
             openrouter_api_key="sk-or-x",
             openrouter_models={"kai": "toml/gemini-model"},
         )
-        elders, _, _ = build_elders(
-            cfg, cli_models={"ada": None, "kai": None, "mei": None}
-        )
+        elders, _, _ = build_elders(cfg, cli_models={"ada": None, "kai": None, "mei": None})
         assert elders["kai"].model == "toml/gemini-model"
 
     def test_api_key_propagates_to_adapters(self):
         cfg = AppConfig(openrouter_api_key="sk-or-abc", openrouter_models={})
-        elders, _, _ = build_elders(
-            cfg, cli_models={"ada": None, "kai": None, "mei": None}
-        )
+        elders, _, _ = build_elders(cfg, cli_models={"ada": None, "kai": None, "mei": None})
         for e in ("ada", "kai", "mei"):
             assert elders[e].api_key == "sk-or-abc"
 
@@ -82,9 +78,7 @@ class TestOpenRouterBranch:
 class TestRosterSpecReturned:
     def test_openrouter_branch_returns_real_spec(self):
         cfg = AppConfig(openrouter_api_key="sk-or-x", openrouter_models={})
-        _, using_or, spec = build_elders(
-            cfg, cli_models={"ada": None, "kai": None, "mei": None}
-        )
+        _, using_or, spec = build_elders(cfg, cli_models={"ada": None, "kai": None, "mei": None})
         assert using_or is True
         assert isinstance(spec, RosterSpec)
         assert spec.name == "openrouter"
@@ -111,9 +105,7 @@ class TestRosterSpecReturned:
 
     def test_subprocess_branch_returns_sentinel_spec(self):
         cfg = AppConfig(openrouter_api_key=None, openrouter_models={})
-        _, using_or, spec = build_elders(
-            cfg, cli_models={"ada": None, "kai": None, "mei": None}
-        )
+        _, using_or, spec = build_elders(cfg, cli_models={"ada": None, "kai": None, "mei": None})
         assert using_or is False
         assert isinstance(spec, RosterSpec)
         assert spec.name == "subprocess"

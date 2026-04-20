@@ -358,9 +358,7 @@ class TestAssembleReportMarkdown:
             agreed=None,
             created_at=datetime(2026, 4, 20, tzinfo=timezone.utc),
         )
-        md = builder.assemble_report_markdown(
-            d, structured, "narrative", synthesiser="ada"
-        )
+        md = builder.assemble_report_markdown(d, structured, "narrative", synthesiser="ada")
         assert "## Unresolved disagreements" in md
         assert "Kai argued for delaying one sprint." in md
         assert "Mei wanted a phased rollout." in md
@@ -377,9 +375,7 @@ class TestAssembleReportMarkdown:
             agreed=None,
             created_at=datetime(2026, 4, 20, tzinfo=timezone.utc),
         )
-        md = builder.assemble_report_markdown(
-            d, structured, "narrative", synthesiser="ada"
-        )
+        md = builder.assemble_report_markdown(d, structured, "narrative", synthesiser="ada")
         assert "## Unresolved disagreements" not in md
         assert "**Why:** No blockers." in md
 

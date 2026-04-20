@@ -8,10 +8,14 @@ from council.experiments.homogenisation.corpus import CorpusPrompt
 
 def _summaries_for_each_cell(
     *,
-    a_jaccard: float = 0.5, a_pref: float = 0.3,
-    b_jaccard: float = 0.45, b_pref: float = 0.35,
-    c_jaccard: float = 0.3, c_pref: float = 0.6,
-    d_jaccard: float = 0.28, d_pref: float = 0.7,
+    a_jaccard: float = 0.5,
+    a_pref: float = 0.3,
+    b_jaccard: float = 0.45,
+    b_pref: float = 0.35,
+    c_jaccard: float = 0.3,
+    c_pref: float = 0.6,
+    d_jaccard: float = 0.28,
+    d_pref: float = 0.7,
 ) -> list[dict]:
     def _row(name, j, p):
         return {
@@ -49,8 +53,10 @@ class TestRenderReport:
             run_id="t",
         )
         for name in (
-            "same_model_same_role", "same_model_diff_role",
-            "diff_model_same_role", "diff_model_diff_role",
+            "same_model_same_role",
+            "same_model_diff_role",
+            "diff_model_same_role",
+            "diff_model_diff_role",
         ):
             assert name in md
 

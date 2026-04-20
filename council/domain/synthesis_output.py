@@ -10,6 +10,7 @@ answer so a rule-ignoring model still yields a usable deliverable.
 
 See ``docs/superpowers/plans/2026-04-20-diversity-engine-refactor.md``.
 """
+
 from __future__ import annotations
 
 import re

@@ -4,6 +4,7 @@ Renders a 2×2 table of (same/diff model) × (same/diff role) with mean
 R1 Jaccard and synthesis-vs-best-R1 preference rate per cell, plus a
 narrative reading the four cells together.
 """
+
 from __future__ import annotations
 
 import datetime as _dt
@@ -71,15 +72,13 @@ def _twoxtwo_preference(summaries: list[dict[str, Any]]) -> str:
             return "—"
         s = by_name[name]
         return (
-            f"{s['preference_rate']:.3f} "
-            f"[{s['preference_ci_lo']:.3f}, {s['preference_ci_hi']:.3f}]"
+            f"{s['preference_rate']:.3f} [{s['preference_ci_lo']:.3f}, {s['preference_ci_hi']:.3f}]"
         )
 
     rows = [
         "| | same role | different role |",
         "|---|---|---|",
-        f"| **same model** | {cell('same_model_same_role')} | "
-        f"{cell('same_model_diff_role')} |",
+        f"| **same model** | {cell('same_model_same_role')} | {cell('same_model_diff_role')} |",
         f"| **different model** | {cell('diff_model_same_role')} | "
         f"{cell('diff_model_diff_role')} |",
     ]
@@ -105,28 +104,20 @@ def _interpret(summaries: list[dict[str, Any]]) -> list[str]:
     if a is not None and b is not None:
         gap = b - a
         if gap > 0.10:
-            bullets.append(
-                f"Role diversity alone moves the needle (B−A = {gap:+.3f})."
-            )
+            bullets.append(f"Role diversity alone moves the needle (B−A = {gap:+.3f}).")
         elif gap < -0.10:
             bullets.append(
                 f"Role diversity alone HURT (B−A = {gap:+.3f}) — personas may be miscalibrated."
             )
         else:
-            bullets.append(
-                f"Role diversity alone is a wash (B−A = {gap:+.3f}; threshold ±0.10)."
-            )
+            bullets.append(f"Role diversity alone is a wash (B−A = {gap:+.3f}; threshold ±0.10).")
 
     if a is not None and c is not None:
         gap = c - a
         if gap > 0.10:
-            bullets.append(
-                f"Model diversity alone moves the needle (C−A = {gap:+.3f})."
-            )
+            bullets.append(f"Model diversity alone moves the needle (C−A = {gap:+.3f}).")
         else:
-            bullets.append(
-                f"Model diversity alone not decisive here (C−A = {gap:+.3f})."
-            )
+            bullets.append(f"Model diversity alone not decisive here (C−A = {gap:+.3f}).")
 
     if b is not None and c is not None:
         gap = c - b
@@ -141,9 +132,7 @@ def _interpret(summaries: list[dict[str, Any]]) -> list[str]:
                 "revisit the diversity-engine positioning."
             )
         else:
-            bullets.append(
-                f"Model and role diversity produce comparable gains (C−B = {gap:+.3f})."
-            )
+            bullets.append(f"Model and role diversity produce comparable gains (C−B = {gap:+.3f}).")
 
     if d is not None and c is not None:
         gap = d - c
@@ -158,9 +147,7 @@ def _interpret(summaries: list[dict[str, Any]]) -> list[str]:
                 "persona-model interaction is worth investigating."
             )
         else:
-            bullets.append(
-                f"Adding roles to diverse models is neutral (D−C = {gap:+.3f})."
-            )
+            bullets.append(f"Adding roles to diverse models is neutral (D−C = {gap:+.3f}).")
 
     return bullets
 

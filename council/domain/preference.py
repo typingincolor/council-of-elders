@@ -12,6 +12,7 @@ the signal the diversity-engine refocus exists to validate:
 
 See ``docs/superpowers/plans/2026-04-20-diversity-engine-refactor.md``.
 """
+
 from __future__ import annotations
 
 import random

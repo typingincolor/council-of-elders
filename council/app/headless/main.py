@@ -191,22 +191,15 @@ async def run_headless(
     else:
         # best-R1-only mode: emit the judge-picked answer as the deliverable.
         if debate.best_r1_elder is not None and best_r1_text:
-            print(
-                f"[Answer (best-R1, {_LABELS[debate.best_r1_elder]})] {best_r1_text}"
-            )
+            print(f"[Answer (best-R1, {_LABELS[debate.best_r1_elder]})] {best_r1_text}")
         else:
-            print(
-                "[warning] best-R1-only mode but no judge available — "
-                "no deliverable produced."
-            )
+            print("[warning] best-R1-only mode but no judge available — no deliverable produced.")
 
     # Emit the observability sidecar. Captures roster, diversity, policy,
     # rounds, best-R1 pick, structured synthesis, and preference verdict.
     if run_summary_root is not None:
         diversity: DiversityScore | None = (
-            score_roster(roster_spec)
-            if roster_spec is not None and roster_spec.models
-            else None
+            score_roster(roster_spec) if roster_spec is not None and roster_spec.models else None
         )
         summary = build_run_summary(
             debate=debate,
@@ -249,15 +242,15 @@ def _max_rounds_type(value: str) -> int:
     return n
 
 
-def _policy_override_from_args(
-    mode: str, max_rounds: int
-) -> DebatePolicy | None:
+def _policy_override_from_args(mode: str, max_rounds: int) -> DebatePolicy | None:
     if mode == "auto":
         return None
     pm: PolicyMode = mode  # type: ignore[assignment]
     return DebatePolicy(
         mode=pm,
-        max_rounds=max_rounds if mode == "full_debate" else {"best_r1_only": 1, "single_critique": 2}[mode],
+        max_rounds=max_rounds
+        if mode == "full_debate"
+        else {"best_r1_only": 1, "single_critique": 2}[mode],
         synthesise=mode != "best_r1_only",
         always_compute_best_r1=True,
         warning=None,

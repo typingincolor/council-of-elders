@@ -9,6 +9,7 @@ Resumes at pair granularity via the manifest on disk — same semantics
 as the homogenisation runner: if a pair is already in the manifest it
 is skipped.
 """
+
 from __future__ import annotations
 
 import json
@@ -101,9 +102,7 @@ async def run_experiment(
         raise ValueError("max_rounds must be at least 2 (R1+R2 are mandatory)")
     manifest_path = _manifest_path(runs_root, run_id)
     manifest = _load_manifest(manifest_path)
-    done: set[tuple[str, str]] = {
-        (e["roster"], e["prompt_id"]) for e in manifest["entries"]
-    }
+    done: set[tuple[str, str]] = {(e["roster"], e["prompt_id"]) for e in manifest["entries"]}
     store = JsonFileStore(root=debate_store_root)
 
     for condition in conditions:

@@ -43,11 +43,14 @@ class TestCli:
 
         monkeypatch.setattr(mod.asyncio, "run", fake_run)
         monkeypatch.setattr(
-            mod.sys, "argv",
+            mod.sys,
+            "argv",
             [
                 "judge_replication",
-                "--run-id", "rid",
-                "--judge-models", "openai/gpt-5,anthropic/claude-sonnet-4.5",
+                "--run-id",
+                "rid",
+                "--judge-models",
+                "openai/gpt-5,anthropic/claude-sonnet-4.5",
             ],
         )
         mod.main()
@@ -55,7 +58,8 @@ class TestCli:
 
     def test_parser_rejects_missing_run_id(self, mod, monkeypatch):
         monkeypatch.setattr(
-            mod.sys, "argv",
+            mod.sys,
+            "argv",
             ["judge_replication", "--judge-models", "openai/gpt-5"],
         )
         with pytest.raises(SystemExit):

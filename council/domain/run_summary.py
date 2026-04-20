@@ -9,6 +9,7 @@ Did the synthesis beat best-R1?
 
 Stored as ``<reports-root>/<debate-id>-summary.json``.
 """
+
 from __future__ import annotations
 
 import json

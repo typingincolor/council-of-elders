@@ -8,7 +8,10 @@ from council.domain.models import CouncilPack, Debate, ElderAnswer, Round, Turn
 
 def _ans(elder, text):
     return ElderAnswer(
-        elder=elder, text=text, error=None, agreed=None,
+        elder=elder,
+        text=text,
+        error=None,
+        agreed=None,
         created_at=datetime(2026, 4, 20, tzinfo=timezone.utc),
     )
 
@@ -27,9 +30,12 @@ def _debate_with_r1(
         ],
     )
     return Debate(
-        id="t", prompt="What?",
+        id="t",
+        prompt="What?",
         pack=CouncilPack(name="bare", shared_context=None, personas={}),
-        rounds=[r1], status="in_progress", synthesis=None,
+        rounds=[r1],
+        status="in_progress",
+        synthesis=None,
     )
 
 
@@ -70,9 +76,12 @@ class TestLLMJudgedBestR1Selector:
     async def test_returns_none_when_no_rounds(self):
         judge = FakeElder(elder_id="ada", replies=["best: 1\nreason: x\n"])
         empty = Debate(
-            id="t", prompt="x",
+            id="t",
+            prompt="x",
             pack=CouncilPack(name="bare", shared_context=None, personas={}),
-            rounds=[], status="in_progress", synthesis=None,
+            rounds=[],
+            status="in_progress",
+            synthesis=None,
         )
         assert await LLMJudgedBestR1Selector(judge_port=judge).select(empty) is None
 
@@ -84,9 +93,12 @@ class TestLLMJudgedBestR1Selector:
     async def test_does_not_call_judge_on_empty_input(self):
         judge = FakeElder(elder_id="ada", replies=[])
         empty = Debate(
-            id="t", prompt="x",
+            id="t",
+            prompt="x",
             pack=CouncilPack(name="bare", shared_context=None, personas={}),
-            rounds=[], status="in_progress", synthesis=None,
+            rounds=[],
+            status="in_progress",
+            synthesis=None,
         )
         result = await LLMJudgedBestR1Selector(judge_port=judge).select(empty)
         assert result is None

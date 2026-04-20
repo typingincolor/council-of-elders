@@ -90,12 +90,8 @@ def test_render_report_interprets_small_diversity_gap() -> None:
         p.write_text(json.dumps(scores_path_input))
         corpus = [CorpusPrompt(id="p1", shape="headline", prompt="Q?")]
         rosters = (
-            RosterSpec(
-                name="homogeneous", models={"ada": "m1", "kai": "m1", "mei": "m1"}
-            ),
-            RosterSpec(
-                name="mixed_baseline", models={"ada": "m2", "kai": "m3", "mei": "m4"}
-            ),
+            RosterSpec(name="homogeneous", models={"ada": "m1", "kai": "m1", "mei": "m1"}),
+            RosterSpec(name="mixed_baseline", models={"ada": "m2", "kai": "m3", "mei": "m4"}),
         )
         md = render_report(
             scores_path=p,

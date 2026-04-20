@@ -39,10 +39,12 @@ async def test_summary_written_after_synthesis(tmp_path: Path, capsys):
         ),
     }
     best_r1_judge = FakeElder(
-        elder_id="ada", replies=["best: 2\nreason: clearer.\n"],
+        elder_id="ada",
+        replies=["best: 2\nreason: clearer.\n"],
     )
     preference_judge = FakeElder(
-        elder_id="ada", replies=["winner: X\nreason: synth wins.\n"],
+        elder_id="ada",
+        replies=["winner: X\nreason: synth wins.\n"],
     )
     roster = RosterSpec(
         name="medium",
@@ -91,7 +93,8 @@ async def test_summary_includes_warning_for_low_diversity(tmp_path: Path, capsys
         "mei": FakeElder(elder_id="mei", replies=["R1 Mei."]),
     }
     best_r1_judge = FakeElder(
-        elder_id="ada", replies=["best: 1\nreason: tightest.\n"],
+        elder_id="ada",
+        replies=["best: 1\nreason: tightest.\n"],
     )
     roster = RosterSpec(
         name="homogeneous",

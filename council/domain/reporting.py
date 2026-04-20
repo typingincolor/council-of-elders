@@ -290,7 +290,5 @@ class ReportBuilder:
             for t in r.turns:
                 a = t.answer.agreed
                 cells[t.elder] = "yes" if a is True else "no" if a is False else "—"
-            lines.append(
-                f"| R{r.number} | {cells['ada']} | {cells['kai']} | {cells['mei']} |"
-            )
+            lines.append(f"| R{r.number} | {cells['ada']} | {cells['kai']} | {cells['mei']} |")
         return "\n".join(lines)

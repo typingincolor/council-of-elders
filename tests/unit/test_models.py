@@ -112,7 +112,12 @@ class TestDebate:
     def test_best_r1_elder_can_be_set(self):
         pack = CouncilPack(name="bare", shared_context=None, personas={})
         d = Debate(
-            id="abc", prompt="hi", pack=pack, rounds=[], status="in_progress", synthesis=None,
+            id="abc",
+            prompt="hi",
+            pack=pack,
+            rounds=[],
+            status="in_progress",
+            synthesis=None,
             best_r1_elder="kai",
         )
         assert d.best_r1_elder == "kai"

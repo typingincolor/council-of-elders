@@ -8,6 +8,7 @@ Best-R1 is always computed when a judge is available (mandatory
 baseline, independent of policy). See
 ``docs/superpowers/plans/2026-04-20-diversity-engine-refactor.md``.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

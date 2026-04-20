@@ -5,6 +5,7 @@ Represents the (slot → model-id) mapping for a council. Promoted from
 experiments share the same type under the diversity-engine direction
 (``docs/superpowers/plans/2026-04-20-diversity-engine-refactor.md``).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

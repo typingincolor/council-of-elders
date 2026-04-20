@@ -8,6 +8,7 @@ This module is the single source of truth for the mapping. Readers
 (``JsonFileStore.load``, ``load_config``) consult it; everything else
 uses the current ``ElderId`` literal directly.
 """
+
 from __future__ import annotations
 
 from council.domain.models import ElderId

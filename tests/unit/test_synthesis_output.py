@@ -39,11 +39,7 @@ class TestParseSynthesis:
         assert out.disagreements == ()
 
     def test_disagreements_with_star_bullets(self):
-        raw = (
-            "ANSWER:\nok\n\n"
-            "WHY:\nbecause\n\n"
-            "DISAGREEMENTS:\n* first\n* second\n"
-        )
+        raw = "ANSWER:\nok\n\nWHY:\nbecause\n\nDISAGREEMENTS:\n* first\n* second\n"
         out = parse_synthesis(raw)
         assert out.disagreements == ("first", "second")
 
@@ -58,11 +54,7 @@ class TestParseSynthesis:
         assert "Second paragraph." in out.answer
 
     def test_case_insensitive_labels(self):
-        raw = (
-            "answer:\nlowercased\n\n"
-            "Why:\nmixed case\n\n"
-            "DISAGREEMENTS:\n- x\n"
-        )
+        raw = "answer:\nlowercased\n\nWhy:\nmixed case\n\nDISAGREEMENTS:\n- x\n"
         out = parse_synthesis(raw)
         assert out.answer == "lowercased"
         assert out.why == "mixed case"

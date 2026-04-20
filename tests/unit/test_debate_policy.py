@@ -44,8 +44,11 @@ class TestPolicyFor:
 
     def test_user_override_wins_over_diversity(self):
         override = DebatePolicy(
-            mode="full_debate", max_rounds=6,
-            synthesise=True, always_compute_best_r1=True, warning=None,
+            mode="full_debate",
+            max_rounds=6,
+            synthesise=True,
+            always_compute_best_r1=True,
+            warning=None,
         )
         p = policy_for(_score("low"), user_override=override)
         assert p is override

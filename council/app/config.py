@@ -62,7 +62,8 @@ def _resolve_models(toml_data: dict) -> dict[ElderId, str]:
             log.warning(
                 "Config key [openrouter.models].%s is deprecated; use "
                 "[openrouter.models].%s instead.",
-                legacy, current,
+                legacy,
+                current,
             )
             out[current] = val
     for elder in _VALID_ELDERS:

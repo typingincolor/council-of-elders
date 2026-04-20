@@ -12,6 +12,7 @@ against replicated probes with alternative judges is scaffolded
 separately; until then, branch on this score as a warning signal, not
 as settled truth.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -60,9 +61,7 @@ def score_roster(spec: RosterSpec) -> DiversityScore:
         )
     elif provider_count == 3 and identical_model_count == 0:
         classification = "high"
-        rationale = (
-            "Three distinct providers, no slot collisions — full debate is justified."
-        )
+        rationale = "Three distinct providers, no slot collisions — full debate is justified."
     else:
         classification = "medium"
         bits: list[str] = []

@@ -22,9 +22,7 @@ def _round_with_all_elders() -> Round:
         turns=[
             Turn(
                 elder="ada",
-                answer=ElderAnswer(
-                    elder="ada", text="ok", error=None, agreed=True, created_at=t
-                ),
+                answer=ElderAnswer(elder="ada", text="ok", error=None, agreed=True, created_at=t),
             ),
             Turn(
                 elder="kai",

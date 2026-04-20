@@ -110,8 +110,11 @@ class TestScoreRoster:
         import pytest
 
         s = DiversityScore(
-            classification="high", provider_count=3, identical_model_count=0,
-            flags=(), rationale="ok",
+            classification="high",
+            provider_count=3,
+            identical_model_count=0,
+            flags=(),
+            rationale="ok",
         )
         with pytest.raises(dataclasses.FrozenInstanceError):
             s.classification = "low"  # type: ignore[misc]
