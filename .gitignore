@@ -13,3 +13,7 @@ build/
 .worktrees/
 runs/
 docs/experiments/
+
+# Claude Code session state — per-user, not per-repo.
+.claude/scheduled_tasks.lock
+.claude/scheduled_tasks.json
