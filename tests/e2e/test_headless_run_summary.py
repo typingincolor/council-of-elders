@@ -83,7 +83,98 @@ async def test_summary_written_after_synthesis(tmp_path: Path, capsys):
     assert data["best_r1_elder"] == "kai"
     assert data["synthesis_generated"] is True
     assert data["synthesis_structured"]["answer"] == "Ship."
-    assert data["preference"]["winner"] in ("synthesis", "best_r1", "tie")
+    # Single-judge path emits multi-judge-shaped payload with 1 verdict.
+    assert data["preference"]["aggregate"] in ("synthesis", "best_r1", "tie")
+    assert data["preference"]["judge_count"] == 1
+    assert len(data["preference"]["verdicts"]) == 1
+
+
+async def test_multi_judge_preference_in_summary(tmp_path: Path, capsys):
+    """preference_judges kwarg feeds judge_preference_multi, aggregate
+    and unanimous fields are persisted to the summary JSON.
+    """
+    elders = {
+        "ada": FakeElder(
+            elder_id="ada",
+            replies=[
+                "R1 Ada",
+                "R2 Ada\n\nQUESTIONS:\n@kai Why?",
+                "ANSWER:\nShip.\n\nWHY:\nok.\n\nDISAGREEMENTS:\n(none)\n",
+            ],
+        ),
+        "kai": FakeElder(
+            elder_id="kai",
+            replies=["R1 Kai", "R2 Kai\n\nQUESTIONS:\n@ada Why?"],
+        ),
+        "mei": FakeElder(
+            elder_id="mei",
+            replies=["R1 Mei", "R2 Mei\n\nQUESTIONS:\n@kai Why?"],
+        ),
+    }
+    best_r1_judge = FakeElder(
+        elder_id="ada",
+        replies=["best: 2\nreason: clearer.\n"],
+    )
+    # Two judges, both scripted to say "winner: X". Shared rng will give
+    # each judge a different X/Y slot layout, so the two verdicts will
+    # differ. That produces a split aggregate (tie).
+    preference_judges = [
+        (
+            "google/gemini-2.5-flash",
+            FakeElder(
+                elder_id="ada",
+                replies=["winner: X\nreason: judge-a take.\n"],
+            ),
+        ),
+        (
+            "anthropic/claude-haiku-4.5",
+            FakeElder(
+                elder_id="ada",
+                replies=["winner: X\nreason: judge-b take.\n"],
+            ),
+        ),
+    ]
+    roster = RosterSpec(
+        name="medium",
+        models={
+            "ada": "anthropic/claude-sonnet-4.5",
+            "kai": "anthropic/claude-haiku-4.5",
+            "mei": "openai/gpt-5",
+        },
+    )
+    summaries_root = tmp_path / "summaries"
+
+    await run_headless(
+        prompt="Q?",
+        pack=_pack(),
+        elders=elders,
+        store=InMemoryStore(),
+        clock=_clock(),
+        bus=InMemoryBus(),
+        synthesizer="ada",
+        best_r1_judge=best_r1_judge,
+        preference_judges=preference_judges,
+        roster_spec=roster,
+        run_summary_root=summaries_root,
+    )
+
+    [summary_path] = list(summaries_root.glob("*-summary.json"))
+    data = json.loads(summary_path.read_text())
+    pref = data["preference"]
+    assert pref is not None
+    assert pref["judge_count"] == 2
+    assert len(pref["verdicts"]) == 2
+    assert {v["judge_model"] for v in pref["verdicts"]} == {
+        "google/gemini-2.5-flash",
+        "anthropic/claude-haiku-4.5",
+    }
+    assert pref["aggregate"] in ("synthesis", "best_r1", "tie")
+    # The exact aggregate depends on the unseeded X/Y randomisation at
+    # call time; what we lock in is the SHAPE — two judges recorded,
+    # aggregate + unanimous present, every verdict has a winner.
+    assert isinstance(pref["unanimous"], bool)
+    for v in pref["verdicts"]:
+        assert v["winner"] in ("synthesis", "best_r1", "tie")
 
 
 async def test_summary_includes_warning_for_low_diversity(tmp_path: Path, capsys):

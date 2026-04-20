@@ -101,3 +101,72 @@ async def judge_preference(
         reason=reason_m.group(1).strip() if reason_m else "",
         raw=raw,
     )
+
+
+@dataclass(frozen=True)
+class JudgeVerdict:
+    """A single judge's preference verdict plus which model produced it."""
+
+    judge_model: str
+    verdict: PreferenceVerdict
+
+
+@dataclass(frozen=True)
+class MultiJudgeVerdict:
+    """Verdicts from N judges plus the majority aggregate.
+
+    Under the diversity-engine direction every preference verdict the
+    system emits should be multi-judge to avoid the judge-family bias
+    documented in
+    ``docs/experiments/2026-04-20-judge-replication.md``. With 2+ judges,
+    the aggregate is computed by majority vote; ties among top counts
+    resolve to ``"tie"``.
+    """
+
+    verdicts: tuple[JudgeVerdict, ...]
+    aggregate: PreferenceWinner
+    unanimous: bool
+
+
+def _aggregate_winners(verdicts: tuple[JudgeVerdict, ...]) -> tuple[PreferenceWinner, bool]:
+    if not verdicts:
+        return "tie", True  # vacuously unanimous
+    counts: dict[PreferenceWinner, int] = {"synthesis": 0, "best_r1": 0, "tie": 0}
+    for v in verdicts:
+        counts[v.verdict.winner] += 1
+    max_count = max(counts.values())
+    top = [w for w, c in counts.items() if c == max_count]
+    if len(top) == 1:
+        return top[0], max_count == len(verdicts)
+    return "tie", False
+
+
+async def judge_preference_multi(
+    *,
+    question: str,
+    synthesis: str,
+    best_r1: str,
+    judges: list[tuple[str, ElderPort]],
+    rng: random.Random | None = None,
+) -> MultiJudgeVerdict:
+    """Run ``judge_preference`` against each (model_id, judge) pair and
+    aggregate by majority vote.
+
+    Each judge gets its OWN X/Y coin-flip (fresh rng.random() call) so
+    positional-bias randomisation is independent per judge. Pass a seeded
+    ``rng`` for reproducibility.
+    """
+    rng = rng or random.Random()
+    verdicts: list[JudgeVerdict] = []
+    for model_id, port in judges:
+        v = await judge_preference(
+            question=question,
+            synthesis=synthesis,
+            best_r1=best_r1,
+            judge_port=port,
+            rng=rng,
+        )
+        verdicts.append(JudgeVerdict(judge_model=model_id, verdict=v))
+    tup = tuple(verdicts)
+    aggregate, unanimous = _aggregate_winners(tup)
+    return MultiJudgeVerdict(verdicts=tup, aggregate=aggregate, unanimous=unanimous)

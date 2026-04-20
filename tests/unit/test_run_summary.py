@@ -11,7 +11,11 @@ from council.domain.models import (
     Round,
     Turn,
 )
-from council.domain.preference import PreferenceVerdict
+from council.domain.preference import (
+    JudgeVerdict,
+    MultiJudgeVerdict,
+    PreferenceVerdict,
+)
 from council.domain.roster import RosterSpec
 from council.domain.run_summary import build_run_summary, write_run_summary
 from council.domain.synthesis_output import SynthesisOutput
@@ -104,11 +108,13 @@ class TestBuildRunSummary:
             "why": "ok.",
             "disagreements": [],
         }
+        # Single-judge verdict is emitted in the multi-judge shape with
+        # one verdict, unanimous=True, judge_count=1.
         assert s.preference == {
-            "winner": "synthesis",
-            "reason": "clearer",
-            "judge_model": None,
-            "single_judge": True,
+            "verdicts": [{"judge_model": None, "winner": "synthesis", "reason": "clearer"}],
+            "aggregate": "synthesis",
+            "unanimous": True,
+            "judge_count": 1,
         }
 
     def test_records_preference_judge_model_when_provided(self):
@@ -122,8 +128,65 @@ class TestBuildRunSummary:
             preference=pref,
             preference_judge_model="google/gemini-2.5-flash",
         )
-        assert s.preference["judge_model"] == "google/gemini-2.5-flash"
-        assert s.preference["single_judge"] is True
+        assert s.preference["verdicts"][0]["judge_model"] == "google/gemini-2.5-flash"
+        assert s.preference["judge_count"] == 1
+
+    def test_multi_judge_payload_shape(self):
+        multi = MultiJudgeVerdict(
+            verdicts=(
+                JudgeVerdict(
+                    judge_model="google/gemini-2.5-flash",
+                    verdict=PreferenceVerdict(winner="synthesis", reason="clearer", raw=""),
+                ),
+                JudgeVerdict(
+                    judge_model="anthropic/claude-haiku-4.5",
+                    verdict=PreferenceVerdict(winner="synthesis", reason="tighter", raw=""),
+                ),
+            ),
+            aggregate="synthesis",
+            unanimous=True,
+        )
+        s = build_run_summary(
+            debate=_debate_with_one_round(),
+            roster_spec=_ROSTER,
+            diversity=_HIGH_DIVERSITY,
+            policy=_FULL_POLICY,
+            synthesis=SynthesisOutput(answer="A", why="", disagreements=(), raw=""),
+            preference=multi,
+        )
+        assert s.preference["aggregate"] == "synthesis"
+        assert s.preference["unanimous"] is True
+        assert s.preference["judge_count"] == 2
+        assert [v["judge_model"] for v in s.preference["verdicts"]] == [
+            "google/gemini-2.5-flash",
+            "anthropic/claude-haiku-4.5",
+        ]
+
+    def test_multi_judge_disagreement_collapses_aggregate_to_tie(self):
+        multi = MultiJudgeVerdict(
+            verdicts=(
+                JudgeVerdict(
+                    judge_model="google/gemini-2.5-flash",
+                    verdict=PreferenceVerdict(winner="synthesis", reason="x", raw=""),
+                ),
+                JudgeVerdict(
+                    judge_model="anthropic/claude-haiku-4.5",
+                    verdict=PreferenceVerdict(winner="best_r1", reason="y", raw=""),
+                ),
+            ),
+            aggregate="tie",
+            unanimous=False,
+        )
+        s = build_run_summary(
+            debate=_debate_with_one_round(),
+            roster_spec=_ROSTER,
+            diversity=_HIGH_DIVERSITY,
+            policy=_FULL_POLICY,
+            synthesis=SynthesisOutput(answer="A", why="", disagreements=(), raw=""),
+            preference=multi,
+        )
+        assert s.preference["aggregate"] == "tie"
+        assert s.preference["unanimous"] is False
 
     def test_handles_missing_synthesis_and_preference(self):
         s = build_run_summary(
@@ -185,5 +248,6 @@ class TestWriteRunSummary:
         assert data["debate_id"] == "debate-xyz"
         assert data["diversity"]["classification"] == "high"
         assert data["policy"]["mode"] == "full_debate"
-        assert data["preference"]["winner"] == "best_r1"
+        assert data["preference"]["aggregate"] == "best_r1"
+        assert data["preference"]["verdicts"][0]["winner"] == "best_r1"
         assert data["synthesis_structured"]["disagreements"] == ["one minor point"]

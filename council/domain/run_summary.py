@@ -21,7 +21,7 @@ from typing import Any
 from council.domain.debate_policy import DebatePolicy
 from council.domain.diversity import DiversityScore
 from council.domain.models import Debate, ElderId
-from council.domain.preference import PreferenceVerdict
+from council.domain.preference import MultiJudgeVerdict, PreferenceVerdict
 from council.domain.roster import RosterSpec
 from council.domain.synthesis_output import SynthesisOutput
 
@@ -47,7 +47,7 @@ def build_run_summary(
     diversity: DiversityScore | None,
     policy: DebatePolicy,
     synthesis: SynthesisOutput | None,
-    preference: PreferenceVerdict | None,
+    preference: PreferenceVerdict | MultiJudgeVerdict | None,
     preference_judge_model: str | None = None,
 ) -> RunSummary:
     roster_payload: dict[str, Any] = (
@@ -81,16 +81,41 @@ def build_run_summary(
             "disagreements": list(synthesis.disagreements),
         }
     preference_payload: dict[str, Any] | None = None
-    if preference is not None:
+    if isinstance(preference, MultiJudgeVerdict):
+        # Multi-judge verdict — the preferred shape under the diversity-
+        # engine direction, since single-judge preference verdicts are
+        # judge-family-biased (see docs/experiments/2026-04-20-judge-
+        # replication.md). Payload preserves every verdict plus a majority
+        # aggregate and a unanimous flag.
         preference_payload = {
-            "winner": preference.winner,
-            "reason": preference.reason,
-            # Single-judge verdict metadata — consumers should know which
-            # judge emitted this verdict, since the 2026-04-20 replication
-            # showed judge-family effects on preference. When
-            # preference_judge_model is None the judge is unknown/unlabelled.
-            "judge_model": preference_judge_model,
-            "single_judge": True,
+            "verdicts": [
+                {
+                    "judge_model": jv.judge_model,
+                    "winner": jv.verdict.winner,
+                    "reason": jv.verdict.reason,
+                }
+                for jv in preference.verdicts
+            ],
+            "aggregate": preference.aggregate,
+            "unanimous": preference.unanimous,
+            "judge_count": len(preference.verdicts),
+        }
+    elif preference is not None:
+        # Back-compat: single PreferenceVerdict from a single-judge call.
+        # Emit in the same shape as the multi-judge payload but with one
+        # verdict, unanimous=True, and judge_count=1, so downstream
+        # consumers only have to handle the list shape.
+        preference_payload = {
+            "verdicts": [
+                {
+                    "judge_model": preference_judge_model,
+                    "winner": preference.winner,
+                    "reason": preference.reason,
+                }
+            ],
+            "aggregate": preference.winner,
+            "unanimous": True,
+            "judge_count": 1,
         }
     return RunSummary(
         debate_id=debate.id,

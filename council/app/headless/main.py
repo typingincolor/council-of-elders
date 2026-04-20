@@ -17,7 +17,12 @@ from council.domain.debate_service import DebateService
 from council.domain.diversity import DiversityScore, score_roster
 from council.domain.models import CouncilPack, Debate, ElderId
 from council.domain.ports import Clock, ElderPort, EventBus, TranscriptStore
-from council.domain.preference import PreferenceVerdict, judge_preference
+from council.domain.preference import (
+    MultiJudgeVerdict,
+    PreferenceVerdict,
+    judge_preference,
+    judge_preference_multi,
+)
 from council.domain.roster import RosterSpec
 from council.domain.run_summary import build_run_summary, write_run_summary
 from council.domain.synthesis_output import SynthesisOutput, parse_synthesis
@@ -68,6 +73,7 @@ async def run_headless(
     report_store=None,  # ReportFileStore | None
     best_r1_judge: ElderPort | None = None,
     preference_judge: ElderPort | None = None,
+    preference_judges: list[tuple[str, ElderPort]] | None = None,
     policy: DebatePolicy | None = None,
     roster_spec: RosterSpec | None = None,
     run_summary_root: Path | None = None,
@@ -149,7 +155,7 @@ async def run_headless(
         print("\n[Best-R1 baseline unavailable (no OpenRouter judge configured).]\n")
 
     structured: SynthesisOutput | None = None
-    preference: PreferenceVerdict | None = None
+    preference: PreferenceVerdict | MultiJudgeVerdict | None = None
 
     # Risk disclosure: under the 2026-04-19 probe and its 2026-04-20
     # judge-swap replication, synthesis rarely beats the best individual
@@ -184,18 +190,36 @@ async def run_headless(
         else:
             print("\nDisagreements: none material.")
 
-        # Preference judge: synthesis vs best-R1 — answers the core
-        # success-signal question ("does synthesis beat best-R1 more
-        # often at high diversity?"). Only runs when both a synthesis
-        # and a best-R1 answer are available.
-        if preference_judge is not None and best_r1_text and structured.answer:
-            preference = await judge_preference(
-                question=prompt,
-                synthesis=structured.answer,
-                best_r1=best_r1_text,
-                judge_port=preference_judge,
-            )
-            print(f"\n[Preference judge] {preference.winner} — {preference.reason}")
+        # Preference judge(s): synthesis vs best-R1 — answers the core
+        # success-signal question. Multi-judge is the preferred shape
+        # under the diversity-engine direction (see
+        # docs/experiments/2026-04-20-judge-replication.md for why
+        # single-judge preference verdicts are judge-family-biased).
+        # preference_judges takes precedence over the legacy single
+        # preference_judge kwarg.
+        if best_r1_text and structured.answer:
+            if preference_judges:
+                preference = await judge_preference_multi(
+                    question=prompt,
+                    synthesis=structured.answer,
+                    best_r1=best_r1_text,
+                    judges=preference_judges,
+                )
+                print(
+                    f"\n[Preference judges] aggregate={preference.aggregate} "
+                    f"(unanimous={preference.unanimous}, "
+                    f"n_judges={len(preference.verdicts)})"
+                )
+                for jv in preference.verdicts:
+                    print(f"  · {jv.judge_model}: {jv.verdict.winner} — {jv.verdict.reason}")
+            elif preference_judge is not None:
+                preference = await judge_preference(
+                    question=prompt,
+                    synthesis=structured.answer,
+                    best_r1=best_r1_text,
+                    judge_port=preference_judge,
+                )
+                print(f"\n[Preference judge] {preference.winner} — {preference.reason}")
 
         # Generate the debate report and print + optionally save it.
         try:
@@ -222,12 +246,12 @@ async def run_headless(
         diversity: DiversityScore | None = (
             score_roster(roster_spec) if roster_spec is not None and roster_spec.models else None
         )
-        # Record which model produced the preference verdict so consumers
-        # know its basis. Single-judge verdicts are judge-family-biased
-        # (see docs/experiments/2026-04-20-judge-replication.md); Stage 9
-        # of the plan rotates multiple judges here.
+        # When the caller used the single preference_judge fallback,
+        # record its model id so the emitted (single-verdict) preference
+        # payload carries judge provenance. Multi-judge payloads already
+        # embed each judge's model id inside the verdicts list.
         preference_judge_model: str | None = None
-        if preference is not None and preference_judge is not None:
+        if isinstance(preference, PreferenceVerdict) and preference_judge is not None:
             preference_judge_model = getattr(preference_judge, "model", None)
         summary = build_run_summary(
             debate=debate,
@@ -362,23 +386,41 @@ def main() -> None:
     from council.adapters.storage.report_file import ReportFileStore
 
     best_r1_judge: ElderPort | None = None
-    preference_judge: ElderPort | None = None
+    preference_judges: list[tuple[str, ElderPort]] | None = None
     if using_openrouter and config.openrouter_api_key:
         from council.adapters.elders.openrouter import OpenRouterAdapter
 
-        # Same cheap judge for both calls (~$0.001 each via gemini-flash).
-        # Separate adapters so usage counters stay independent if we later
-        # want to attribute cost per-task.
+        # Best-R1 uses a single cheap judge (~$0.001 via gemini-flash). The
+        # rubric is a straightforward "pick the strongest of three"; family
+        # bias on this task is less structurally dangerous than it is on
+        # preference, where the 2026-04-20 replication found judge-family
+        # effects. We keep best-R1 single-judge for cost.
         best_r1_judge = OpenRouterAdapter(
             elder_id="ada",
             model="google/gemini-2.5-flash",
             api_key=config.openrouter_api_key,
         )
-        preference_judge = OpenRouterAdapter(
-            elder_id="ada",
-            model="google/gemini-2.5-flash",
-            api_key=config.openrouter_api_key,
-        )
+        # Preference is multi-judge by default — two families (Google +
+        # Anthropic), both cheap. Adds ~$0.02/run. Each adapter is
+        # separate so per-task cost attribution stays possible.
+        preference_judges = [
+            (
+                "google/gemini-2.5-flash",
+                OpenRouterAdapter(
+                    elder_id="ada",
+                    model="google/gemini-2.5-flash",
+                    api_key=config.openrouter_api_key,
+                ),
+            ),
+            (
+                "anthropic/claude-haiku-4.5",
+                OpenRouterAdapter(
+                    elder_id="ada",
+                    model="anthropic/claude-haiku-4.5",
+                    api_key=config.openrouter_api_key,
+                ),
+            ),
+        ]
 
     asyncio.run(
         run_headless(
@@ -393,7 +435,7 @@ def main() -> None:
             max_rounds=args.max_rounds,
             report_store=ReportFileStore(root=Path(args.reports_root)),
             best_r1_judge=best_r1_judge,
-            preference_judge=preference_judge,
+            preference_judges=preference_judges,
             policy=_policy_override_from_args(args.policy, args.max_rounds),
             roster_spec=roster_spec,
             run_summary_root=Path(args.summaries_root),
