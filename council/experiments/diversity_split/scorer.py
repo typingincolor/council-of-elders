@@ -34,6 +34,7 @@ from council.adapters.storage.json_file import JsonFileStore
 from council.domain.models import Debate, ElderId
 from council.domain.ports import ElderPort
 from council.domain.preference import judge_preference_multi
+from council.domain.synthesis_output import parse_synthesis
 from council.experiments.homogenisation.judges import judge_best_r1, judge_claim_overlap
 from council.experiments.homogenisation.scorer import _binomial_ci_90
 
@@ -104,7 +105,15 @@ async def _score_one_debate(
         judge_port=single_judge,
     )
     best_text = answers[best.best_index - 1]
-    synth_text = debate.synthesis.text if debate.synthesis else ""
+    # BUG FIX 2026-04-20: the preference judge used to receive the raw
+    # synthesis text including the ANSWER:/WHY:/DISAGREEMENTS: structural
+    # labels, which the user never sees. The judge's rubric penalises
+    # bloat and shape-fit, so synthesis was being systematically
+    # handicapped for a wrapper the deliverable doesn't actually include.
+    # Parse the synthesis and send only the ANSWER body — what
+    # run_headless actually shows to the user.
+    raw_synth = debate.synthesis.text if debate.synthesis else ""
+    synth_text = parse_synthesis(raw_synth).answer if raw_synth else ""
 
     multi = await judge_preference_multi(
         question=debate.prompt,

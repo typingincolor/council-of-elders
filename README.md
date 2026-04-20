@@ -5,25 +5,26 @@
 [![CI](https://github.com/typingincolor/council-of-elders/actions/workflows/ci.yml/badge.svg)](https://github.com/typingincolor/council-of-elders/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> ## ⚠️ This is a failed experiment.
+> ## ⚠️ This is an experiment, not a finished product.
 >
-> The premise was "three diverse LLMs debate, then synthesise a better answer than any one of them alone could produce". Rigorous testing showed **the debate mechanic actively makes the output worse**.
+> The premise was "three diverse LLMs debate, then synthesise a better answer than any one of them alone". After four experiments (and one scoring bug I initially missed), the actual story is more specific than that:
 >
-> - In 32 debates across four roster configurations scored by two independent judges, the synthesised answer *never* beat the strongest individual R1 answer. Zero wins.
-> - Removing the debate entirely — three models write independently, one synthesises their three parallel answers with no cross-examination — produced synthesis wins 2 out of 8 times.
-> - The single round of cross-examination (R2) dropped judged-preference quality by ~0.19. Adding further rounds doesn't recover.
+> - **Model diversity matters.** A roster of three distinct providers (Anthropic + Meta + OpenAI) produces synthesis preferred ~44% of the time over the strongest individual answer, at n=8. A homogeneous same-model roster drops that to ~31%.
+> - **Personas don't substitute, and compose *negatively*.** Adding per-elder personas to a same-model roster is neutral. Adding them on top of the diverse roster drops preference by ~0.13. Persona context overhead is the likely cause; the roles pack is **not** recommended.
+> - **The debate rounds are net-negative on synthesis quality.** Running R1 only, then synthesising — with no cross-examination rounds between elders — beats the full three-round debate by ~0.13 on judged preference. R2 cross-exam is the damage site; R3+ adds nothing more. The tool's current default pipeline (R1 + R2 + R3 + synthesis) is not the best configuration it can produce.
+> - **Best-R1 is a genuine baseline.** The strongest individual R1 beats synthesis in roughly half of debates even in the best configuration. If you're only going to keep one output, keep it. But synthesis wins 5–6 times out of 32 in good configurations, and ties another third, so it's not dominated.
 >
-> So: parallel sampling across different models was doing useful work. The automated back-and-forth between them was the value-destroying part — the part the tool's name is built around.
+> The working configuration is **three distinct providers, bare pack, R1-only synthesis** — which the current code doesn't directly support as a mode. Adding it is a small change and tracked in the results docs below.
 >
-> **Caveat:** all of the above is for *automated* model-to-model debate. Human-in-the-loop multi-model consultation (a human picking which thread to pull, rephrasing, directing follow-ups) wasn't tested and may well work — that's how the author was using models by hand before building this.
+> **Caveat:** all experiments used *automated* model-to-model debate. Human-in-the-loop multi-model consultation (a human picking which thread to pull, rephrasing, directing follow-ups) wasn't tested and may well behave differently.
 >
 > Full methodology and per-debate results: [`docs/experiments/`](docs/experiments/). Key reads:
-> - [`2026-04-19-9288-homogenisation.md`](docs/experiments/2026-04-19-9288-homogenisation.md) — first probe
-> - [`2026-04-20-judge-replication.md`](docs/experiments/2026-04-20-judge-replication.md) — judge-family bias
-> - [`2026-04-20-f294-results.md`](docs/experiments/2026-04-20-f294-results.md) — 2×2 diversity experiment
-> - [`2026-04-20-226f-results.md`](docs/experiments/2026-04-20-226f-results.md) — debate-depth ablation (the decisive one)
+> - [`2026-04-19-9288-homogenisation.md`](docs/experiments/2026-04-19-9288-homogenisation.md) — first probe; showed homogeneous councils underperform.
+> - [`2026-04-20-judge-replication.md`](docs/experiments/2026-04-20-judge-replication.md) — judge-family bias in the original scoring. Directional findings survive.
+> - [`2026-04-20-f294-results.md`](docs/experiments/2026-04-20-f294-results.md) — 2×2 model × role experiment. Cell C (diff model, bare pack) wins.
+> - [`2026-04-20-226f-results.md`](docs/experiments/2026-04-20-226f-results.md) — debate-depth ablation. R1-only synthesis beats full debate.
 >
-> The code below still runs. It's kept as an archive of the experiment, not a recommendation.
+> The code still runs. The experiments tell you where the working configuration is.
 >
 > ---
 

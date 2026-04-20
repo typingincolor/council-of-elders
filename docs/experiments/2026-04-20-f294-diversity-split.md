@@ -36,8 +36,8 @@ averaged per cell.
 
 | | same role | different role |
 |---|---|---|
-| **same model** | 0.677 | 0.422 |
-| **different model** | 0.367 | 0.322 |
+| **same model** | 0.659 | 0.408 |
+| **different model** | 0.362 | 0.309 |
 
 ## Metric 2 — Synthesis-vs-best-R1 preference (90% CI)
 
@@ -46,15 +46,15 @@ the strongest R1 answer. Ties = 0.5.
 
 | | same role | different role |
 |---|---|---|
-| **same model** | 0.125 [0.028, 0.411] | 0.062 [0.000, 0.253] |
-| **different model** | 0.188 [0.087, 0.540] | 0.188 [0.087, 0.540] |
+| **same model** | 0.312 [0.087, 0.540] | 0.312 [0.087, 0.540] |
+| **different model** | 0.438 [0.249, 0.751] | 0.312 [0.087, 0.540] |
 
 ## Interpretation
 
-- Role diversity alone is a wash (B−A = -0.062; threshold ±0.10).
-- Model diversity alone not decisive here (C−A = +0.062).
+- Role diversity alone is a wash (B−A = +0.000; threshold ±0.10).
+- Model diversity alone moves the needle (C−A = +0.125).
 - B-vs-C is in the inconclusive zone (C−B = +0.125, between ±0.10 and ±0.15). Expand to larger n before drawing a conclusion on personas-as-substitute.
-- **Two axes do not compose** (|D−C| = 0.000 ≤ 0.10). Personas add no marginal value on top of model diversity; drop the default persona pack.
+- Adding personas to diverse models HURT performance (D−C = -0.125 < −0.10) — persona-model interaction effect worth investigating.
 
 ## Caveats
 
@@ -71,38 +71,38 @@ the strongest R1 answer. Ties = 0.5.
 
 | debate | condition | prompt | R1 Jaccard | winner |
 |---|---|---|---|---|
-| `c275a0eb` | same_model_same_role | headline_001 | 0.867 | best_r1 |
-| `43e4e2a9` | same_model_same_role | summary_001 | 0.658 | best_r1 |
-| `98b3ca90` | same_model_same_role | strategy_001 | 0.592 | best_r1 |
-| `ea57cacf` | same_model_same_role | strategy_002 | 0.568 | best_r1 |
-| `5b4e4a8d` | same_model_same_role | technical_001 | 0.620 | best_r1 |
-| `30894db5` | same_model_same_role | technical_002 | 0.527 | best_r1 |
-| `ea26dbb3` | same_model_same_role | factual_001 | 0.713 | tie |
-| `aa9e0615` | same_model_same_role | value_001 | 0.871 | tie |
-| `f5f77625` | same_model_diff_role | headline_001 | 0.728 | best_r1 |
-| `8263b2e2` | same_model_diff_role | summary_001 | 0.560 | best_r1 |
-| `82276fc7` | same_model_diff_role | strategy_001 | 0.253 | best_r1 |
-| `30868837` | same_model_diff_role | strategy_002 | 0.252 | best_r1 |
-| `d1d0b229` | same_model_diff_role | technical_001 | 0.322 | best_r1 |
-| `6479a495` | same_model_diff_role | technical_002 | 0.295 | best_r1 |
-| `325dab3c` | same_model_diff_role | factual_001 | 0.566 | tie |
-| `575f9988` | same_model_diff_role | value_001 | 0.401 | best_r1 |
-| `8a594864` | diff_model_same_role | headline_001 | 0.728 | tie |
-| `86c32771` | diff_model_same_role | summary_001 | 0.452 | best_r1 |
-| `80233098` | diff_model_same_role | strategy_001 | 0.160 | tie |
-| `fbaec6b5` | diff_model_same_role | strategy_002 | 0.277 | best_r1 |
-| `9942f374` | diff_model_same_role | technical_001 | 0.332 | best_r1 |
-| `b630619f` | diff_model_same_role | technical_002 | 0.267 | tie |
-| `ec7bfc31` | diff_model_same_role | factual_001 | 0.437 | best_r1 |
-| `5ab87157` | diff_model_same_role | value_001 | 0.285 | best_r1 |
-| `7a672fc3` | diff_model_diff_role | headline_001 | 0.503 | tie |
-| `12f647b6` | diff_model_diff_role | summary_001 | 0.544 | tie |
-| `1fdc9634` | diff_model_diff_role | strategy_001 | 0.236 | best_r1 |
-| `7256cedc` | diff_model_diff_role | strategy_002 | 0.140 | best_r1 |
-| `5271f898` | diff_model_diff_role | technical_001 | 0.250 | best_r1 |
-| `3d8342f9` | diff_model_diff_role | technical_002 | 0.209 | tie |
-| `e2ae6204` | diff_model_diff_role | factual_001 | 0.382 | best_r1 |
-| `bf569914` | diff_model_diff_role | value_001 | 0.309 | best_r1 |
+| `c275a0eb` | same_model_same_role | headline_001 | 0.867 | tie |
+| `43e4e2a9` | same_model_same_role | summary_001 | 0.811 | best_r1 |
+| `98b3ca90` | same_model_same_role | strategy_001 | 0.582 | best_r1 |
+| `ea57cacf` | same_model_same_role | strategy_002 | 0.471 | best_r1 |
+| `5b4e4a8d` | same_model_same_role | technical_001 | 0.664 | tie |
+| `30894db5` | same_model_same_role | technical_002 | 0.404 | synthesis |
+| `ea26dbb3` | same_model_same_role | factual_001 | 0.672 | tie |
+| `aa9e0615` | same_model_same_role | value_001 | 0.805 | best_r1 |
+| `f5f77625` | same_model_diff_role | headline_001 | 0.700 | tie |
+| `8263b2e2` | same_model_diff_role | summary_001 | 0.632 | tie |
+| `82276fc7` | same_model_diff_role | strategy_001 | 0.227 | best_r1 |
+| `30868837` | same_model_diff_role | strategy_002 | 0.211 | best_r1 |
+| `d1d0b229` | same_model_diff_role | technical_001 | 0.251 | best_r1 |
+| `6479a495` | same_model_diff_role | technical_002 | 0.331 | tie |
+| `325dab3c` | same_model_diff_role | factual_001 | 0.452 | synthesis |
+| `575f9988` | same_model_diff_role | value_001 | 0.462 | best_r1 |
+| `8a594864` | diff_model_same_role | headline_001 | 0.678 | tie |
+| `86c32771` | diff_model_same_role | summary_001 | 0.453 | synthesis |
+| `80233098` | diff_model_same_role | strategy_001 | 0.148 | synthesis |
+| `fbaec6b5` | diff_model_same_role | strategy_002 | 0.262 | best_r1 |
+| `9942f374` | diff_model_same_role | technical_001 | 0.354 | best_r1 |
+| `b630619f` | diff_model_same_role | technical_002 | 0.318 | tie |
+| `ec7bfc31` | diff_model_same_role | factual_001 | 0.441 | tie |
+| `5ab87157` | diff_model_same_role | value_001 | 0.240 | best_r1 |
+| `7a672fc3` | diff_model_diff_role | headline_001 | 0.477 | tie |
+| `12f647b6` | diff_model_diff_role | summary_001 | 0.509 | synthesis |
+| `1fdc9634` | diff_model_diff_role | strategy_001 | 0.195 | best_r1 |
+| `7256cedc` | diff_model_diff_role | strategy_002 | 0.133 | best_r1 |
+| `5271f898` | diff_model_diff_role | technical_001 | 0.152 | best_r1 |
+| `3d8342f9` | diff_model_diff_role | technical_002 | 0.221 | tie |
+| `e2ae6204` | diff_model_diff_role | factual_001 | 0.410 | tie |
+| `bf569914` | diff_model_diff_role | value_001 | 0.374 | best_r1 |
 
 ## Run metadata
 
