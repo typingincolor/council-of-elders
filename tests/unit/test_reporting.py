@@ -165,6 +165,30 @@ class TestBuildMetadataSection:
     def test_includes_convergence_summary(self, builder):
         md = builder.build_metadata_section(_debate_with_history())
         assert "round 3" in md.lower()
+        assert "consensus" in md.lower()
+
+    def test_non_convergence_frames_as_productive_disagreement(self, builder):
+        # Neither terminal state is treated as failure under the
+        # diversity-engine direction.
+        r1 = Round(
+            number=1,
+            turns=[
+                Turn(elder="claude", answer=_answer("claude", "c", agreed=False)),
+                Turn(elder="gemini", answer=_answer("gemini", "g", agreed=False)),
+                Turn(elder="chatgpt", answer=_answer("chatgpt", "x", agreed=False)),
+            ],
+        )
+        d = Debate(
+            id="d",
+            prompt="Q?",
+            pack=CouncilPack(name="bare", shared_context=None, personas={}),
+            rounds=[r1],
+            status="in_progress",
+            synthesis=None,
+        )
+        md = builder.build_metadata_section(d)
+        assert "productive disagreement" in md.lower()
+        assert "failure" not in md.lower()
 
     def test_includes_timeline_table(self, builder):
         md = builder.build_metadata_section(_debate_with_history())

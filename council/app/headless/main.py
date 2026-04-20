@@ -14,11 +14,13 @@ from council.app.config import load_config
 from council.domain.best_r1 import LLMJudgedBestR1Selector
 from council.domain.debate_policy import DebatePolicy, PolicyMode, policy_for
 from council.domain.debate_service import DebateService
-from council.domain.diversity import score_roster
+from council.domain.diversity import DiversityScore, score_roster
 from council.domain.models import CouncilPack, Debate, ElderId
 from council.domain.ports import Clock, ElderPort, EventBus, TranscriptStore
+from council.domain.preference import PreferenceVerdict, judge_preference
 from council.domain.roster import RosterSpec
-from council.domain.synthesis_output import parse_synthesis
+from council.domain.run_summary import build_run_summary, write_run_summary
+from council.domain.synthesis_output import SynthesisOutput, parse_synthesis
 
 _LABELS: dict[ElderId, str] = {
     "claude": "Claude",
@@ -65,8 +67,10 @@ async def run_headless(
     max_rounds: int = 3,
     report_store=None,  # ReportFileStore | None
     best_r1_judge: ElderPort | None = None,
+    preference_judge: ElderPort | None = None,
     policy: DebatePolicy | None = None,
     roster_spec: RosterSpec | None = None,
+    run_summary_root: Path | None = None,
 ) -> None:
     """Headless one-shot debate.
 
@@ -144,6 +148,9 @@ async def run_headless(
     else:
         print("\n[Best-R1 baseline unavailable (no OpenRouter judge configured).]\n")
 
+    structured: SynthesisOutput | None = None
+    preference: PreferenceVerdict | None = None
+
     if effective_policy.synthesise:
         synth = await svc.synthesize(debate, by=synthesizer)
         structured = parse_synthesis(synth.text or "")
@@ -157,6 +164,19 @@ async def run_headless(
                 print(f"- {d}")
         else:
             print("\nDisagreements: none material.")
+
+        # Preference judge: synthesis vs best-R1 — answers the core
+        # success-signal question ("does synthesis beat best-R1 more
+        # often at high diversity?"). Only runs when both a synthesis
+        # and a best-R1 answer are available.
+        if preference_judge is not None and best_r1_text and structured.answer:
+            preference = await judge_preference(
+                question=prompt,
+                synthesis=structured.answer,
+                best_r1=best_r1_text,
+                judge_port=preference_judge,
+            )
+            print(f"\n[Preference judge] {preference.winner} — {preference.reason}")
 
         # Generate the debate report and print + optionally save it.
         try:
@@ -179,6 +199,25 @@ async def run_headless(
                 "[warning] best-R1-only mode but no judge available — "
                 "no deliverable produced."
             )
+
+    # Emit the observability sidecar. Captures roster, diversity, policy,
+    # rounds, best-R1 pick, structured synthesis, and preference verdict.
+    if run_summary_root is not None:
+        diversity: DiversityScore | None = (
+            score_roster(roster_spec)
+            if roster_spec is not None and roster_spec.models
+            else None
+        )
+        summary = build_run_summary(
+            debate=debate,
+            roster_spec=roster_spec,
+            diversity=diversity,
+            policy=effective_policy,
+            synthesis=structured,
+            preference=preference,
+        )
+        summary_path = write_run_summary(summary, root=run_summary_root)
+        print(f"\n[run summary] {summary_path}")
 
     if using_openrouter:
         from council.adapters.elders.openrouter import (
@@ -272,6 +311,15 @@ def main() -> None:
         default=str(Path.home() / ".council" / "reports"),
         help="Directory where debate reports are saved as markdown.",
     )
+    parser.add_argument(
+        "--summaries-root",
+        default=str(Path.home() / ".council" / "summaries"),
+        help=(
+            "Directory where per-debate run_summary.json files are saved. "
+            "Captures roster, diversity, policy, best-R1, synthesis, and "
+            "preference verdict."
+        ),
+    )
     args = parser.parse_args()
 
     packs_root = Path(args.packs_root)
@@ -292,11 +340,20 @@ def main() -> None:
     from council.adapters.storage.report_file import ReportFileStore
 
     best_r1_judge: ElderPort | None = None
+    preference_judge: ElderPort | None = None
     if using_openrouter and config.openrouter_api_key:
         from council.adapters.elders.openrouter import OpenRouterAdapter
 
+        # Same cheap judge for both calls (~$0.001 each via gemini-flash).
+        # Separate adapters so usage counters stay independent if we later
+        # want to attribute cost per-task.
         best_r1_judge = OpenRouterAdapter(
-            elder_id="claude",  # judge elder_id is arbitrary — the adapter is standalone
+            elder_id="claude",
+            model="google/gemini-2.5-flash",
+            api_key=config.openrouter_api_key,
+        )
+        preference_judge = OpenRouterAdapter(
+            elder_id="claude",
             model="google/gemini-2.5-flash",
             api_key=config.openrouter_api_key,
         )
@@ -314,7 +371,9 @@ def main() -> None:
             max_rounds=args.max_rounds,
             report_store=ReportFileStore(root=Path(args.reports_root)),
             best_r1_judge=best_r1_judge,
+            preference_judge=preference_judge,
             policy=_policy_override_from_args(args.policy, args.max_rounds),
             roster_spec=roster_spec,
+            run_summary_root=Path(args.summaries_root),
         )
     )

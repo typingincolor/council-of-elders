@@ -145,7 +145,10 @@ class ReportBuilder:
             "that moved the debate, not every minor quibble. If the debate was "
             "largely harmonious, say so plainly rather than inventing tension.\n"
             "3. Concessions, shifts, or holdouts. Do not assume convergence was "
-            "linear; if it was partial or non-monotonic, describe that.\n\n"
+            "linear; if it was partial or non-monotonic, describe that. "
+            "Productive disagreement is a valid terminal state — do not frame "
+            "non-convergence as a failure or defect; frame it as the council's "
+            "honest verdict on an unresolved question.\n\n"
             "Then perform TWO audits in order.\n\n"
             "**Task-fidelity audit.** Compare the synthesised answer against "
             "the user's ORIGINAL question. Did the synthesis answer the "
@@ -270,10 +273,13 @@ class ReportBuilder:
     # ---- helpers --------------------------------------------------------
 
     def _convergence_summary(self, debate: Debate) -> str:
+        # Both terminal states are valid under the diversity-engine direction —
+        # convergence is informational, not a success metric. "Productive
+        # disagreement" is an equally legitimate outcome.
         for r in debate.rounds:
             if r.converged():
-                return f"All three elders converged in round {r.number}."
-        return "No full convergence before synthesis."
+                return f"Reached consensus in round {r.number}."
+        return f"Retained productive disagreement across all {len(debate.rounds)} rounds."
 
     def _convergence_table(self, debate: Debate) -> str:
         header = "| Round | Claude | Gemini | ChatGPT |"
