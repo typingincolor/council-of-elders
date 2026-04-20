@@ -320,6 +320,45 @@ class TestAssembleReportMarkdown:
         )
         assert "Final answer." in md
 
+    def test_surfaces_disagreements_when_synthesis_is_structured(self, builder):
+        d = _debate_with_history()
+        structured = ElderAnswer(
+            elder="claude",
+            text=(
+                "ANSWER:\nShip.\n\n"
+                "WHY:\nBenefit outweighs risk.\n\n"
+                "DISAGREEMENTS:\n- Gemini argued for delaying one sprint.\n"
+                "- ChatGPT wanted a phased rollout.\n"
+            ),
+            error=None,
+            agreed=None,
+            created_at=datetime(2026, 4, 20, tzinfo=timezone.utc),
+        )
+        md = builder.assemble_report_markdown(
+            d, structured, "narrative", synthesiser="claude"
+        )
+        assert "## Unresolved disagreements" in md
+        assert "Gemini argued for delaying one sprint." in md
+        assert "ChatGPT wanted a phased rollout." in md
+        assert "**Why:** Benefit outweighs risk." in md
+        # Body of ANSWER is surfaced too.
+        assert "Ship." in md
+
+    def test_harmonious_synthesis_omits_disagreements_section(self, builder):
+        d = _debate_with_history()
+        structured = ElderAnswer(
+            elder="claude",
+            text="ANSWER:\nShip.\n\nWHY:\nNo blockers.\n\nDISAGREEMENTS:\n(none)\n",
+            error=None,
+            agreed=None,
+            created_at=datetime(2026, 4, 20, tzinfo=timezone.utc),
+        )
+        md = builder.assemble_report_markdown(
+            d, structured, "narrative", synthesiser="claude"
+        )
+        assert "## Unresolved disagreements" not in md
+        assert "**Why:** No blockers." in md
+
     def test_contains_narrative_section(self, builder):
         d = _debate_with_history()
         md = builder.assemble_report_markdown(

@@ -18,6 +18,7 @@ from council.domain.diversity import score_roster
 from council.domain.models import CouncilPack, Debate, ElderId
 from council.domain.ports import Clock, ElderPort, EventBus, TranscriptStore
 from council.domain.roster import RosterSpec
+from council.domain.synthesis_output import parse_synthesis
 
 _LABELS: dict[ElderId, str] = {
     "claude": "Claude",
@@ -145,7 +146,17 @@ async def run_headless(
 
     if effective_policy.synthesise:
         synth = await svc.synthesize(debate, by=synthesizer)
-        print(f"[Synthesis by {_LABELS[synthesizer]}] {synth.text}")
+        structured = parse_synthesis(synth.text or "")
+        print(f"\n[Synthesis by {_LABELS[synthesizer]}]\n")
+        print(structured.answer)
+        if structured.why:
+            print(f"\nWhy: {structured.why}")
+        if structured.disagreements:
+            print("\nDisagreements:")
+            for d in structured.disagreements:
+                print(f"- {d}")
+        else:
+            print("\nDisagreements: none material.")
 
         # Generate the debate report and print + optionally save it.
         try:

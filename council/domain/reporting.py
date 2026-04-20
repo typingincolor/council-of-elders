@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 
 from council.domain.models import Debate, ElderAnswer, ElderId
+from council.domain.synthesis_output import parse_synthesis
 
 _PROMPT_HEADER_LIMIT = 200
 
@@ -233,11 +234,22 @@ class ReportBuilder:
         parts.append("")
         parts.append(f"**Synthesised by:** {_ELDER_LABEL[synthesiser]}")
         parts.append("")
+        structured = parse_synthesis(synthesis.text or "")
         parts.append("## Synthesised answer")
         parts.append("")
-        synth_text = synthesis.text or "_(no text)_"
-        parts.append(_demote_markdown_headings(synth_text))
+        parts.append(_demote_markdown_headings(structured.answer or "_(no text)_"))
         parts.append("")
+        if structured.why:
+            parts.append("**Why:** " + structured.why)
+            parts.append("")
+        if structured.disagreements:
+            # Primary section (before debate metadata) — surfaces dissent
+            # to the reader rather than hiding it in the audit footer.
+            parts.append("## Unresolved disagreements")
+            parts.append("")
+            for d in structured.disagreements:
+                parts.append(f"- {d}")
+            parts.append("")
         parts.append(self.build_metadata_section(debate))
         parts.append("")
         final_positions = self.build_final_positions_section(debate)

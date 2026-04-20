@@ -160,45 +160,54 @@ class PromptBuilder:
             parts.append(header)
         parts.append(f"The user's original question was:\n\n{debate.prompt}")
         parts.append(self._all_rounds_section(debate))
-        # Rewrite origin: produced by the council meta-debate 5142e6fc.
-        # Fixes: aspirational-form wording replaced with pragmatic-brevity
-        # operationalisation; transcript-length mimicry severed explicitly;
-        # authorship-bias rule added ("synthesize, don't select"); draft-label
-        # ban generalised from token-blacklist to category (process
-        # scaffolding of any kind); first-token anchor added; separation-of-
-        # concerns note ("a separate downstream step audits the debate").
+        # Rewrite origin: diversity-engine refocus (docs/superpowers/plans/
+        # 2026-04-20-diversity-engine-refactor.md). Previous version aimed
+        # for a clean single-block answer; this one emits a three-section
+        # structure (ANSWER / WHY / DISAGREEMENTS) so the user-facing
+        # deliverable can preserve decision-relevant divergence instead
+        # of collapsing it. The "synthesize, don't select" discipline and
+        # form/length calibration are unchanged — only the output shape.
         parts.append(
             "You have seen every advisor across every round. Write the final "
-            "answer the user receives. A separate downstream step audits the "
-            "debate — that is not your job. Your job is the clean answer.\n\n"
-            "**Form and length.** Match the shape and the brevity the user's "
-            'request implies in normal usage. "One sentence" means one short '
-            'sentence, not a 30-word multi-clause one. "Headline," "slogan," '
-            '"tagline," "one-liner," "tweet," "short answer" all mean '
-            "genuinely punchy, not merely technically compliant. If the user "
-            "gave an example, match its register and length. If the form is "
-            "unspecified, default to the shortest response that fully "
-            "answers. Do not inherit length or structure from the advisors "
-            "when it conflicts with the user's ask — calibrate to the user, "
-            "not the transcript. Add no structure beyond what the user "
-            "requested (no bullets, headings, or sections unless asked).\n\n"
+            "deliverable the user receives.\n\n"
+            "**Form and length.** Inside the ANSWER section, match the shape "
+            "and brevity the user's request implies in normal usage. \"One "
+            'sentence" means one short sentence. "Headline," "slogan," '
+            '"tagline," "tweet," "short answer" mean genuinely punchy. If '
+            "the user gave an example, match its register and length. If the "
+            "form is unspecified, default to the shortest response that fully "
+            "answers. Calibrate to the user's ask, not to the transcript "
+            "length. Add no structure beyond what the user requested inside "
+            "the ANSWER section (no bullets, headings, or sub-sections unless "
+            "the user asked).\n\n"
             "**Synthesize, do not select.** Do not copy any single advisor's "
             "wording wholesale when others contributed. Take the strongest "
             "formulation of each component from whichever advisor expressed "
             "it best, and write it in your own voice. Where advisors "
-            "disagreed, decide based on the strongest argument in the "
-            "transcript — not recency, confidence, or majority — and output "
-            "only your decision.\n\n"
-            "**Output discipline.** Output only the answer itself. No "
-            "preamble, sign-off, framing sentence, section headings, labels, "
-            "markdown scaffolding, tags, or meta-commentary. Do not mention "
-            "the debate, the advisors, agreement, disagreement, or your "
-            "reasoning. Do not emit process scaffolding of any kind — no "
-            "draft markers, phase headings, or iterative-refinement "
-            'structure (e.g. "Goal:", "Approach:", "Synthesis:", "Draft:", '
-            '"Refined:", "**Defining X**", "Step 1:"). Do not append a '
-            "CONVERGED tag.\n\n"
-            "Begin your response with the first word of the answer itself."
+            "disagreed, decide on the strongest argument in the transcript — "
+            "not recency, confidence, or majority — and put your decision in "
+            "ANSWER. Record the losing position (and why it matters) under "
+            "DISAGREEMENTS, not in ANSWER.\n\n"
+            "**Output format.** Emit EXACTLY these three labelled sections "
+            "in this order, with the labels flush-left in uppercase exactly "
+            "as shown. No preamble, no sign-off, no text before ANSWER: or "
+            "after the last DISAGREEMENTS line. Do not append a CONVERGED "
+            "tag.\n\n"
+            "ANSWER:\n"
+            "<the user-facing deliverable, calibrated to the user's ask>\n\n"
+            "WHY:\n"
+            "<1-3 short sentences on the load-bearing reason, in your own "
+            "voice — no advisor names>\n\n"
+            "DISAGREEMENTS:\n"
+            "- <one bullet per DECISION-RELEVANT disagreement between "
+            "advisors: a divergence counts only if it would change action, "
+            "interpretation, scope, caveats, confidence, or edge-case "
+            "handling for the user. Attribute where useful "
+            '(e.g. "Claude argued X; Gemini argued Y"). Skip stylistic or '
+            "framing differences.>\n"
+            "- <additional bullets as needed>\n\n"
+            "If advisors agreed on every decision-relevant point, write "
+            "exactly `(none)` as the only line under DISAGREEMENTS."
         )
         return "\n\n".join(parts)
 
