@@ -11,9 +11,9 @@ from council.app.tui.app import CouncilApp
 def _app(tmp_path):
     (tmp_path / "bare").mkdir()
     elders = {
-        "claude": FakeElder(elder_id="claude", replies=["r1\nCONVERGED: yes"]),
-        "gemini": FakeElder(elder_id="gemini", replies=["r1\nCONVERGED: yes"]),
-        "chatgpt": FakeElder(elder_id="chatgpt", replies=["r1\nCONVERGED: yes"]),
+        "ada": FakeElder(elder_id="ada", replies=["r1\nCONVERGED: yes"]),
+        "kai": FakeElder(elder_id="kai", replies=["r1\nCONVERGED: yes"]),
+        "mei": FakeElder(elder_id="mei", replies=["r1\nCONVERGED: yes"]),
     }
     return CouncilApp(
         elders=elders,
@@ -41,7 +41,7 @@ async def test_number_key_focuses_correct_pane(tmp_path):
         await pilot.press("enter")
         await _wait_until(pilot, lambda: app.awaiting_decision)
 
-        for key, elder in [("2", "gemini"), ("3", "chatgpt"), ("4", "synthesis"), ("1", "claude")]:
+        for key, elder in [("2", "kai"), ("3", "mei"), ("4", "synthesis"), ("1", "ada")]:
             await pilot.press(key)
             await pilot.pause()
             assert app._view.pane(elder).has_focus

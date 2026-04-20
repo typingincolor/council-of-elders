@@ -20,18 +20,18 @@ def _conv(text: str = "hi") -> list[Message]:
 class TestConstructorAndHealth:
     def test_exposes_elder_id(self):
         a = OpenRouterAdapter(
-            elder_id="claude", model="anthropic/claude-sonnet-4.5", api_key="sk-or-x"
+            elder_id="ada", model="anthropic/claude-sonnet-4.5", api_key="sk-or-x"
         )
-        assert a.elder_id == "claude"
+        assert a.elder_id == "ada"
 
     async def test_health_check_true_when_key_set(self):
         a = OpenRouterAdapter(
-            elder_id="claude", model="anthropic/claude-sonnet-4.5", api_key="sk-or-x"
+            elder_id="ada", model="anthropic/claude-sonnet-4.5", api_key="sk-or-x"
         )
         assert await a.health_check() is True
 
     async def test_health_check_false_when_key_empty(self):
-        a = OpenRouterAdapter(elder_id="claude", model="anthropic/claude-sonnet-4.5", api_key="")
+        a = OpenRouterAdapter(elder_id="ada", model="anthropic/claude-sonnet-4.5", api_key="")
         assert await a.health_check() is False
 
     def test_error_class_has_kind_and_detail(self):
@@ -43,7 +43,7 @@ class TestConstructorAndHealth:
         import logging
 
         with caplog.at_level(logging.WARNING, logger="council.adapters.elders.openrouter"):
-            OpenRouterAdapter(elder_id="claude", model="sonnet", api_key="k")
+            OpenRouterAdapter(elder_id="ada", model="sonnet", api_key="k")
         assert any("does not look like an OpenRouter id" in rec.message for rec in caplog.records)
 
     def test_does_not_warn_on_proper_openrouter_id(self, caplog):
@@ -51,7 +51,7 @@ class TestConstructorAndHealth:
 
         with caplog.at_level(logging.WARNING, logger="council.adapters.elders.openrouter"):
             OpenRouterAdapter(
-                elder_id="claude",
+                elder_id="ada",
                 model="anthropic/claude-sonnet-4.5",
                 api_key="k",
             )
@@ -64,7 +64,7 @@ class TestConstructorAndHealth:
         import logging
 
         with caplog.at_level(logging.WARNING, logger="council.adapters.elders.openrouter"):
-            OpenRouterAdapter(elder_id="claude", model="", api_key="k")
+            OpenRouterAdapter(elder_id="ada", model="", api_key="k")
         assert not any(
             "does not look like an OpenRouter id" in rec.message for rec in caplog.records
         )
@@ -72,7 +72,7 @@ class TestConstructorAndHealth:
 
 def _adapter_with_transport(transport: httpx.MockTransport) -> OpenRouterAdapter:
     return OpenRouterAdapter(
-        elder_id="claude",
+        elder_id="ada",
         model="anthropic/claude-sonnet-4.5",
         api_key="sk-or-test",
         client=httpx.AsyncClient(transport=transport, base_url="https://openrouter.ai"),
@@ -300,12 +300,12 @@ class TestCostCapture:
 
 class TestFormatCostNotice:
     def test_with_known_limit_shows_remaining(self):
-        a = OpenRouterAdapter(elder_id="claude", model="x", api_key="k")
+        a = OpenRouterAdapter(elder_id="ada", model="x", api_key="k")
         a.session_cost_usd = 0.10
-        b = OpenRouterAdapter(elder_id="gemini", model="x", api_key="k")
+        b = OpenRouterAdapter(elder_id="kai", model="x", api_key="k")
         b.session_cost_usd = 0.05
         line = format_cost_notice(
-            elders={"claude": a, "gemini": b},
+            elders={"ada": a, "kai": b},
             round_cost_delta_usd=0.03,
             credits_used=2.5,
             credits_limit=10.0,
@@ -315,9 +315,9 @@ class TestFormatCostNotice:
         assert "credits remaining: $7.50" in line
 
     def test_with_no_limit_shows_used(self):
-        a = OpenRouterAdapter(elder_id="claude", model="x", api_key="k")
+        a = OpenRouterAdapter(elder_id="ada", model="x", api_key="k")
         line = format_cost_notice(
-            elders={"claude": a},
+            elders={"ada": a},
             round_cost_delta_usd=0.01,
             credits_used=3.25,
             credits_limit=None,
@@ -326,14 +326,14 @@ class TestFormatCostNotice:
         assert "remaining" not in line
 
     def test_includes_per_elder_breakdown(self):
-        a = OpenRouterAdapter(elder_id="claude", model="x", api_key="k")
+        a = OpenRouterAdapter(elder_id="ada", model="x", api_key="k")
         a.session_cost_usd = 0.1234
-        b = OpenRouterAdapter(elder_id="gemini", model="x", api_key="k")
+        b = OpenRouterAdapter(elder_id="kai", model="x", api_key="k")
         b.session_cost_usd = 0.0500
-        c = OpenRouterAdapter(elder_id="chatgpt", model="x", api_key="k")
+        c = OpenRouterAdapter(elder_id="mei", model="x", api_key="k")
         c.session_cost_usd = 0.2000
         line = format_cost_notice(
-            elders={"claude": a, "gemini": b, "chatgpt": c},
+            elders={"ada": a, "kai": b, "mei": c},
             round_cost_delta_usd=0.07,
             credits_used=1.0,
             credits_limit=10.0,
@@ -351,7 +351,7 @@ class TestFormatCostNotice:
             pass
 
         line = format_cost_notice(
-            elders={"claude": _Stub(), "gemini": _Stub(), "chatgpt": _Stub()},
+            elders={"ada": _Stub(), "kai": _Stub(), "mei": _Stub()},
             round_cost_delta_usd=0.0,
             credits_used=0.0,
             credits_limit=None,

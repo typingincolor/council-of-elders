@@ -24,20 +24,20 @@ def _ans(elder, text="x"):
     )
 
 
-def _debate_with_one_round(best_r1: str | None = "gemini"):
+def _debate_with_one_round(best_r1: str | None = "kai"):
     r1 = Round(
         number=1,
         turns=[
-            Turn(elder="claude", answer=_ans("claude", "c")),
-            Turn(elder="gemini", answer=_ans("gemini", "g")),
-            Turn(elder="chatgpt", answer=_ans("chatgpt", "x")),
+            Turn(elder="ada", answer=_ans("ada", "c")),
+            Turn(elder="kai", answer=_ans("kai", "g")),
+            Turn(elder="mei", answer=_ans("mei", "x")),
         ],
     )
     return Debate(
         id="debate-xyz", prompt="What should I do?",
         pack=CouncilPack(name="bare", shared_context=None, personas={}),
         rounds=[r1], status="synthesized",
-        synthesis=_ans("claude", "ANSWER:\nShip.\n\nWHY:\nok.\n\nDISAGREEMENTS:\n(none)\n"),
+        synthesis=_ans("ada", "ANSWER:\nShip.\n\nWHY:\nok.\n\nDISAGREEMENTS:\n(none)\n"),
         best_r1_elder=best_r1,  # type: ignore[arg-type]
     )
 
@@ -55,9 +55,9 @@ _FULL_POLICY = DebatePolicy(
 _ROSTER = RosterSpec(
     name="openrouter",
     models={
-        "claude": "anthropic/claude-sonnet-4.5",
-        "gemini": "meta-llama/llama-3.1-70b-instruct",
-        "chatgpt": "openai/gpt-5",
+        "ada": "anthropic/claude-sonnet-4.5",
+        "kai": "meta-llama/llama-3.1-70b-instruct",
+        "mei": "openai/gpt-5",
     },
 )
 
@@ -79,11 +79,11 @@ class TestBuildRunSummary:
         assert s.debate_id == "debate-xyz"
         assert s.prompt == "What should I do?"
         assert s.roster["name"] == "openrouter"
-        assert s.roster["models"]["gemini"] == "meta-llama/llama-3.1-70b-instruct"
+        assert s.roster["models"]["kai"] == "meta-llama/llama-3.1-70b-instruct"
         assert s.diversity["classification"] == "high"
         assert s.policy["mode"] == "full_debate"
         assert s.rounds_executed == 1
-        assert s.best_r1_elder == "gemini"
+        assert s.best_r1_elder == "kai"
         assert s.synthesis_generated is True
         assert s.synthesis_structured == {
             "answer": "Ship.", "why": "ok.", "disagreements": [],

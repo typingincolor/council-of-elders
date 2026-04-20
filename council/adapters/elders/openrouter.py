@@ -158,7 +158,7 @@ class OpenRouterAdapter:
         return bool(self.api_key)
 
 
-_ELDER_ABBREV = {"claude": "C", "gemini": "G", "chatgpt": "X"}
+_ELDER_ABBREV = {"ada": "C", "kai": "G", "mei": "X"}
 
 
 def _per_elder_breakdown(elders: dict) -> str:

@@ -15,9 +15,9 @@ from council.app.tui.verbs import RandomVerbChooser, VerbChooser
 from council.domain.ports import Clock
 
 _ELDER_CONFIG: tuple[tuple[str, str], ...] = (
-    ("claude", "Claude"),
-    ("gemini", "Gemini"),
-    ("chatgpt", "ChatGPT"),
+    ("ada", "Ada"),
+    ("kai", "Kai"),
+    ("mei", "Mei"),
 )
 
 
@@ -53,7 +53,7 @@ class CouncilView(Widget):
                 clock=self._clock,
             )
         panes["synthesis"] = ElderPaneWidget(
-            elder_id="claude",  # identifier is unused for synthesis rendering
+            elder_id="ada",  # identifier is unused for synthesis rendering
             display_name="Synthesis",
             verb_chooser=self._verb_chooser,
             clock=self._clock,
@@ -96,9 +96,9 @@ class CouncilView(Widget):
     def _compose_mode(self, mode: LayoutMode) -> ComposeResult:
         if mode == "columns":
             yield Horizontal(
-                self._panes["claude"],
-                self._panes["gemini"],
-                self._panes["chatgpt"],
+                self._panes["ada"],
+                self._panes["kai"],
+                self._panes["mei"],
                 id="columns-container",
             )
             yield self._panes["synthesis"]
@@ -113,7 +113,7 @@ class CouncilView(Widget):
         mode = self._current_layout
         if mode == "tabs":
             tabbed = self.query_one(TabbedContent)
-            for key in ("claude", "gemini", "chatgpt", "synthesis"):
+            for key in ("ada", "kai", "mei", "synthesis"):
                 await tabbed.add_pane(
                     TabPane(
                         self._panes[key].display_name,

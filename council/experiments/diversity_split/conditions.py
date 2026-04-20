@@ -32,9 +32,9 @@ class Condition:
 _SAME_MODEL = RosterSpec(
     name="same_model",
     models={
-        "claude": "openai/gpt-5-mini",
-        "gemini": "openai/gpt-5-mini",
-        "chatgpt": "openai/gpt-5-mini",
+        "ada": "openai/gpt-5-mini",
+        "kai": "openai/gpt-5-mini",
+        "mei": "openai/gpt-5-mini",
     },
 )
 
@@ -43,9 +43,9 @@ _SAME_MODEL = RosterSpec(
 _DIFF_MODEL = RosterSpec(
     name="diff_model",
     models={
-        "claude": "anthropic/claude-sonnet-4.5",
-        "gemini": "meta-llama/llama-3.1-70b-instruct",
-        "chatgpt": "openai/gpt-5",
+        "ada": "anthropic/claude-sonnet-4.5",
+        "kai": "meta-llama/llama-3.1-70b-instruct",
+        "mei": "openai/gpt-5",
     },
 )
 
@@ -69,7 +69,7 @@ _ROLES_PACK = CouncilPack(
     name="roles",
     shared_context=None,
     personas={
-        "claude": (
+        "ada": (
             "You are the skeptic of the council. Your job is to surface "
             "hidden assumptions and demand evidence. Challenge load-bearing "
             "claims; ask what would have to be true for the proposal to "
@@ -77,14 +77,14 @@ _ROLES_PACK = CouncilPack(
             "raise objections that would change a careful decision-maker's "
             "action."
         ),
-        "gemini": (
+        "kai": (
             "You are the implementer of the council. Your job is to focus "
             "on concrete steps, constraints, who does what, and by when. "
             "Translate abstract recommendations into specific first moves "
             "and name what blocks them. Avoid high-altitude framing when "
             "a concrete plan is what's needed."
         ),
-        "chatgpt": (
+        "mei": (
             "You are the strategist of the council. Your job is to look "
             "across the trade-offs and find the highest-leverage move. "
             "Pay attention to second-order effects and what the decision "

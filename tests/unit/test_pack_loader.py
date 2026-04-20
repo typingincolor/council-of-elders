@@ -39,9 +39,9 @@ def test_loads_per_elder_personas(packs_root: Path):
     loader = FilesystemPackLoader(root=packs_root)
     pack = loader.load("exec")
     assert pack.personas == {
-        "claude": "Legal advisor.",
-        "gemini": "Engineer.",
-        "chatgpt": "Marketer.",
+        "ada": "Legal advisor.",
+        "kai": "Engineer.",
+        "mei": "Marketer.",
     }
 
 

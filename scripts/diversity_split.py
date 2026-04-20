@@ -83,7 +83,7 @@ async def _cmd_run(args: argparse.Namespace) -> None:
 async def _cmd_score(args: argparse.Namespace) -> None:
     api_key = _require_key()
     judge = OpenRouterAdapter(
-        elder_id="claude", model=args.judge_model, api_key=api_key,
+        elder_id="ada", model=args.judge_model, api_key=api_key,
     )
     path = await score_probe(
         run_id=args.run_id,

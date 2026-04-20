@@ -6,8 +6,8 @@ class TestParseSynthesis:
         raw = (
             "ANSWER:\nHire one senior.\n\n"
             "WHY:\nOne senior clears blockers juniors can't.\n\n"
-            "DISAGREEMENTS:\n- Claude preferred three juniors for parallelism.\n"
-            "- ChatGPT flagged onboarding cost.\n"
+            "DISAGREEMENTS:\n- Ada preferred three juniors for parallelism.\n"
+            "- Mei flagged onboarding cost.\n"
         )
         out = parse_synthesis(raw)
         assert out.answer == "Hire one senior."

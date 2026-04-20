@@ -17,9 +17,9 @@ from council.domain.roster import RosterSpec
 # `docs/experiments/2026-04-19-9288-homogenisation.md`. The slot label
 # is just a label — the debate protocol is slot-keyed, not model-keyed.
 _DEFAULT_OPENROUTER_MODELS: dict[ElderId, str] = {
-    "claude": "anthropic/claude-sonnet-4.5",
-    "gemini": "meta-llama/llama-3.1-70b-instruct",
-    "chatgpt": "openai/gpt-5",
+    "ada": "anthropic/claude-sonnet-4.5",
+    "kai": "meta-llama/llama-3.1-70b-instruct",
+    "mei": "openai/gpt-5",
 }
 
 
@@ -31,7 +31,7 @@ def build_elders(
     if config.openrouter_api_key:
         elders: dict[ElderId, ElderPort] = {}
         resolved_models: dict[ElderId, str] = {}
-        for eid in ("claude", "gemini", "chatgpt"):
+        for eid in ("ada", "kai", "mei"):
             model = (
                 cli_models.get(eid)
                 or config.openrouter_models.get(eid)
@@ -46,8 +46,8 @@ def build_elders(
         return elders, True, RosterSpec(name="openrouter", models=resolved_models)
 
     elders = {
-        "claude": ClaudeCodeAdapter(model=cli_models.get("claude")),
-        "gemini": GeminiCLIAdapter(model=cli_models.get("gemini")),
-        "chatgpt": CodexCLIAdapter(model=cli_models.get("chatgpt")),
+        "ada": ClaudeCodeAdapter(model=cli_models.get("ada")),
+        "kai": GeminiCLIAdapter(model=cli_models.get("kai")),
+        "mei": CodexCLIAdapter(model=cli_models.get("mei")),
     }
     return elders, False, RosterSpec(name="subprocess", models={})

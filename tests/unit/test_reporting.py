@@ -37,30 +37,30 @@ def _debate_with_history():
     r1 = Round(
         number=1,
         turns=[
-            Turn(elder="claude", answer=_answer("claude", "C R1")),
-            Turn(elder="gemini", answer=_answer("gemini", "G R1")),
-            Turn(elder="chatgpt", answer=_answer("chatgpt", "X R1")),
+            Turn(elder="ada", answer=_answer("ada", "C R1")),
+            Turn(elder="kai", answer=_answer("kai", "G R1")),
+            Turn(elder="mei", answer=_answer("mei", "X R1")),
         ],
     )
-    q1 = ElderQuestion(from_elder="claude", to_elder="gemini", text="Why SSE?", round_number=2)
-    q2 = ElderQuestion(from_elder="gemini", to_elder="chatgpt", text="Growth?", round_number=2)
-    q3 = ElderQuestion(from_elder="chatgpt", to_elder="claude", text="Latency?", round_number=2)
+    q1 = ElderQuestion(from_elder="ada", to_elder="kai", text="Why SSE?", round_number=2)
+    q2 = ElderQuestion(from_elder="kai", to_elder="mei", text="Growth?", round_number=2)
+    q3 = ElderQuestion(from_elder="mei", to_elder="ada", text="Latency?", round_number=2)
     r2 = Round(
         number=2,
         turns=[
             Turn(
-                elder="claude",
-                answer=_answer("claude", "C R2"),
+                elder="ada",
+                answer=_answer("ada", "C R2"),
                 questions=(q1,),
             ),
             Turn(
-                elder="gemini",
-                answer=_answer("gemini", "G R2"),
+                elder="kai",
+                answer=_answer("kai", "G R2"),
                 questions=(q2,),
             ),
             Turn(
-                elder="chatgpt",
-                answer=_answer("chatgpt", "X R2"),
+                elder="mei",
+                answer=_answer("mei", "X R2"),
                 questions=(q3,),
             ),
         ],
@@ -68,9 +68,9 @@ def _debate_with_history():
     r3 = Round(
         number=3,
         turns=[
-            Turn(elder="claude", answer=_answer("claude", "C R3", agreed=True)),
-            Turn(elder="gemini", answer=_answer("gemini", "G R3", agreed=True)),
-            Turn(elder="chatgpt", answer=_answer("chatgpt", "X R3", agreed=True)),
+            Turn(elder="ada", answer=_answer("ada", "C R3", agreed=True)),
+            Turn(elder="kai", answer=_answer("kai", "G R3", agreed=True)),
+            Turn(elder="mei", answer=_answer("mei", "X R3", agreed=True)),
         ],
     )
     return Debate(
@@ -79,7 +79,7 @@ def _debate_with_history():
         pack=CouncilPack(name="bare", shared_context=None, personas={}),
         rounds=[r1, r2, r3],
         status="synthesized",
-        synthesis=_answer("claude", "Final answer.", agreed=None),
+        synthesis=_answer("ada", "Final answer.", agreed=None),
     )
 
 
@@ -157,10 +157,10 @@ class TestBuildMetadataSection:
 
     def test_includes_question_list(self, builder):
         md = builder.build_metadata_section(_debate_with_history())
-        assert "Claude → Gemini" in md
+        assert "Ada → Kai" in md
         assert "Why SSE?" in md
-        assert "Gemini → ChatGPT" in md
-        assert "ChatGPT → Claude" in md
+        assert "Kai → Mei" in md
+        assert "Mei → Ada" in md
 
     def test_includes_convergence_summary(self, builder):
         md = builder.build_metadata_section(_debate_with_history())
@@ -173,9 +173,9 @@ class TestBuildMetadataSection:
         r1 = Round(
             number=1,
             turns=[
-                Turn(elder="claude", answer=_answer("claude", "c", agreed=False)),
-                Turn(elder="gemini", answer=_answer("gemini", "g", agreed=False)),
-                Turn(elder="chatgpt", answer=_answer("chatgpt", "x", agreed=False)),
+                Turn(elder="ada", answer=_answer("ada", "c", agreed=False)),
+                Turn(elder="kai", answer=_answer("kai", "g", agreed=False)),
+                Turn(elder="mei", answer=_answer("mei", "x", agreed=False)),
             ],
         )
         d = Debate(
@@ -219,9 +219,9 @@ class TestBuildMetadataSection:
 class TestBuildFinalPositionsSection:
     def test_renders_each_elder_with_convergence_label(self, builder):
         md = builder.build_final_positions_section(_debate_with_history())
-        assert "### Claude — _CONVERGED: yes_" in md
-        assert "### Gemini — _CONVERGED: yes_" in md
-        assert "### ChatGPT — _CONVERGED: yes_" in md
+        assert "### Ada — _CONVERGED: yes_" in md
+        assert "### Kai — _CONVERGED: yes_" in md
+        assert "### Mei — _CONVERGED: yes_" in md
 
     def test_includes_each_elders_last_round_text(self, builder):
         md = builder.build_final_positions_section(_debate_with_history())
@@ -340,30 +340,30 @@ class TestAssembleReportMarkdown:
     def test_contains_synthesis_text(self, builder):
         d = _debate_with_history()
         md = builder.assemble_report_markdown(
-            d, d.synthesis, "Narrative goes here.", synthesiser="claude"
+            d, d.synthesis, "Narrative goes here.", synthesiser="ada"
         )
         assert "Final answer." in md
 
     def test_surfaces_disagreements_when_synthesis_is_structured(self, builder):
         d = _debate_with_history()
         structured = ElderAnswer(
-            elder="claude",
+            elder="ada",
             text=(
                 "ANSWER:\nShip.\n\n"
                 "WHY:\nBenefit outweighs risk.\n\n"
-                "DISAGREEMENTS:\n- Gemini argued for delaying one sprint.\n"
-                "- ChatGPT wanted a phased rollout.\n"
+                "DISAGREEMENTS:\n- Kai argued for delaying one sprint.\n"
+                "- Mei wanted a phased rollout.\n"
             ),
             error=None,
             agreed=None,
             created_at=datetime(2026, 4, 20, tzinfo=timezone.utc),
         )
         md = builder.assemble_report_markdown(
-            d, structured, "narrative", synthesiser="claude"
+            d, structured, "narrative", synthesiser="ada"
         )
         assert "## Unresolved disagreements" in md
-        assert "Gemini argued for delaying one sprint." in md
-        assert "ChatGPT wanted a phased rollout." in md
+        assert "Kai argued for delaying one sprint." in md
+        assert "Mei wanted a phased rollout." in md
         assert "**Why:** Benefit outweighs risk." in md
         # Body of ANSWER is surfaced too.
         assert "Ship." in md
@@ -371,14 +371,14 @@ class TestAssembleReportMarkdown:
     def test_harmonious_synthesis_omits_disagreements_section(self, builder):
         d = _debate_with_history()
         structured = ElderAnswer(
-            elder="claude",
+            elder="ada",
             text="ANSWER:\nShip.\n\nWHY:\nNo blockers.\n\nDISAGREEMENTS:\n(none)\n",
             error=None,
             agreed=None,
             created_at=datetime(2026, 4, 20, tzinfo=timezone.utc),
         )
         md = builder.assemble_report_markdown(
-            d, structured, "narrative", synthesiser="claude"
+            d, structured, "narrative", synthesiser="ada"
         )
         assert "## Unresolved disagreements" not in md
         assert "**Why:** No blockers." in md
@@ -386,26 +386,26 @@ class TestAssembleReportMarkdown:
     def test_contains_narrative_section(self, builder):
         d = _debate_with_history()
         md = builder.assemble_report_markdown(
-            d, d.synthesis, "Narrative goes here.", synthesiser="claude"
+            d, d.synthesis, "Narrative goes here.", synthesiser="ada"
         )
         assert "## Narrative" in md
         assert "Narrative goes here." in md
 
     def test_contains_metadata_section(self, builder):
         d = _debate_with_history()
-        md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="claude")
+        md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="ada")
         assert "Debate metadata" in md
         assert "**Questions asked:**" in md
 
     def test_contains_question_and_synthesiser(self, builder):
         d = _debate_with_history()
-        md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="gemini")
+        md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="kai")
         assert "Should we ship?" in md
-        assert "Synthesised by:** Gemini" in md
+        assert "Synthesised by:** Kai" in md
 
     def test_contains_final_positions_section(self, builder):
         d = _debate_with_history()
-        md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="claude")
+        md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="ada")
         assert "Final positions" in md
         # Each elder's last-round text is rendered.
         assert "C R3" in md
@@ -414,7 +414,7 @@ class TestAssembleReportMarkdown:
 
     def test_narrative_section_is_labelled_consensus_audit(self, builder):
         d = _debate_with_history()
-        md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="claude")
+        md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="ada")
         assert "Narrative & consensus audit" in md
 
     def test_truncates_long_prompt_in_header_and_appends_source(self, builder):
@@ -431,7 +431,7 @@ class TestAssembleReportMarkdown:
             status=d.status,
             synthesis=d.synthesis,
         )
-        md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="claude")
+        md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="ada")
         # Header only carries the first sentence.
         header_block = md.split("## Synthesised answer")[0]
         assert "Short question here." in header_block
@@ -444,7 +444,7 @@ class TestAssembleReportMarkdown:
 
     def test_short_prompt_does_not_trigger_appendix(self, builder):
         d = _debate_with_history()  # prompt is "Should we ship?"
-        md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="claude")
+        md = builder.assemble_report_markdown(d, d.synthesis, "nar", synthesiser="ada")
         assert "## Full question (source material)" not in md
 
     def test_demotes_headings_in_synthesis_text(self, builder):
@@ -460,7 +460,7 @@ class TestAssembleReportMarkdown:
             agreed=None,
             created_at=d.synthesis.created_at,
         )
-        md = builder.assemble_report_markdown(d, bad_synth, "nar", synthesiser="claude")
+        md = builder.assemble_report_markdown(d, bad_synth, "nar", synthesiser="ada")
         assert "#### The answer" in md
         # No `##`-level heading line starting "The answer" (demoted to ####).
         assert not re.search(r"^## The answer", md, flags=re.MULTILINE)
@@ -470,9 +470,9 @@ class TestDebateServiceGenerateReport:
     async def test_uses_synthesiser_elder_for_narrative(self):
         d = _debate_with_history()
         elders = {
-            "claude": FakeElder(elder_id="claude", replies=["Narrative from Claude."]),
-            "gemini": FakeElder(elder_id="gemini", replies=[]),
-            "chatgpt": FakeElder(elder_id="chatgpt", replies=[]),
+            "ada": FakeElder(elder_id="ada", replies=["Narrative from Ada."]),
+            "kai": FakeElder(elder_id="kai", replies=[]),
+            "mei": FakeElder(elder_id="mei", replies=[]),
         }
         svc = DebateService(
             elders=elders,
@@ -480,10 +480,10 @@ class TestDebateServiceGenerateReport:
             clock=FakeClock(now=datetime(2026, 4, 19, tzinfo=timezone.utc)),
             bus=InMemoryBus(),
         )
-        md = await svc.generate_report(d, by="claude")
-        assert "Narrative from Claude." in md
-        # And the conversation passed to Claude ends with the narrative-request.
-        convo = elders["claude"].conversations[-1]
+        md = await svc.generate_report(d, by="ada")
+        assert "Narrative from Ada." in md
+        # And the conversation passed to Ada ends with the narrative-request.
+        convo = elders["ada"].conversations[-1]
         assert convo[-1].role == "user"
         low = convo[-1].content.lower()
         assert "analysis" in low or "debate" in low
@@ -494,13 +494,13 @@ class TestDebateServiceGenerateReport:
         d.synthesis = None
         svc = DebateService(
             elders={
-                "claude": FakeElder(elder_id="claude", replies=[]),
-                "gemini": FakeElder(elder_id="gemini", replies=[]),
-                "chatgpt": FakeElder(elder_id="chatgpt", replies=[]),
+                "ada": FakeElder(elder_id="ada", replies=[]),
+                "kai": FakeElder(elder_id="kai", replies=[]),
+                "mei": FakeElder(elder_id="mei", replies=[]),
             },
             store=InMemoryStore(),
             clock=FakeClock(now=datetime(2026, 4, 19, tzinfo=timezone.utc)),
             bus=InMemoryBus(),
         )
         with pytest.raises(ValueError):
-            await svc.generate_report(d, by="claude")
+            await svc.generate_report(d, by="ada")

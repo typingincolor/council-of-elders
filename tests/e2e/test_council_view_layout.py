@@ -28,7 +28,7 @@ async def test_view_has_four_panes_one_per_elder_plus_synthesis():
     view = _make_view()
     async with _Host(view).run_test() as pilot:
         await pilot.pause()
-        assert set(view.pane_ids()) == {"claude", "gemini", "chatgpt", "synthesis"}
+        assert set(view.pane_ids()) == {"ada", "kai", "mei", "synthesis"}
 
 
 async def test_narrow_width_selects_tabs_mode():

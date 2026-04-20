@@ -34,9 +34,9 @@ chatgpt = "openai/gpt-5"
         cfg = load_config(path=cfg_path)
         assert cfg.openrouter_api_key == "sk-or-v1-abc"
         assert cfg.openrouter_models == {
-            "claude": "anthropic/claude-sonnet-4.5",
-            "gemini": "google/gemini-2.5-pro",
-            "chatgpt": "openai/gpt-5",
+            "ada": "anthropic/claude-sonnet-4.5",
+            "kai": "google/gemini-2.5-pro",
+            "mei": "openai/gpt-5",
         }
 
     def test_section_missing_leaves_empty(self, tmp_path: Path, monkeypatch):

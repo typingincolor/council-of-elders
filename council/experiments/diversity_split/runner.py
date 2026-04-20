@@ -29,7 +29,7 @@ from council.experiments.homogenisation.corpus import CorpusPrompt
 
 ElderFactory = Callable[[Condition], dict[ElderId, ElderPort]]
 
-_SYNTHESISER_ROTATION: tuple[ElderId, ...] = ("claude", "gemini", "chatgpt")
+_SYNTHESISER_ROTATION: tuple[ElderId, ...] = ("ada", "kai", "mei")
 
 
 def _manifest_path(runs_root: Path, run_id: str) -> Path:

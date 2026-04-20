@@ -14,30 +14,30 @@ from council.experiments.homogenisation.corpus import CorpusPrompt
 
 def _scripted_elders_for_one_debate() -> dict[ElderId, FakeElder]:
     return {
-        "claude": FakeElder(
-            elder_id="claude",
+        "ada": FakeElder(
+            elder_id="ada",
             replies=[
-                "R1 Claude",
-                "R2 Claude\n\nQUESTIONS:\n@gemini Why?",
-                "R3 Claude\nCONVERGED: yes",
+                "R1 Ada",
+                "R2 Ada\n\nQUESTIONS:\n@kai Why?",
+                "R3 Ada\nCONVERGED: yes",
                 "final synth",  # synthesis
             ],
         ),
-        "gemini": FakeElder(
-            elder_id="gemini",
+        "kai": FakeElder(
+            elder_id="kai",
             replies=[
-                "R1 Gemini",
-                "R2 Gemini\n\nQUESTIONS:\n@claude Why?",
-                "R3 Gemini\nCONVERGED: yes",
+                "R1 Kai",
+                "R2 Kai\n\nQUESTIONS:\n@ada Why?",
+                "R3 Kai\nCONVERGED: yes",
                 "final synth",
             ],
         ),
-        "chatgpt": FakeElder(
-            elder_id="chatgpt",
+        "mei": FakeElder(
+            elder_id="mei",
             replies=[
-                "R1 ChatGPT",
-                "R2 ChatGPT\n\nQUESTIONS:\n@gemini Why?",
-                "R3 ChatGPT\nCONVERGED: yes",
+                "R1 Mei",
+                "R2 Mei\n\nQUESTIONS:\n@kai Why?",
+                "R3 Mei\nCONVERGED: yes",
                 "final synth",
             ],
         ),

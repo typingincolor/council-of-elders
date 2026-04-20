@@ -23,25 +23,25 @@ async def test_elder_question_surfaces_in_both_asker_and_target_panes(tmp_path):
     # Questions first appear in R2 (cross-examination). R1 is silent.
     (tmp_path / "bare").mkdir()
     elders = {
-        "claude": FakeElder(
-            elder_id="claude",
+        "ada": FakeElder(
+            elder_id="ada",
             replies=[
-                "R1 Claude",
-                "My answer.\n\nQUESTIONS:\n@gemini Timeline?",
+                "R1 Ada",
+                "My answer.\n\nQUESTIONS:\n@kai Timeline?",
             ],
         ),
-        "gemini": FakeElder(
-            elder_id="gemini",
+        "kai": FakeElder(
+            elder_id="kai",
             replies=[
-                "R1 Gemini",
-                "Gemini R2\n\nQUESTIONS:\n@claude Why?",
+                "R1 Kai",
+                "Kai R2\n\nQUESTIONS:\n@ada Why?",
             ],
         ),
-        "chatgpt": FakeElder(
-            elder_id="chatgpt",
+        "mei": FakeElder(
+            elder_id="mei",
             replies=[
-                "R1 ChatGPT",
-                "ChatGPT R2\n\nQUESTIONS:\n@claude Why?",
+                "R1 Mei",
+                "Mei R2\n\nQUESTIONS:\n@ada Why?",
             ],
         ),
     }
@@ -58,16 +58,16 @@ async def test_elder_question_surfaces_in_both_asker_and_target_panes(tmp_path):
         # awaiting_decision flips True only after R2 completes (post-auto-chain).
         await _wait_until(pilot, lambda: app.awaiting_decision)
 
-        # Claude's pane should show the outgoing question (emitted in R2).
-        claude_text = pane_lines(app, "claude")
-        assert "To Gemini" in claude_text
+        # Ada's pane should show the outgoing question (emitted in R2).
+        claude_text = pane_lines(app, "ada")
+        assert "To Kai" in claude_text
         assert "Timeline?" in claude_text
 
-        # Gemini's pane should show the incoming question.
-        gemini_text = pane_lines(app, "gemini")
-        assert "From Claude" in gemini_text
+        # Kai's pane should show the incoming question.
+        gemini_text = pane_lines(app, "kai")
+        assert "From Ada" in gemini_text
         assert "Timeline?" in gemini_text
 
-        # ChatGPT's pane should NOT show the claude→gemini question.
-        chatgpt_text = pane_lines(app, "chatgpt")
+        # Mei's pane should NOT show the claude→gemini question.
+        chatgpt_text = pane_lines(app, "mei")
         assert "Timeline?" not in chatgpt_text

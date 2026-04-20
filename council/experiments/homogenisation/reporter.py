@@ -79,11 +79,11 @@ def _interpret(summaries: list[dict[str, Any]]) -> list[str]:
 
 
 def _rosters_table(rosters: tuple[RosterSpec, ...]) -> str:
-    rows = ["| Roster | claude slot | gemini slot | chatgpt slot |", "|---|---|---|---|"]
+    rows = ["| Roster | ada slot | kai slot | mei slot |", "|---|---|---|---|"]
     for r in rosters:
         rows.append(
-            f"| `{r.name}` | `{r.models['claude']}` | "
-            f"`{r.models['gemini']}` | `{r.models['chatgpt']}` |"
+            f"| `{r.name}` | `{r.models['ada']}` | "
+            f"`{r.models['kai']}` | `{r.models['mei']}` |"
         )
     return "\n".join(rows)
 
@@ -181,7 +181,7 @@ Fraction of debates where the judge preferred the final synthesis over the stron
 - gemini slot substituted; other slots not swept.
 - Round cap 6 may truncate debates; reported, not mitigated.
 - Judge family proximity — gemini-flash may bias toward gemini-slot content in mixed/substituted rosters.
-- Persona priming: homogeneous elders still see peers labelled as "Claude"/"Gemini"/"ChatGPT" via the existing prompt pack, so this is not a clean model-equivalence test — it is the operational behaviour a user configuring 3× same-model would see.
+- Persona priming: homogeneous elders still see peers labelled as "Ada"/"Kai"/"Mei" via the existing prompt pack, so this is not a clean model-equivalence test — it is the operational behaviour a user configuring 3× same-model would see.
 
 ## Appendix A — per-debate details
 

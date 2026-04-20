@@ -68,9 +68,9 @@ def _demote_markdown_headings(text: str, levels: int = 2) -> str:
 
 
 _ELDER_LABEL: dict[ElderId, str] = {
-    "claude": "Claude",
-    "gemini": "Gemini",
-    "chatgpt": "ChatGPT",
+    "ada": "Ada",
+    "kai": "Kai",
+    "mei": "Mei",
 }
 
 
@@ -136,8 +136,8 @@ class ReportBuilder:
             "headings of any level — no `#`, `##`, or `###`. Bold and inline "
             "code are fine. Start directly with the content; no preamble, no "
             "title.\n\n"
-            'Voice: past tense, third person. Name elders explicitly ("Claude '
-            'argued…", "Gemini conceded…"). If you are one of the elders, '
+            'Voice: past tense, third person. Name elders explicitly ("Ada '
+            'argued…", "Kai conceded…"). If you are one of the elders, '
             "refer to your past turns in the third person by your own name.\n\n"
             "Cover, in roughly this order:\n\n"
             "1. Each elder's round-1 opening stance in one sentence.\n"
@@ -282,15 +282,15 @@ class ReportBuilder:
         return f"Retained productive disagreement across all {len(debate.rounds)} rounds."
 
     def _convergence_table(self, debate: Debate) -> str:
-        header = "| Round | Claude | Gemini | ChatGPT |"
+        header = "| Round | Ada | Kai | Mei |"
         sep = "|---|---|---|---|"
         lines = [header, sep]
         for r in debate.rounds:
-            cells = {"claude": "—", "gemini": "—", "chatgpt": "—"}
+            cells = {"ada": "—", "kai": "—", "mei": "—"}
             for t in r.turns:
                 a = t.answer.agreed
                 cells[t.elder] = "yes" if a is True else "no" if a is False else "—"
             lines.append(
-                f"| R{r.number} | {cells['claude']} | {cells['gemini']} | {cells['chatgpt']} |"
+                f"| R{r.number} | {cells['ada']} | {cells['kai']} | {cells['mei']} |"
             )
         return "\n".join(lines)

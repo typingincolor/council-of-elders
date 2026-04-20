@@ -16,7 +16,7 @@ from council.domain.models import Message
 
 def _fake_elder():
     return FakeElder(
-        elder_id="claude",
+        elder_id="ada",
         replies=["The first answer.\nCONVERGED: yes"],
     )
 
@@ -35,7 +35,7 @@ def _openrouter_mocked():
         )
 
     return OpenRouterAdapter(
-        elder_id="claude",
+        elder_id="ada",
         model="anthropic/claude-sonnet-4.5",
         api_key="sk-or-contract",
         client=httpx.AsyncClient(

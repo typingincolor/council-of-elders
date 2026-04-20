@@ -53,8 +53,8 @@ def _build_args(model: str | None):
 class GeminiCLIAdapter(SubprocessElder):
     def __init__(self, model: str | None = None) -> None:
         super().__init__(
-            elder_id="gemini",
-            binary="gemini",
+            elder_id="kai",
+            binary="kai",
             build_args=_build_args(model),
             classify_stderr=_classify,
             sanitize_stdout=_sanitize,

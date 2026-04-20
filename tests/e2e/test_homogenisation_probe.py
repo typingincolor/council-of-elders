@@ -18,7 +18,7 @@ from council.experiments.homogenisation.scorer import score_probe
 def _scripted_debate_replies() -> list[str]:
     return [
         "R1 answer",
-        "CONVERGED: no\n\nR2 answer\n\nQUESTIONS:\n@chatgpt why?",
+        "CONVERGED: no\n\nR2 answer\n\nQUESTIONS:\n@mei why?",
         "CONVERGED: yes\n\nR3 final",
         "Synthesised answer.",
         "Report body.",
@@ -29,7 +29,7 @@ def _scripted_debate_replies() -> list[str]:
 def _elder_factory(_spec: RosterSpec) -> dict[ElderId, Any]:
     return {
         slot: FakeElder(elder_id=slot, replies=_scripted_debate_replies())
-        for slot in ("claude", "gemini", "chatgpt")
+        for slot in ("ada", "kai", "mei")
     }
 
 
@@ -37,7 +37,7 @@ def _judge_port() -> FakeElder:
     # Scripted judge replies — 3 claim-overlap + 1 best-R1 + 1 preference
     # per debate; one roster × one prompt = 5 total.
     return FakeElder(
-        elder_id="claude",
+        elder_id="ada",
         replies=[
             "shared_count: 3\na_only_count: 1\nb_only_count: 1\nnote: x\n",
             "shared_count: 3\na_only_count: 1\nb_only_count: 1\nnote: y\n",
@@ -54,7 +54,7 @@ async def test_full_probe_pipeline_end_to_end(tmp_path: Path) -> None:
     rosters = (
         RosterSpec(
             name="mixed_baseline",
-            models={"claude": "a/a", "gemini": "b/b", "chatgpt": "c/c"},
+            models={"ada": "a/a", "kai": "b/b", "mei": "c/c"},
         ),
     )
     run_id = "2026-04-19-e2e"

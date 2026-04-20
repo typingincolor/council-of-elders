@@ -5,10 +5,16 @@ from pathlib import Path
 
 from council.domain.models import CouncilPack, ElderId
 
+# Iteration order matters: legacy names are read FIRST, then the current
+# names, so a current-name file (e.g. ada.md) overrides a legacy one
+# (claude.md) when both exist in the same pack.
 _ELDER_FILES: dict[str, ElderId] = {
-    "claude.md": "claude",
-    "gemini.md": "gemini",
-    "chatgpt.md": "chatgpt",
+    "claude.md": "ada",
+    "gemini.md": "kai",
+    "chatgpt.md": "mei",
+    "ada.md": "ada",
+    "kai.md": "kai",
+    "mei.md": "mei",
 }
 
 

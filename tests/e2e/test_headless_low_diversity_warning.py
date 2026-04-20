@@ -20,29 +20,29 @@ def _clock():
 
 def _elders_full_debate_ready():
     return {
-        "claude": FakeElder(
-            elder_id="claude",
+        "ada": FakeElder(
+            elder_id="ada",
             replies=[
-                "R1 Claude original.",
-                "R2 Claude\n\nQUESTIONS:\n@gemini Why?",
-                "R3 Claude\nCONVERGED: yes",
+                "R1 Ada original.",
+                "R2 Ada\n\nQUESTIONS:\n@kai Why?",
+                "R3 Ada\nCONVERGED: yes",
                 "Final synth.",
             ],
         ),
-        "gemini": FakeElder(
-            elder_id="gemini",
+        "kai": FakeElder(
+            elder_id="kai",
             replies=[
-                "R1 Gemini",
-                "R2 Gemini\n\nQUESTIONS:\n@claude Why?",
-                "R3 Gemini\nCONVERGED: yes",
+                "R1 Kai",
+                "R2 Kai\n\nQUESTIONS:\n@ada Why?",
+                "R3 Kai\nCONVERGED: yes",
             ],
         ),
-        "chatgpt": FakeElder(
-            elder_id="chatgpt",
+        "mei": FakeElder(
+            elder_id="mei",
             replies=[
-                "R1 ChatGPT",
-                "R2 ChatGPT\n\nQUESTIONS:\n@gemini Why?",
-                "R3 ChatGPT\nCONVERGED: yes",
+                "R1 Mei",
+                "R2 Mei\n\nQUESTIONS:\n@kai Why?",
+                "R3 Mei\nCONVERGED: yes",
             ],
         ),
     }
@@ -50,15 +50,15 @@ def _elders_full_debate_ready():
 
 def _elders_r1_only():
     return {
-        "claude": FakeElder(elder_id="claude", replies=["R1 Claude only."]),
-        "gemini": FakeElder(elder_id="gemini", replies=["R1 Gemini only."]),
-        "chatgpt": FakeElder(elder_id="chatgpt", replies=["R1 ChatGPT only."]),
+        "ada": FakeElder(elder_id="ada", replies=["R1 Ada only."]),
+        "kai": FakeElder(elder_id="kai", replies=["R1 Kai only."]),
+        "mei": FakeElder(elder_id="mei", replies=["R1 Mei only."]),
     }
 
 
 async def test_low_diversity_mode_skips_debate_and_returns_best_r1(capsys):
     judge = FakeElder(
-        elder_id="claude",
+        elder_id="ada",
         replies=["best: 1\nreason: first one was tightest.\n"],
     )
     override = DebatePolicy(
@@ -75,14 +75,14 @@ async def test_low_diversity_mode_skips_debate_and_returns_best_r1(capsys):
         store=InMemoryStore(),
         clock=_clock(),
         bus=InMemoryBus(),
-        synthesizer="claude",
+        synthesizer="ada",
         best_r1_judge=judge,
         policy=override,
     )
     out = capsys.readouterr().out
     assert "Low-diversity roster" in out
-    assert "R1 Claude only." in out
-    assert "Answer (best-R1, Claude)" in out
+    assert "R1 Ada only." in out
+    assert "Answer (best-R1, Ada)" in out
     # Synthesis did not run, R2 did not run.
     assert "Final synth." not in out
     assert "Round 2" not in out
@@ -93,13 +93,13 @@ async def test_homogeneous_roster_auto_picks_best_r1_only(capsys):
     roster = RosterSpec(
         name="homogeneous",
         models={
-            "claude": "openai/gpt-5-mini",
-            "gemini": "openai/gpt-5-mini",
-            "chatgpt": "openai/gpt-5-mini",
+            "ada": "openai/gpt-5-mini",
+            "kai": "openai/gpt-5-mini",
+            "mei": "openai/gpt-5-mini",
         },
     )
     judge = FakeElder(
-        elder_id="claude",
+        elder_id="ada",
         replies=["best: 2\nreason: gemini slot clearest.\n"],
     )
     await run_headless(
@@ -109,14 +109,14 @@ async def test_homogeneous_roster_auto_picks_best_r1_only(capsys):
         store=InMemoryStore(),
         clock=_clock(),
         bus=InMemoryBus(),
-        synthesizer="claude",
+        synthesizer="ada",
         best_r1_judge=judge,
         roster_spec=roster,  # no explicit policy — derive from diversity
     )
     out = capsys.readouterr().out
     assert "Low-diversity roster" in out
     assert "unsafe_consensus_risk" not in out  # flag name shouldn't leak verbatim
-    assert "Answer (best-R1, Gemini)" in out
+    assert "Answer (best-R1, Kai)" in out
     assert "Final synth." not in out
 
 
@@ -124,9 +124,9 @@ async def test_high_diversity_roster_runs_full_debate(capsys):
     roster = RosterSpec(
         name="mixed",
         models={
-            "claude": "anthropic/claude-sonnet-4.5",
-            "gemini": "meta-llama/llama-3.1-70b-instruct",
-            "chatgpt": "openai/gpt-5",
+            "ada": "anthropic/claude-sonnet-4.5",
+            "kai": "meta-llama/llama-3.1-70b-instruct",
+            "mei": "openai/gpt-5",
         },
     )
     await run_headless(
@@ -136,7 +136,7 @@ async def test_high_diversity_roster_runs_full_debate(capsys):
         store=InMemoryStore(),
         clock=_clock(),
         bus=InMemoryBus(),
-        synthesizer="claude",
+        synthesizer="ada",
         roster_spec=roster,
     )
     out = capsys.readouterr().out
@@ -149,32 +149,32 @@ async def test_medium_diversity_roster_runs_single_critique(capsys):
     roster = RosterSpec(
         name="two_provider",
         models={
-            "claude": "anthropic/claude-sonnet-4.5",
-            "gemini": "anthropic/claude-haiku-4.5",
-            "chatgpt": "openai/gpt-5",
+            "ada": "anthropic/claude-sonnet-4.5",
+            "kai": "anthropic/claude-haiku-4.5",
+            "mei": "openai/gpt-5",
         },
     )
     elders = {
-        "claude": FakeElder(
-            elder_id="claude",
+        "ada": FakeElder(
+            elder_id="ada",
             replies=[
-                "R1 Claude",
-                "R2 Claude\n\nQUESTIONS:\n@gemini Why?",
+                "R1 Ada",
+                "R2 Ada\n\nQUESTIONS:\n@kai Why?",
                 "Final synth.",  # synthesis call — single_critique still synthesises
             ],
         ),
-        "gemini": FakeElder(
-            elder_id="gemini",
+        "kai": FakeElder(
+            elder_id="kai",
             replies=[
-                "R1 Gemini",
-                "R2 Gemini\n\nQUESTIONS:\n@claude Why?",
+                "R1 Kai",
+                "R2 Kai\n\nQUESTIONS:\n@ada Why?",
             ],
         ),
-        "chatgpt": FakeElder(
-            elder_id="chatgpt",
+        "mei": FakeElder(
+            elder_id="mei",
             replies=[
-                "R1 ChatGPT",
-                "R2 ChatGPT\n\nQUESTIONS:\n@gemini Why?",
+                "R1 Mei",
+                "R2 Mei\n\nQUESTIONS:\n@kai Why?",
             ],
         ),
     }
@@ -185,7 +185,7 @@ async def test_medium_diversity_roster_runs_single_critique(capsys):
         store=InMemoryStore(),
         clock=_clock(),
         bus=InMemoryBus(),
-        synthesizer="claude",
+        synthesizer="ada",
         roster_spec=roster,
     )
     out = capsys.readouterr().out

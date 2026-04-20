@@ -25,13 +25,13 @@ _CELL_LABELS: dict[str, tuple[str, str]] = {
 
 def _rosters_table(conditions: tuple[Condition, ...]) -> str:
     rows = [
-        "| Condition | claude slot | gemini slot | chatgpt slot | pack |",
+        "| Condition | ada slot | kai slot | mei slot | pack |",
         "|---|---|---|---|---|",
     ]
     for c in conditions:
         rows.append(
-            f"| `{c.name}` | `{c.roster.models['claude']}` | "
-            f"`{c.roster.models['gemini']}` | `{c.roster.models['chatgpt']}` | "
+            f"| `{c.name}` | `{c.roster.models['ada']}` | "
+            f"`{c.roster.models['kai']}` | `{c.roster.models['mei']}` | "
             f"`{c.pack.name}` |"
         )
     return "\n".join(rows)

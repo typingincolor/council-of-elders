@@ -21,35 +21,35 @@ def _clock():
 
 async def test_summary_written_after_synthesis(tmp_path: Path, capsys):
     elders = {
-        "claude": FakeElder(
-            elder_id="claude",
+        "ada": FakeElder(
+            elder_id="ada",
             replies=[
-                "R1 Claude",
-                "R2 Claude\n\nQUESTIONS:\n@gemini Why?",
+                "R1 Ada",
+                "R2 Ada\n\nQUESTIONS:\n@kai Why?",
                 "ANSWER:\nShip.\n\nWHY:\nok.\n\nDISAGREEMENTS:\n(none)\n",
             ],
         ),
-        "gemini": FakeElder(
-            elder_id="gemini",
-            replies=["R1 Gemini", "R2 Gemini\n\nQUESTIONS:\n@claude Why?"],
+        "kai": FakeElder(
+            elder_id="kai",
+            replies=["R1 Kai", "R2 Kai\n\nQUESTIONS:\n@ada Why?"],
         ),
-        "chatgpt": FakeElder(
-            elder_id="chatgpt",
-            replies=["R1 ChatGPT", "R2 ChatGPT\n\nQUESTIONS:\n@gemini Why?"],
+        "mei": FakeElder(
+            elder_id="mei",
+            replies=["R1 Mei", "R2 Mei\n\nQUESTIONS:\n@kai Why?"],
         ),
     }
     best_r1_judge = FakeElder(
-        elder_id="claude", replies=["best: 2\nreason: clearer.\n"],
+        elder_id="ada", replies=["best: 2\nreason: clearer.\n"],
     )
     preference_judge = FakeElder(
-        elder_id="claude", replies=["winner: X\nreason: synth wins.\n"],
+        elder_id="ada", replies=["winner: X\nreason: synth wins.\n"],
     )
     roster = RosterSpec(
         name="medium",
         models={
-            "claude": "anthropic/claude-sonnet-4.5",
-            "gemini": "anthropic/claude-haiku-4.5",
-            "chatgpt": "openai/gpt-5",
+            "ada": "anthropic/claude-sonnet-4.5",
+            "kai": "anthropic/claude-haiku-4.5",
+            "mei": "openai/gpt-5",
         },
     )
     summaries_root = tmp_path / "summaries"
@@ -61,7 +61,7 @@ async def test_summary_written_after_synthesis(tmp_path: Path, capsys):
         store=InMemoryStore(),
         clock=_clock(),
         bus=InMemoryBus(),
-        synthesizer="claude",
+        synthesizer="ada",
         best_r1_judge=best_r1_judge,
         preference_judge=preference_judge,
         roster_spec=roster,
@@ -78,7 +78,7 @@ async def test_summary_written_after_synthesis(tmp_path: Path, capsys):
     assert data["diversity"]["classification"] == "medium"
     assert data["policy"]["mode"] == "single_critique"
     assert data["rounds_executed"] == 2  # R1 + R2 under single_critique
-    assert data["best_r1_elder"] == "gemini"
+    assert data["best_r1_elder"] == "kai"
     assert data["synthesis_generated"] is True
     assert data["synthesis_structured"]["answer"] == "Ship."
     assert data["preference"]["winner"] in ("synthesis", "best_r1", "tie")
@@ -86,19 +86,19 @@ async def test_summary_written_after_synthesis(tmp_path: Path, capsys):
 
 async def test_summary_includes_warning_for_low_diversity(tmp_path: Path, capsys):
     elders = {
-        "claude": FakeElder(elder_id="claude", replies=["R1 Claude."]),
-        "gemini": FakeElder(elder_id="gemini", replies=["R1 Gemini."]),
-        "chatgpt": FakeElder(elder_id="chatgpt", replies=["R1 ChatGPT."]),
+        "ada": FakeElder(elder_id="ada", replies=["R1 Ada."]),
+        "kai": FakeElder(elder_id="kai", replies=["R1 Kai."]),
+        "mei": FakeElder(elder_id="mei", replies=["R1 Mei."]),
     }
     best_r1_judge = FakeElder(
-        elder_id="claude", replies=["best: 1\nreason: tightest.\n"],
+        elder_id="ada", replies=["best: 1\nreason: tightest.\n"],
     )
     roster = RosterSpec(
         name="homogeneous",
         models={
-            "claude": "openai/gpt-5-mini",
-            "gemini": "openai/gpt-5-mini",
-            "chatgpt": "openai/gpt-5-mini",
+            "ada": "openai/gpt-5-mini",
+            "kai": "openai/gpt-5-mini",
+            "mei": "openai/gpt-5-mini",
         },
     )
     summaries_root = tmp_path / "summaries"
@@ -110,7 +110,7 @@ async def test_summary_includes_warning_for_low_diversity(tmp_path: Path, capsys
         store=InMemoryStore(),
         clock=_clock(),
         bus=InMemoryBus(),
-        synthesizer="claude",
+        synthesizer="ada",
         best_r1_judge=best_r1_judge,
         roster_spec=roster,
         run_summary_root=summaries_root,

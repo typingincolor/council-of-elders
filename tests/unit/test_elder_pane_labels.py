@@ -10,7 +10,7 @@ def _base_clock() -> FakeClock:
     return FakeClock(now=datetime(2026, 4, 19, 12, 0, 0, tzinfo=timezone.utc))
 
 
-def _answer(elder="claude", agreed=True, text="hi"):
+def _answer(elder="ada", agreed=True, text="hi"):
     return ElderAnswer(
         elder=elder,
         text=text,
@@ -20,23 +20,23 @@ def _answer(elder="claude", agreed=True, text="hi"):
     )
 
 
-def _error(elder="claude", kind="timeout"):
+def _error(elder="ada", kind="timeout"):
     return ElderError(elder=elder, kind=kind, detail="")
 
 
 class TestInitialLabel:
     def test_elder_initial_label_is_display_name_only(self):
         pane = ElderPane.standalone(
-            elder_id="claude",
-            display_name="Claude",
+            elder_id="ada",
+            display_name="Ada",
             verb_chooser=FixedVerbChooser("Pondering"),
             clock=_base_clock(),
         )
-        assert pane.current_label() == "Claude"
+        assert pane.current_label() == "Ada"
 
     def test_synthesis_initial_label_is_synthesis(self):
         pane = ElderPane.standalone(
-            elder_id="claude",
+            elder_id="ada",
             display_name="Synthesis",
             verb_chooser=FixedVerbChooser("Pondering"),
             clock=_base_clock(),
@@ -49,21 +49,21 @@ class TestThinkingLabel:
     def test_elder_thinking_label_has_verb_and_elapsed(self):
         clock = _base_clock()
         pane = ElderPane.standalone(
-            elder_id="claude",
-            display_name="Claude",
+            elder_id="ada",
+            display_name="Ada",
             verb_chooser=FixedVerbChooser("Pondering"),
             clock=clock,
         )
         pane.begin_thinking(round_number=1)
-        assert pane.current_label() == "Claude · Pondering… 0s"
+        assert pane.current_label() == "Ada · Pondering… 0s"
         clock.advance_seconds(12)
         pane.refresh_label()
-        assert pane.current_label() == "Claude · Pondering… 12s"
+        assert pane.current_label() == "Ada · Pondering… 12s"
 
     def test_synthesis_thinking_label_has_synthesising_prefix(self):
         clock = _base_clock()
         pane = ElderPane.standalone(
-            elder_id="claude",
+            elder_id="ada",
             display_name="Synthesis",
             verb_chooser=FixedVerbChooser("Pondering"),
             clock=clock,
@@ -79,41 +79,41 @@ class TestThinkingLabel:
 class TestCompletedLabel:
     def test_converged_label(self):
         pane = ElderPane.standalone(
-            elder_id="claude",
-            display_name="Claude",
+            elder_id="ada",
+            display_name="Ada",
             verb_chooser=FixedVerbChooser("Pondering"),
             clock=_base_clock(),
         )
         pane.begin_thinking(1)
         pane.end_thinking_completed(_answer(agreed=True))
-        assert pane.current_label() == "Claude ✓"
+        assert pane.current_label() == "Ada ✓"
 
     def test_dissenting_label(self):
         pane = ElderPane.standalone(
-            elder_id="claude",
-            display_name="Claude",
+            elder_id="ada",
+            display_name="Ada",
             verb_chooser=FixedVerbChooser("Pondering"),
             clock=_base_clock(),
         )
         pane.begin_thinking(1)
         pane.end_thinking_completed(_answer(agreed=False))
-        assert pane.current_label() == "Claude ↻"
+        assert pane.current_label() == "Ada ↻"
 
     def test_undeclared_agreement_label_falls_back_to_dissenting(self):
         pane = ElderPane.standalone(
-            elder_id="claude",
-            display_name="Claude",
+            elder_id="ada",
+            display_name="Ada",
             verb_chooser=FixedVerbChooser("Pondering"),
             clock=_base_clock(),
         )
         pane.begin_thinking(1)
         pane.end_thinking_completed(_answer(agreed=None))
         # No explicit agreement — treat as dissent for display purposes.
-        assert pane.current_label() == "Claude ↻"
+        assert pane.current_label() == "Ada ↻"
 
     def test_synthesis_completed_label(self):
         pane = ElderPane.standalone(
-            elder_id="claude",
+            elder_id="ada",
             display_name="Synthesis",
             verb_chooser=FixedVerbChooser("Pondering"),
             clock=_base_clock(),
@@ -125,14 +125,14 @@ class TestCompletedLabel:
 
     def test_error_label(self):
         pane = ElderPane.standalone(
-            elder_id="claude",
-            display_name="Claude",
+            elder_id="ada",
+            display_name="Ada",
             verb_chooser=FixedVerbChooser("Pondering"),
             clock=_base_clock(),
         )
         pane.begin_thinking(1)
         pane.end_thinking_failed(_error(kind="timeout"))
-        assert pane.current_label() == "Claude ⚠"
+        assert pane.current_label() == "Ada ⚠"
 
 
 class TestMultipleRounds:
@@ -148,14 +148,14 @@ class TestMultipleRounds:
         clock = _base_clock()
         chooser = CountingChooser()
         pane = ElderPane.standalone(
-            elder_id="claude",
-            display_name="Claude",
+            elder_id="ada",
+            display_name="Ada",
             verb_chooser=chooser,
             clock=clock,
         )
         pane.begin_thinking(1)
-        assert pane.current_label() == "Claude · Verb1… 0s"
+        assert pane.current_label() == "Ada · Verb1… 0s"
         pane.end_thinking_completed(_answer(agreed=True))
         pane.begin_thinking(2)
-        assert pane.current_label() == "Claude · Verb2… 0s"
+        assert pane.current_label() == "Ada · Verb2… 0s"
         assert chooser.calls == 2

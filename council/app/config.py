@@ -19,7 +19,7 @@ class AppConfig:
 
 DEFAULT_CONFIG_PATH = Path.home() / ".council" / "config.toml"
 
-_VALID_ELDERS: tuple[ElderId, ...] = ("claude", "gemini", "chatgpt")
+_VALID_ELDERS: tuple[ElderId, ...] = ("ada", "kai", "mei")
 
 
 def _read_toml(path: Path) -> dict:
@@ -45,9 +45,26 @@ def _resolve_key(toml_data: dict) -> str | None:
     return None
 
 
+_LEGACY_MODEL_KEYS: dict[str, ElderId] = {
+    "claude": "ada",
+    "gemini": "kai",
+    "chatgpt": "mei",
+}
+
+
 def _resolve_models(toml_data: dict) -> dict[ElderId, str]:
     section = toml_data.get("openrouter", {}).get("models", {})
     out: dict[ElderId, str] = {}
+    # Current-name keys take precedence over legacy-name keys.
+    for legacy, current in _LEGACY_MODEL_KEYS.items():
+        val = section.get(legacy)
+        if isinstance(val, str) and val:
+            log.warning(
+                "Config key [openrouter.models].%s is deprecated; use "
+                "[openrouter.models].%s instead.",
+                legacy, current,
+            )
+            out[current] = val
     for elder in _VALID_ELDERS:
         val = section.get(elder)
         if isinstance(val, str) and val:

@@ -138,24 +138,24 @@ def test_resolve_preference_winner_handles_all_cases() -> None:
 @pytest.mark.asyncio
 async def test_judge_claim_overlap_formats_prompt_and_parses_reply() -> None:
     judge = FakeElder(
-        elder_id="claude",  # elder_id is arbitrary for judges
+        elder_id="ada",  # elder_id is arbitrary for judges
         replies=["shared_count: 4\na_only_count: 1\nb_only_count: 1\nnote: ok\n"],
     )
     obs = await judge_claim_overlap(
         question="Q?",
-        answer_a="alpha",
-        answer_b="beta",
+        answer_a="ada",
+        answer_b="kai",
         judge_port=judge,
     )
     assert obs.shared == 4 and obs.jaccard == 4 / 6
     conv = judge.conversations[0]
     assert "Q?" in conv[0][1]  # prompt body contains the question
-    assert "alpha" in conv[0][1] and "beta" in conv[0][1]
+    assert "ada" in conv[0][1] and "kai" in conv[0][1]
 
 
 @pytest.mark.asyncio
 async def test_judge_best_r1_returns_parsed_obs() -> None:
-    judge = FakeElder(elder_id="claude", replies=["best: 2\nreason: fewer hedges.\n"])
+    judge = FakeElder(elder_id="ada", replies=["best: 2\nreason: fewer hedges.\n"])
     obs = await judge_best_r1(
         question="Q?",
         answers=("a1", "a2", "a3"),
@@ -166,7 +166,7 @@ async def test_judge_best_r1_returns_parsed_obs() -> None:
 
 @pytest.mark.asyncio
 async def test_judge_preference_uses_shuffle_and_resolves_winner() -> None:
-    judge = FakeElder(elder_id="claude", replies=["winner: X\nreason: tighter.\n"])
+    judge = FakeElder(elder_id="ada", replies=["winner: X\nreason: tighter.\n"])
     rng = random.Random(0)  # rng.random() >= 0.5 → best_r1 goes to X
     obs = await judge_preference(
         question="Q?",

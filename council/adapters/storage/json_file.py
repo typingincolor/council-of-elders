@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from council.domain.elder_migration import migrate_slot_id
 from council.domain.models import (
     CouncilPack,
     Debate,
@@ -107,6 +108,10 @@ def _serialize_question(q: ElderQuestion) -> dict[str, Any]:
     }
 
 
+def _migrated_slot(slot: str | None) -> str | None:
+    return None if slot is None else migrate_slot_id(slot)
+
+
 def _deserialize_debate(d: dict[str, Any]) -> Debate:
     debate = Debate(
         id=d["id"],
@@ -115,7 +120,7 @@ def _deserialize_debate(d: dict[str, Any]) -> Debate:
         rounds=[_deserialize_round(r) for r in d["rounds"]],
         status=d["status"],
         synthesis=_deserialize_answer(d["synthesis"]) if d["synthesis"] else None,
-        best_r1_elder=d.get("best_r1_elder"),
+        best_r1_elder=_migrated_slot(d.get("best_r1_elder")),  # type: ignore[arg-type]
     )
     for m in d.get("user_messages", []):
         debate.user_messages.append(_deserialize_user_message(m))
@@ -126,7 +131,7 @@ def _deserialize_pack(p: dict[str, Any]) -> CouncilPack:
     return CouncilPack(
         name=p["name"],
         shared_context=p["shared_context"],
-        personas={k: v for k, v in p["personas"].items()},
+        personas={migrate_slot_id(k): v for k, v in p["personas"].items()},
     )
 
 
@@ -143,7 +148,7 @@ def _deserialize_round(r: dict[str, Any]) -> Round:
         number=r["number"],
         turns=[
             Turn(
-                elder=t["elder"],
+                elder=migrate_slot_id(t["elder"]),
                 answer=_deserialize_answer(t["answer"]),
                 questions=tuple(_deserialize_question(q) for q in t.get("questions", [])),
             )
@@ -155,12 +160,14 @@ def _deserialize_round(r: dict[str, Any]) -> Round:
 def _deserialize_answer(a: dict[str, Any]) -> ElderAnswer:
     err = a["error"]
     return ElderAnswer(
-        elder=a["elder"],
+        elder=migrate_slot_id(a["elder"]),
         text=a["text"],
         error=(
             None
             if err is None
-            else ElderError(elder=err["elder"], kind=err["kind"], detail=err["detail"])
+            else ElderError(
+                elder=migrate_slot_id(err["elder"]), kind=err["kind"], detail=err["detail"]
+            )
         ),
         agreed=a["agreed"],
         created_at=datetime.fromisoformat(a["created_at"]),
@@ -169,8 +176,8 @@ def _deserialize_answer(a: dict[str, Any]) -> ElderAnswer:
 
 def _deserialize_question(q: dict[str, Any]) -> ElderQuestion:
     return ElderQuestion(
-        from_elder=q["from_elder"],
-        to_elder=q["to_elder"],
+        from_elder=migrate_slot_id(q["from_elder"]),
+        to_elder=migrate_slot_id(q["to_elder"]),
         text=q["text"],
         round_number=q["round_number"],
     )

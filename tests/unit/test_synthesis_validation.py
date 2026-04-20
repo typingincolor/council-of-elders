@@ -101,18 +101,18 @@ class TestDraftLabels:
 
 class TestAdvisorMentions:
     def test_two_mentions_triggers(self):
-        r = _v().validate("Ship value faster. This matches what Claude and Gemini argued.")
+        r = _v().validate("Ship value faster. This matches what Ada and Kai argued.")
         assert isinstance(r, SynthesisViolation)
         assert r.reason == "advisor_mentions"
 
     def test_single_legitimate_mention_is_tolerated(self):
-        # A single stray "claude" (e.g. part of a technical term or in
+        # A single stray "ada" (e.g. part of a technical term or in
         # a direct quote) doesn't fire — threshold is 2.
         r = _v().validate("Ship faster. The claude-flavoured approach is one option.")
         assert isinstance(r, SynthesisOk)
 
     def test_the_debate_mention(self):
-        r = _v().validate("Ship value faster. The debate surfaced that Gemini pushed back.")
+        r = _v().validate("Ship value faster. The debate surfaced that Kai pushed back.")
         assert isinstance(r, SynthesisViolation)
         assert r.reason == "advisor_mentions"
 

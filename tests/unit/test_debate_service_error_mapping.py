@@ -21,10 +21,10 @@ def _debate():
 
 
 class CliMissingElder:
-    elder_id = "gemini"
+    elder_id = "kai"
 
     async def ask(self, prompt, *, timeout_s=120.0):
-        raise ElderSubprocessError("cli_missing", "gemini")
+        raise ElderSubprocessError("cli_missing", "kai")
 
     async def health_check(self):
         return False
@@ -32,9 +32,9 @@ class CliMissingElder:
 
 async def test_cli_missing_preserves_error_kind():
     elders = {
-        "claude": FakeElder(elder_id="claude", replies=["ok\nCONVERGED: yes"]),
-        "gemini": CliMissingElder(),
-        "chatgpt": FakeElder(elder_id="chatgpt", replies=["ok\nCONVERGED: yes"]),
+        "ada": FakeElder(elder_id="ada", replies=["ok\nCONVERGED: yes"]),
+        "kai": CliMissingElder(),
+        "mei": FakeElder(elder_id="mei", replies=["ok\nCONVERGED: yes"]),
     }
     s = DebateService(
         elders=elders,
@@ -43,6 +43,6 @@ async def test_cli_missing_preserves_error_kind():
         bus=InMemoryBus(),
     )
     r = await s.run_round(_debate())
-    gem = next(t for t in r.turns if t.elder == "gemini")
+    gem = next(t for t in r.turns if t.elder == "kai")
     assert gem.answer.error is not None
     assert gem.answer.error.kind == "cli_missing"

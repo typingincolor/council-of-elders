@@ -25,28 +25,28 @@ async def test_debate_report_appended_to_synthesis_pane_and_written_to_file(tmp_
     reports_dir = tmp_path / "reports"
 
     elders = {
-        "claude": FakeElder(
-            elder_id="claude",
+        "ada": FakeElder(
+            elder_id="ada",
             replies=[
-                "R1 Claude",
-                "R2 Claude\n\nQUESTIONS:\n@gemini Why?",
+                "R1 Ada",
+                "R2 Ada\n\nQUESTIONS:\n@kai Why?",
                 "The synthesised answer.",
-                "Claude argued for option A initially. Gemini conceded on scope. "
+                "Ada argued for option A initially. Kai conceded on scope. "
                 "All three converged by R3.",
             ],
         ),
-        "gemini": FakeElder(
-            elder_id="gemini",
+        "kai": FakeElder(
+            elder_id="kai",
             replies=[
-                "R1 Gemini",
-                "R2 Gemini\n\nQUESTIONS:\n@claude Why?",
+                "R1 Kai",
+                "R2 Kai\n\nQUESTIONS:\n@ada Why?",
             ],
         ),
-        "chatgpt": FakeElder(
-            elder_id="chatgpt",
+        "mei": FakeElder(
+            elder_id="mei",
             replies=[
-                "R1 ChatGPT",
-                "R2 ChatGPT\n\nQUESTIONS:\n@claude Why?",
+                "R1 Mei",
+                "R2 Mei\n\nQUESTIONS:\n@ada Why?",
             ],
         ),
     }
@@ -66,7 +66,7 @@ async def test_debate_report_appended_to_synthesis_pane_and_written_to_file(tmp_
         await _wait_until(pilot, lambda: app.awaiting_decision)  # after R2
         await pilot.press("s")
         await _wait_until(pilot, lambda: len(app.screen_stack) > 1, timeout_s=2.0)
-        await pilot.press("1")  # pick Claude as synthesiser
+        await pilot.press("1")  # pick Ada as synthesiser
         await _wait_until(pilot, lambda: app.is_finished)
         # Wait for the report worker to finish.
         await _wait_until(
@@ -79,7 +79,7 @@ async def test_debate_report_appended_to_synthesis_pane_and_written_to_file(tmp_
     assert "The synthesised answer." in synth_text
     assert "--- Debate report ---" in synth_text
     assert "Debate metadata" in synth_text
-    assert "Claude argued for option A initially" in synth_text
+    assert "Ada argued for option A initially" in synth_text
 
     # File was written.
     files = list(reports_dir.glob("*.md"))
@@ -88,4 +88,4 @@ async def test_debate_report_appended_to_synthesis_pane_and_written_to_file(tmp_
     assert "Synthesised answer" in content
     assert "The synthesised answer." in content
     assert "## Narrative" in content
-    assert "Claude argued for option A initially" in content
+    assert "Ada argued for option A initially" in content

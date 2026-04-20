@@ -122,7 +122,7 @@ async def _judge_debates(
         )
 
     judge = OpenRouterAdapter(
-        elder_id="claude",  # elder_id is arbitrary; the judge is a standalone adapter
+        elder_id="ada",  # elder_id is arbitrary; the judge is a standalone adapter
         model=judge_model,
         api_key=config.openrouter_api_key,
     )

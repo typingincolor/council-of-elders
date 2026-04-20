@@ -24,8 +24,8 @@ def _build_args(model: str | None):
 class ClaudeCodeAdapter(SubprocessElder):
     def __init__(self, model: str | None = None) -> None:
         super().__init__(
-            elder_id="claude",
-            binary="claude",
+            elder_id="ada",
+            binary="ada",
             build_args=_build_args(model),
             classify_stderr=_classify,
         )

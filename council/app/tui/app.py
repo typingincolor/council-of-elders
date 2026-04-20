@@ -62,16 +62,16 @@ class CouncilInput(TextArea):
 
 class SynthesizerModal(ModalScreen[ElderId]):
     BINDINGS = [
-        Binding("1", "pick('claude')", "Claude"),
-        Binding("2", "pick('gemini')", "Gemini"),
-        Binding("3", "pick('chatgpt')", "ChatGPT"),
+        Binding("1", "pick('ada')", "Ada"),
+        Binding("2", "pick('kai')", "Kai"),
+        Binding("3", "pick('mei')", "Mei"),
         Binding("escape", "dismiss(None)", "Cancel"),
     ]
 
     def compose(self) -> ComposeResult:
         yield Vertical(
             Static("Who should synthesize?"),
-            Static("[1] Claude   [2] Gemini   [3] ChatGPT   [Esc] Cancel"),
+            Static("[1] Ada   [2] Kai   [3] Mei   [Esc] Cancel"),
         )
 
     def action_pick(self, elder: str) -> None:
@@ -92,9 +92,9 @@ class CouncilApp(App):
         Binding("a", "abandon", "Abandon", show=False),
         Binding("o", "override", "Override convergence", show=False),
         Binding("f", "toggle_layout", "Toggle layout", show=False),
-        Binding("1", "focus_pane('claude')", "Claude", show=False),
-        Binding("2", "focus_pane('gemini')", "Gemini", show=False),
-        Binding("3", "focus_pane('chatgpt')", "ChatGPT", show=False),
+        Binding("1", "focus_pane('ada')", "Ada", show=False),
+        Binding("2", "focus_pane('kai')", "Kai", show=False),
+        Binding("3", "focus_pane('mei')", "Mei", show=False),
         Binding("4", "focus_pane('synthesis')", "Synthesis", show=False),
     ]
 
@@ -184,15 +184,15 @@ class CouncilApp(App):
                     self._spawn(self._generate_and_write_report(ev.answer.elder))
             elif isinstance(ev, UserMessageReceived):
                 # Dispatch to all three elder panes for inline rendering.
-                for pane_key in ("claude", "gemini", "chatgpt"):
+                for pane_key in ("ada", "kai", "mei"):
                     self._view.pane(pane_key).on_user_message(ev.message)
 
     # --- health check ----------------------------------------------------
     async def _run_health_checks(self) -> None:
         labels: dict[ElderId, str] = {
-            "claude": "Claude",
-            "gemini": "Gemini",
-            "chatgpt": "ChatGPT",
+            "ada": "Ada",
+            "kai": "Kai",
+            "mei": "Mei",
         }
 
         async def _probe(elder_id: ElderId) -> tuple[ElderId, bool]:
@@ -394,9 +394,9 @@ def main() -> None:
 
     config = load_config()
     cli_models: dict[ElderId, str | None] = {
-        "claude": args.claude_model,
-        "gemini": args.gemini_model,
-        "chatgpt": args.codex_model,
+        "ada": args.claude_model,
+        "kai": args.gemini_model,
+        "mei": args.codex_model,
     }
     elders, using_openrouter, _roster_spec = build_elders(config, cli_models=cli_models)
 

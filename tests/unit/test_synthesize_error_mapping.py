@@ -24,7 +24,7 @@ def _debate():
 
 
 class QuotaExhaustedElder:
-    elder_id = "gemini"
+    elder_id = "kai"
 
     async def ask(self, prompt, *, timeout_s=45.0):
         raise ElderSubprocessError("quota_exhausted", "daily limit reached")
@@ -35,9 +35,9 @@ class QuotaExhaustedElder:
 
 async def test_synthesize_preserves_structured_error_kind():
     elders = {
-        "claude": FakeElder(elder_id="claude", replies=["r1\nCONVERGED: yes"]),
-        "gemini": QuotaExhaustedElder(),
-        "chatgpt": FakeElder(elder_id="chatgpt", replies=["r1\nCONVERGED: yes"]),
+        "ada": FakeElder(elder_id="ada", replies=["r1\nCONVERGED: yes"]),
+        "kai": QuotaExhaustedElder(),
+        "mei": FakeElder(elder_id="mei", replies=["r1\nCONVERGED: yes"]),
     }
     s = DebateService(
         elders=elders,
@@ -48,8 +48,8 @@ async def test_synthesize_preserves_structured_error_kind():
     d = _debate()
     # Prime a round so synthesize has context.
     await s.run_round(d)
-    # Ask Gemini (the one wired to raise) to synthesise.
-    ans = await s.synthesize(d, by="gemini")
+    # Ask Kai (the one wired to raise) to synthesise.
+    ans = await s.synthesize(d, by="kai")
     assert ans.error is not None
     assert ans.error.kind == "quota_exhausted"
     assert ans.error.detail == "daily limit reached"
@@ -57,7 +57,7 @@ async def test_synthesize_preserves_structured_error_kind():
 
 async def test_synthesize_unstructured_exception_still_falls_back_to_nonzero_exit():
     class BoomElder:
-        elder_id = "claude"
+        elder_id = "ada"
 
         async def ask(self, prompt, *, timeout_s=45.0):
             raise RuntimeError("generic boom")
@@ -66,9 +66,9 @@ async def test_synthesize_unstructured_exception_still_falls_back_to_nonzero_exi
             return True
 
     elders = {
-        "claude": BoomElder(),
-        "gemini": FakeElder(elder_id="gemini", replies=["r1\nCONVERGED: yes"]),
-        "chatgpt": FakeElder(elder_id="chatgpt", replies=["r1\nCONVERGED: yes"]),
+        "ada": BoomElder(),
+        "kai": FakeElder(elder_id="kai", replies=["r1\nCONVERGED: yes"]),
+        "mei": FakeElder(elder_id="mei", replies=["r1\nCONVERGED: yes"]),
     }
     s = DebateService(
         elders=elders,
@@ -78,7 +78,7 @@ async def test_synthesize_unstructured_exception_still_falls_back_to_nonzero_exi
     )
     d = _debate()
     await s.run_round(d)
-    ans = await s.synthesize(d, by="claude")
+    ans = await s.synthesize(d, by="ada")
     assert ans.error is not None
     assert ans.error.kind == "nonzero_exit"
     assert "generic boom" in ans.error.detail

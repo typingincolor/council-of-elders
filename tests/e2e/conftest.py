@@ -6,7 +6,7 @@ from __future__ import annotations
 def pane_lines(app, elder_key: str) -> str:
     """Return the history text of a specific ElderPaneWidget by elder key.
 
-    `elder_key` is one of "claude", "gemini", "chatgpt", or "synthesis".
+    `elder_key` is one of "ada", "kai", "mei", or "synthesis".
     Apps that expose a CouncilView must store it on `app._view`.
     """
     view = getattr(app, "_view", None)

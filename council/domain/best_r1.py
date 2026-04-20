@@ -18,7 +18,7 @@ from typing import Protocol
 from council.domain.models import Debate, ElderId, Message
 from council.domain.ports import ElderPort
 
-_ELDER_ORDER: tuple[ElderId, ElderId, ElderId] = ("claude", "gemini", "chatgpt")
+_ELDER_ORDER: tuple[ElderId, ElderId, ElderId] = ("ada", "kai", "mei")
 
 BEST_R1_PROMPT = """You will see three candidate answers to the user's question. Pick the single strongest one on correctness, completeness, and shape-fit. Ignore stylistic polish. Do not favour longer answers.
 

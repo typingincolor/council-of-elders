@@ -3,9 +3,9 @@ from __future__ import annotations
 from council.domain.models import Debate, ElderId
 
 _ELDER_LABEL: dict[ElderId, str] = {
-    "claude": "Claude",
-    "gemini": "Gemini",
-    "chatgpt": "ChatGPT",
+    "ada": "Ada",
+    "kai": "Kai",
+    "mei": "Mei",
 }
 
 
@@ -84,11 +84,11 @@ class PromptBuilder:
             "Your reply must end with this exact closing block, flush left, "
             "with exact capitalization, and with nothing after it:\n\n"
             "QUESTIONS:\n"
-            "@claude your direct question here\n\n"
-            "Replace @claude with exactly one of @claude, @gemini, or "
-            "@chatgpt, but not yourself. Use the exact lowercase handle "
-            "with @, not variants such as Claude:, To Claude —, or "
-            "@Claude. Ask exactly one real, direct interrogative sentence "
+            "@ada your direct question here\n\n"
+            "Replace @ada with exactly one of @ada, @kai, or "
+            "@mei, but not yourself. Use the exact lowercase handle "
+            "with @, not variants such as Ada:, To Ada —, or "
+            "@Ada. Ask exactly one real, direct interrogative sentence "
             'ending in "?", addressed to that one peer, and targeting a '
             "specific load-bearing element of that peer's answer. Do not "
             "give advice phrased as a question, do not ask a rhetorical "
@@ -203,7 +203,7 @@ class PromptBuilder:
             "advisors: a divergence counts only if it would change action, "
             "interpretation, scope, caveats, confidence, or edge-case "
             "handling for the user. Attribute where useful "
-            '(e.g. "Claude argued X; Gemini argued Y"). Skip stylistic or '
+            '(e.g. "Ada argued X; Kai argued Y"). Skip stylistic or '
             "framing differences.>\n"
             "- <additional bullets as needed>\n\n"
             "If advisors agreed on every decision-relevant point, write "

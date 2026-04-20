@@ -87,7 +87,7 @@ async def _run_one_debate(
     return debate.id
 
 
-_SYNTHESISER_ROTATION: tuple[ElderId, ...] = ("claude", "gemini", "chatgpt")
+_SYNTHESISER_ROTATION: tuple[ElderId, ...] = ("ada", "kai", "mei")
 
 
 async def run_probe(

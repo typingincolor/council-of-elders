@@ -22,25 +22,25 @@ ROSTERS: tuple[RosterSpec, ...] = (
     RosterSpec(
         name="homogeneous",
         models={
-            "claude": "openai/gpt-5-mini",
-            "gemini": "openai/gpt-5-mini",
-            "chatgpt": "openai/gpt-5-mini",
+            "ada": "openai/gpt-5-mini",
+            "kai": "openai/gpt-5-mini",
+            "mei": "openai/gpt-5-mini",
         },
     ),
     RosterSpec(
         name="mixed_baseline",
         models={
-            "claude": "anthropic/claude-sonnet-4.5",
-            "gemini": "google/gemini-2.5-pro",
-            "chatgpt": "openai/gpt-5",
+            "ada": "anthropic/claude-sonnet-4.5",
+            "kai": "google/gemini-2.5-pro",
+            "mei": "openai/gpt-5",
         },
     ),
     RosterSpec(
         name="substituted",
         models={
-            "claude": "anthropic/claude-sonnet-4.5",
-            "gemini": "meta-llama/llama-3.1-70b-instruct",
-            "chatgpt": "openai/gpt-5",
+            "ada": "anthropic/claude-sonnet-4.5",
+            "kai": "meta-llama/llama-3.1-70b-instruct",
+            "mei": "openai/gpt-5",
         },
     ),
 )

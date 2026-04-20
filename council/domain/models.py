@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal, NamedTuple
 
-ElderId = Literal["claude", "gemini", "chatgpt"]
+ElderId = Literal["ada", "kai", "mei"]
 
 Role = Literal["system", "user", "assistant"]
 

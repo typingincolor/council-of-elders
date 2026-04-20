@@ -41,53 +41,53 @@ def _debate(rounds):
 
 class TestLatching:
     def test_substantive_reaffirm_is_substantive(self):
-        # Claude converges R3, Gemini asks Claude a question in R3.
-        # Claude's R4 body is long → substantive re-engagement.
-        q = ElderQuestion(from_elder="gemini", to_elder="claude", text="Why X?", round_number=3)
+        # Ada converges R3, Kai asks Ada a question in R3.
+        # Ada's R4 body is long → substantive re-engagement.
+        q = ElderQuestion(from_elder="kai", to_elder="ada", text="Why X?", round_number=3)
         r3 = Round(
             number=3,
             turns=[
                 Turn(
-                    elder="claude",
-                    answer=_ans("claude", "Detailed R3 answer.", agreed=True),
+                    elder="ada",
+                    answer=_ans("ada", "Detailed R3 answer.", agreed=True),
                 ),
-                Turn(elder="gemini", answer=_ans("gemini", "g3", agreed=False), questions=(q,)),
-                Turn(elder="chatgpt", answer=_ans("chatgpt", "x3", agreed=True)),
+                Turn(elder="kai", answer=_ans("kai", "g3", agreed=False), questions=(q,)),
+                Turn(elder="mei", answer=_ans("mei", "x3", agreed=True)),
             ],
         )
         r4 = Round(
             number=4,
             turns=[
                 Turn(
-                    elder="claude",
-                    answer=_ans("claude", "A" * 500, agreed=True),  # long body
+                    elder="ada",
+                    answer=_ans("ada", "A" * 500, agreed=True),  # long body
                 ),
-                Turn(elder="gemini", answer=_ans("gemini", "g4", agreed=True)),
-                Turn(elder="chatgpt", answer=_ans("chatgpt", "x4", agreed=True)),
+                Turn(elder="kai", answer=_ans("kai", "g4", agreed=True)),
+                Turn(elder="mei", answer=_ans("mei", "x4", agreed=True)),
             ],
         )
         report = analyse_latching(_debate([r3, r4]))
         assert report.n == 1
         assert report.observations[0].classification == "substantive"
-        assert report.observations[0].elder == "claude"
-        assert report.observations[0].peer_asker == "gemini"
+        assert report.observations[0].elder == "ada"
+        assert report.observations[0].peer_asker == "kai"
 
     def test_disengaged_reaffirm_is_disengaged(self):
-        q = ElderQuestion(from_elder="gemini", to_elder="claude", text="Why?", round_number=3)
+        q = ElderQuestion(from_elder="kai", to_elder="ada", text="Why?", round_number=3)
         r3 = Round(
             number=3,
             turns=[
-                Turn(elder="claude", answer=_ans("claude", "c3", agreed=True)),
-                Turn(elder="gemini", answer=_ans("gemini", "g3", agreed=False), questions=(q,)),
-                Turn(elder="chatgpt", answer=_ans("chatgpt", "x3", agreed=True)),
+                Turn(elder="ada", answer=_ans("ada", "c3", agreed=True)),
+                Turn(elder="kai", answer=_ans("kai", "g3", agreed=False), questions=(q,)),
+                Turn(elder="mei", answer=_ans("mei", "x3", agreed=True)),
             ],
         )
         r4 = Round(
             number=4,
             turns=[
-                Turn(elder="claude", answer=_ans("claude", "Yes.", agreed=True)),  # tiny
-                Turn(elder="gemini", answer=_ans("gemini", "g4", agreed=True)),
-                Turn(elder="chatgpt", answer=_ans("chatgpt", "x4", agreed=True)),
+                Turn(elder="ada", answer=_ans("ada", "Yes.", agreed=True)),  # tiny
+                Turn(elder="kai", answer=_ans("kai", "g4", agreed=True)),
+                Turn(elder="mei", answer=_ans("mei", "x4", agreed=True)),
             ],
         )
         report = analyse_latching(_debate([r3, r4]))
@@ -95,22 +95,22 @@ class TestLatching:
         assert report.disengaged_rate == 1.0
 
     def test_flip_is_flip(self):
-        q = ElderQuestion(from_elder="gemini", to_elder="claude", text="Why?", round_number=3)
+        q = ElderQuestion(from_elder="kai", to_elder="ada", text="Why?", round_number=3)
         r3 = Round(
             number=3,
             turns=[
-                Turn(elder="claude", answer=_ans("claude", "c3", agreed=True)),
-                Turn(elder="gemini", answer=_ans("gemini", "g3", agreed=False), questions=(q,)),
-                Turn(elder="chatgpt", answer=_ans("chatgpt", "x3", agreed=True)),
+                Turn(elder="ada", answer=_ans("ada", "c3", agreed=True)),
+                Turn(elder="kai", answer=_ans("kai", "g3", agreed=False), questions=(q,)),
+                Turn(elder="mei", answer=_ans("mei", "x3", agreed=True)),
             ],
         )
         r4 = Round(
             number=4,
             turns=[
-                # Claude flipped to CONVERGED: no.
-                Turn(elder="claude", answer=_ans("claude", "A" * 500, agreed=False)),
-                Turn(elder="gemini", answer=_ans("gemini", "g4", agreed=True)),
-                Turn(elder="chatgpt", answer=_ans("chatgpt", "x4", agreed=True)),
+                # Ada flipped to CONVERGED: no.
+                Turn(elder="ada", answer=_ans("ada", "A" * 500, agreed=False)),
+                Turn(elder="kai", answer=_ans("kai", "g4", agreed=True)),
+                Turn(elder="mei", answer=_ans("mei", "x4", agreed=True)),
             ],
         )
         report = analyse_latching(_debate([r3, r4]))
@@ -118,21 +118,21 @@ class TestLatching:
         assert report.flip_rate == 1.0
 
     def test_no_peer_question_produces_no_observation(self):
-        # Claude converges R3 but no peer asked it anything.
+        # Ada converges R3 but no peer asked it anything.
         r3 = Round(
             number=3,
             turns=[
-                Turn(elder="claude", answer=_ans("claude", "c3", agreed=True)),
-                Turn(elder="gemini", answer=_ans("gemini", "g3", agreed=True)),
-                Turn(elder="chatgpt", answer=_ans("chatgpt", "x3", agreed=True)),
+                Turn(elder="ada", answer=_ans("ada", "c3", agreed=True)),
+                Turn(elder="kai", answer=_ans("kai", "g3", agreed=True)),
+                Turn(elder="mei", answer=_ans("mei", "x3", agreed=True)),
             ],
         )
         r4 = Round(
             number=4,
             turns=[
-                Turn(elder="claude", answer=_ans("claude", "c4", agreed=True)),
-                Turn(elder="gemini", answer=_ans("gemini", "g4", agreed=True)),
-                Turn(elder="chatgpt", answer=_ans("chatgpt", "x4", agreed=True)),
+                Turn(elder="ada", answer=_ans("ada", "c4", agreed=True)),
+                Turn(elder="kai", answer=_ans("kai", "g4", agreed=True)),
+                Turn(elder="mei", answer=_ans("mei", "x4", agreed=True)),
             ],
         )
         report = analyse_latching(_debate([r3, r4]))
@@ -146,25 +146,25 @@ class TestLowDelta:
         r2 = Round(
             number=2,
             turns=[
-                Turn(elder="claude", answer=_ans("claude", base)),
-                Turn(elder="gemini", answer=_ans("gemini", "g2")),
-                Turn(elder="chatgpt", answer=_ans("chatgpt", "x2")),
+                Turn(elder="ada", answer=_ans("ada", base)),
+                Turn(elder="kai", answer=_ans("kai", "g2")),
+                Turn(elder="mei", answer=_ans("mei", "x2")),
             ],
         )
         r3 = Round(
             number=3,
             turns=[
                 Turn(
-                    elder="claude",
+                    elder="ada",
                     # Tiny edit — high similarity.
-                    answer=_ans("claude", base + " Also: tests."),
+                    answer=_ans("ada", base + " Also: tests."),
                 ),
-                Turn(elder="gemini", answer=_ans("gemini", "g3")),
-                Turn(elder="chatgpt", answer=_ans("chatgpt", "x3")),
+                Turn(elder="kai", answer=_ans("kai", "g3")),
+                Turn(elder="mei", answer=_ans("mei", "x3")),
             ],
         )
         report = analyse_low_delta_rounds(_debate([r2, r3]))
-        claude_delta = next(d for d in report.deltas if d.elder == "claude")
+        claude_delta = next(d for d in report.deltas if d.elder == "ada")
         assert claude_delta.is_low_delta is True
         assert claude_delta.similarity > 0.92
 
@@ -172,37 +172,37 @@ class TestLowDelta:
         r2 = Round(
             number=2,
             turns=[
-                Turn(elder="claude", answer=_ans("claude", "Ship incrementally.")),
-                Turn(elder="gemini", answer=_ans("gemini", "g2")),
-                Turn(elder="chatgpt", answer=_ans("chatgpt", "x2")),
+                Turn(elder="ada", answer=_ans("ada", "Ship incrementally.")),
+                Turn(elder="kai", answer=_ans("kai", "g2")),
+                Turn(elder="mei", answer=_ans("mei", "x2")),
             ],
         )
         r3 = Round(
             number=3,
             turns=[
                 Turn(
-                    elder="claude",
+                    elder="ada",
                     answer=_ans(
-                        "claude",
+                        "ada",
                         "I changed my mind: the correct approach is a bounded rewrite "
                         "because shared-surface migration costs are lower than incremental refactor.",
                     ),
                 ),
-                Turn(elder="gemini", answer=_ans("gemini", "g3")),
-                Turn(elder="chatgpt", answer=_ans("chatgpt", "x3")),
+                Turn(elder="kai", answer=_ans("kai", "g3")),
+                Turn(elder="mei", answer=_ans("mei", "x3")),
             ],
         )
         report = analyse_low_delta_rounds(_debate([r2, r3]))
-        claude_delta = next(d for d in report.deltas if d.elder == "claude")
+        claude_delta = next(d for d in report.deltas if d.elder == "ada")
         assert claude_delta.is_low_delta is False
 
     def test_skips_r1(self):
         r1 = Round(
             number=1,
             turns=[
-                Turn(elder="claude", answer=_ans("claude", "c1")),
-                Turn(elder="gemini", answer=_ans("gemini", "g1")),
-                Turn(elder="chatgpt", answer=_ans("chatgpt", "x1")),
+                Turn(elder="ada", answer=_ans("ada", "c1")),
+                Turn(elder="kai", answer=_ans("kai", "g1")),
+                Turn(elder="mei", answer=_ans("mei", "x1")),
             ],
         )
         report = analyse_low_delta_rounds(_debate([r1]))
@@ -274,7 +274,7 @@ class TestDriftParse:
 class _StubJudge:
     """Minimal stand-in for an ElderPort; returns a pre-scripted reply."""
 
-    elder_id = "claude"
+    elder_id = "ada"
 
     def __init__(self, reply: str) -> None:
         self._reply = reply
@@ -293,7 +293,7 @@ class TestAnalyseDrift:
         # A debate without synthesis cannot be judged.
         r1 = Round(
             number=1,
-            turns=[Turn(elder="claude", answer=_ans("claude", "x"))],
+            turns=[Turn(elder="ada", answer=_ans("ada", "x"))],
         )
         d = _debate([r1])
         # synthesis is None in this _debate() helper
@@ -304,7 +304,7 @@ class TestAnalyseDrift:
     async def test_calls_judge_with_prompt_containing_question_and_synthesis(self):
         r1 = Round(
             number=1,
-            turns=[Turn(elder="claude", answer=_ans("claude", "initial take"))],
+            turns=[Turn(elder="ada", answer=_ans("ada", "initial take"))],
         )
         d = Debate(
             id="abc",
@@ -312,7 +312,7 @@ class TestAnalyseDrift:
             pack=CouncilPack(name="bare", shared_context=None, personas={}),
             rounds=[r1],
             status="synthesized",
-            synthesis=_ans("claude", "Ship faster."),
+            synthesis=_ans("ada", "Ship faster."),
         )
         judge = _StubJudge("shape_fit: 3\ncontent_fit: 3\ndrift_flag: no\nreason: clean headline")
         result = await analyse_drift(d, judge)

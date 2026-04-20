@@ -55,7 +55,7 @@ def _require_key() -> str:
 async def _run_for_judge(
     *, run_id: str, runs_root: Path, debate_store_root: Path, api_key: str, judge_model: str
 ) -> Path:
-    judge = OpenRouterAdapter(elder_id="claude", model=judge_model, api_key=api_key)
+    judge = OpenRouterAdapter(elder_id="ada", model=judge_model, api_key=api_key)
     slug = _slug(judge_model)
     # Point the scorer at an alternate scores path so the original scores.json
     # for the gemini-flash judge stays intact.

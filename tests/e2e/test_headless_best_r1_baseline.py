@@ -18,29 +18,29 @@ def _clock():
 
 def _elders():
     return {
-        "claude": FakeElder(
-            elder_id="claude",
+        "ada": FakeElder(
+            elder_id="ada",
             replies=[
-                "R1 Claude",
-                "R2 Claude\n\nQUESTIONS:\n@gemini Why?",
-                "R3 Claude\nCONVERGED: yes",
+                "R1 Ada",
+                "R2 Ada\n\nQUESTIONS:\n@kai Why?",
+                "R3 Ada\nCONVERGED: yes",
                 "Final synth.",
             ],
         ),
-        "gemini": FakeElder(
-            elder_id="gemini",
+        "kai": FakeElder(
+            elder_id="kai",
             replies=[
-                "R1 Gemini",
-                "R2 Gemini\n\nQUESTIONS:\n@claude Why?",
-                "R3 Gemini\nCONVERGED: yes",
+                "R1 Kai",
+                "R2 Kai\n\nQUESTIONS:\n@ada Why?",
+                "R3 Kai\nCONVERGED: yes",
             ],
         ),
-        "chatgpt": FakeElder(
-            elder_id="chatgpt",
+        "mei": FakeElder(
+            elder_id="mei",
             replies=[
-                "R1 ChatGPT",
-                "R2 ChatGPT\n\nQUESTIONS:\n@gemini Why?",
-                "R3 ChatGPT\nCONVERGED: yes",
+                "R1 Mei",
+                "R2 Mei\n\nQUESTIONS:\n@kai Why?",
+                "R3 Mei\nCONVERGED: yes",
             ],
         ),
     }
@@ -48,8 +48,8 @@ def _elders():
 
 async def test_best_r1_printed_when_judge_available(capsys):
     judge = FakeElder(
-        elder_id="claude",
-        replies=["best: 2\nreason: Gemini cut the clearest line.\n"],
+        elder_id="ada",
+        replies=["best: 2\nreason: Kai cut the clearest line.\n"],
     )
     store = InMemoryStore()
     await run_headless(
@@ -59,16 +59,16 @@ async def test_best_r1_printed_when_judge_available(capsys):
         store=store,
         clock=_clock(),
         bus=InMemoryBus(),
-        synthesizer="claude",
+        synthesizer="ada",
         best_r1_judge=judge,
     )
     out = capsys.readouterr().out
-    assert "Best R1 (judge-picked): Gemini" in out
-    assert "Gemini cut the clearest line" in out
+    assert "Best R1 (judge-picked): Kai" in out
+    assert "Kai cut the clearest line" in out
     # debate was saved with best_r1_elder recorded
     debates = list(store._data.values())
     assert len(debates) == 1
-    assert debates[0].best_r1_elder == "gemini"
+    assert debates[0].best_r1_elder == "kai"
 
 
 async def test_baseline_unavailable_message_when_no_judge(capsys):
@@ -79,7 +79,7 @@ async def test_baseline_unavailable_message_when_no_judge(capsys):
         store=InMemoryStore(),
         clock=_clock(),
         bus=InMemoryBus(),
-        synthesizer="claude",
+        synthesizer="ada",
     )
     out = capsys.readouterr().out
     assert "Best-R1 baseline unavailable" in out
@@ -87,7 +87,7 @@ async def test_baseline_unavailable_message_when_no_judge(capsys):
 
 async def test_best_r1_does_not_block_synthesis(capsys):
     judge = FakeElder(
-        elder_id="claude",
+        elder_id="ada",
         replies=["best: 1\nreason: first one was tightest.\n"],
     )
     await run_headless(
@@ -97,9 +97,9 @@ async def test_best_r1_does_not_block_synthesis(capsys):
         store=InMemoryStore(),
         clock=_clock(),
         bus=InMemoryBus(),
-        synthesizer="claude",
+        synthesizer="ada",
         best_r1_judge=judge,
     )
     out = capsys.readouterr().out
-    assert "Best R1 (judge-picked): Claude" in out
+    assert "Best R1 (judge-picked): Ada" in out
     assert "Final synth." in out  # synthesis still emitted

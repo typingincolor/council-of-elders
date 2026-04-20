@@ -12,26 +12,26 @@ from council.domain.models import ElderAnswer, ElderError, Round
 
 
 def test_turn_started_is_debate_event():
-    e: DebateEvent = TurnStarted(elder="claude", round_number=1)
-    assert e.elder == "claude"
+    e: DebateEvent = TurnStarted(elder="ada", round_number=1)
+    assert e.elder == "ada"
     assert e.round_number == 1
 
 
 def test_turn_completed_carries_answer():
     ans = ElderAnswer(
-        elder="claude",
+        elder="ada",
         text="hi",
         error=None,
         agreed=True,
         created_at=datetime(2026, 4, 18, tzinfo=timezone.utc),
     )
-    e = TurnCompleted(elder="claude", round_number=1, answer=ans)
+    e = TurnCompleted(elder="ada", round_number=1, answer=ans)
     assert e.answer is ans
 
 
 def test_turn_failed_carries_error():
-    err = ElderError(elder="claude", kind="timeout", detail="")
-    e = TurnFailed(elder="claude", round_number=1, error=err)
+    err = ElderError(elder="ada", kind="timeout", detail="")
+    e = TurnFailed(elder="ada", round_number=1, error=err)
     assert e.error is err
 
 
@@ -43,7 +43,7 @@ def test_round_completed_carries_round():
 
 def test_synthesis_and_abandoned_shapes():
     ans = ElderAnswer(
-        elder="claude",
+        elder="ada",
         text="final",
         error=None,
         agreed=None,
@@ -70,14 +70,14 @@ def test_turn_completed_carries_questions_tuple():
     from council.domain.models import ElderAnswer, ElderQuestion
 
     ans = ElderAnswer(
-        elder="claude",
+        elder="ada",
         text="x",
         error=None,
         agreed=True,
         created_at=datetime(2026, 4, 19, tzinfo=timezone.utc),
     )
-    q = ElderQuestion(from_elder="claude", to_elder="gemini", text="why?", round_number=1)
-    e = TurnCompleted(elder="claude", round_number=1, answer=ans, questions=(q,))
+    q = ElderQuestion(from_elder="ada", to_elder="kai", text="why?", round_number=1)
+    e = TurnCompleted(elder="ada", round_number=1, answer=ans, questions=(q,))
     assert e.questions == (q,)
 
 
@@ -85,11 +85,11 @@ def test_turn_completed_questions_default_empty():
     from council.domain.models import ElderAnswer
 
     ans = ElderAnswer(
-        elder="claude",
+        elder="ada",
         text="x",
         error=None,
         agreed=True,
         created_at=datetime(2026, 4, 19, tzinfo=timezone.utc),
     )
-    e = TurnCompleted(elder="claude", round_number=1, answer=ans)
+    e = TurnCompleted(elder="ada", round_number=1, answer=ans)
     assert e.questions == ()

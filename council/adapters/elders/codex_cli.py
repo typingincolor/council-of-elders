@@ -24,7 +24,7 @@ def _build_args(model: str | None):
 class CodexCLIAdapter(SubprocessElder):
     def __init__(self, model: str | None = None) -> None:
         super().__init__(
-            elder_id="chatgpt",
+            elder_id="mei",
             binary="codex",
             build_args=_build_args(model),
             classify_stderr=_classify,

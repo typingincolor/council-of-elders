@@ -68,7 +68,10 @@ _DRAFT_LABEL_RES = [
 # Advisor-name mentions in the body — the synthesis prompt explicitly
 # forbids these. Case-insensitive word-boundary matches.
 _ADVISOR_MENTION_RES = [
-    re.compile(r"\b(claude|gemini|chatgpt|the\s+advisors?|the\s+elders?)\b", re.IGNORECASE),
+    re.compile(
+        r"\b(ada|kai|mei|claude|gemini|chatgpt|the\s+advisors?|the\s+elders?)\b",
+        re.IGNORECASE,
+    ),
     re.compile(r"\b(the\s+debate|the\s+council|first\s+advisor|second\s+advisor)\b", re.IGNORECASE),
 ]
 
@@ -90,7 +93,7 @@ class SynthesisValidator:
     The validator is biased toward specificity over sensitivity: each
     detector must have a low false-positive rate so the retry ceiling
     isn't hit on genuinely good output. Marginal cases (e.g. a synthesis
-    that happens to include the word "claude" in a non-mention context)
+    that happens to include the word "ada" in a non-mention context)
     are accepted. The detectors fire only on patterns with high base-rate
     correlation with the observed failure modes.
     """

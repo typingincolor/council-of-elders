@@ -12,14 +12,14 @@ def test_rosters_are_named_correctly() -> None:
 
 def test_homogeneous_roster_uses_same_model_in_all_slots() -> None:
     hom = next(r for r in ROSTERS if r.name == "homogeneous")
-    assert hom.models["claude"] == hom.models["gemini"] == hom.models["chatgpt"]
+    assert hom.models["ada"] == hom.models["kai"] == hom.models["mei"]
 
 
-def test_substituted_roster_places_llama_in_gemini_slot() -> None:
+def test_substituted_roster_places_llama_in_kai_slot() -> None:
     sub = next(r for r in ROSTERS if r.name == "substituted")
-    assert "llama" in sub.models["gemini"].lower()
-    assert "claude" in sub.models["claude"].lower()
-    assert "openai" in sub.models["chatgpt"].lower()
+    assert "llama" in sub.models["kai"].lower()
+    assert "anthropic" in sub.models["ada"].lower()
+    assert "openai" in sub.models["mei"].lower()
 
 
 def test_build_roster_elders_returns_openrouter_adapters() -> None:
@@ -28,14 +28,14 @@ def test_build_roster_elders_returns_openrouter_adapters() -> None:
     spec = RosterSpec(
         name="test",
         models={
-            "claude": "anthropic/claude-sonnet-4.5",
-            "gemini": "google/gemini-2.5-pro",
-            "chatgpt": "openai/gpt-5",
+            "ada": "anthropic/claude-sonnet-4.5",
+            "kai": "google/gemini-2.5-pro",
+            "mei": "openai/gpt-5",
         },
     )
     elders = build_roster_elders(spec, api_key="sk-test")
-    assert set(elders.keys()) == {"claude", "gemini", "chatgpt"}
-    for slot in ("claude", "gemini", "chatgpt"):
+    assert set(elders.keys()) == {"ada", "kai", "mei"}
+    for slot in ("ada", "kai", "mei"):
         assert isinstance(elders[slot], OpenRouterAdapter)
         assert elders[slot].model == spec.models[slot]
         assert elders[slot].api_key == "sk-test"

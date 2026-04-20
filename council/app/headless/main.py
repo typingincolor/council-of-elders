@@ -23,9 +23,9 @@ from council.domain.run_summary import build_run_summary, write_run_summary
 from council.domain.synthesis_output import SynthesisOutput, parse_synthesis
 
 _LABELS: dict[ElderId, str] = {
-    "claude": "Claude",
-    "gemini": "Gemini",
-    "chatgpt": "ChatGPT",
+    "ada": "Ada",
+    "kai": "Kai",
+    "mei": "Mei",
 }
 
 
@@ -271,7 +271,7 @@ def main() -> None:
     parser.add_argument("prompt")
     parser.add_argument("--pack", default="bare")
     parser.add_argument("--packs-root", default=str(Path.home() / ".council" / "packs"))
-    parser.add_argument("--synthesizer", choices=["claude", "gemini", "chatgpt"], default="claude")
+    parser.add_argument("--synthesizer", choices=["ada", "kai", "mei"], default="ada")
     parser.add_argument("--store-root", default=str(Path.home() / ".council" / "debates"))
     parser.add_argument(
         "--claude-model",
@@ -332,9 +332,9 @@ def main() -> None:
 
     config = load_config()
     cli_models: dict[ElderId, str | None] = {
-        "claude": args.claude_model,
-        "gemini": args.gemini_model,
-        "chatgpt": args.codex_model,
+        "ada": args.claude_model,
+        "kai": args.gemini_model,
+        "mei": args.codex_model,
     }
     elders, using_openrouter, roster_spec = build_elders(config, cli_models=cli_models)
     from council.adapters.storage.report_file import ReportFileStore
@@ -348,12 +348,12 @@ def main() -> None:
         # Separate adapters so usage counters stay independent if we later
         # want to attribute cost per-task.
         best_r1_judge = OpenRouterAdapter(
-            elder_id="claude",
+            elder_id="ada",
             model="google/gemini-2.5-flash",
             api_key=config.openrouter_api_key,
         )
         preference_judge = OpenRouterAdapter(
-            elder_id="claude",
+            elder_id="ada",
             model="google/gemini-2.5-flash",
             api_key=config.openrouter_api_key,
         )

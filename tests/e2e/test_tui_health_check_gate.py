@@ -37,9 +37,9 @@ async def test_no_warning_when_all_elders_healthy(tmp_path):
     app = _app(
         tmp_path,
         elders={
-            "claude": FakeElder(elder_id="claude", replies=[], healthy=True),
-            "gemini": FakeElder(elder_id="gemini", replies=[], healthy=True),
-            "chatgpt": FakeElder(elder_id="chatgpt", replies=[], healthy=True),
+            "ada": FakeElder(elder_id="ada", replies=[], healthy=True),
+            "kai": FakeElder(elder_id="kai", replies=[], healthy=True),
+            "mei": FakeElder(elder_id="mei", replies=[], healthy=True),
         },
     )
     async with app.run_test() as pilot:
@@ -55,15 +55,15 @@ async def test_unhealthy_elder_produces_warning_line(tmp_path):
     app = _app(
         tmp_path,
         elders={
-            "claude": FakeElder(elder_id="claude", replies=[], healthy=True),
-            "gemini": FakeElder(elder_id="gemini", replies=[], healthy=False),
-            "chatgpt": FakeElder(elder_id="chatgpt", replies=[], healthy=True),
+            "ada": FakeElder(elder_id="ada", replies=[], healthy=True),
+            "kai": FakeElder(elder_id="kai", replies=[], healthy=False),
+            "mei": FakeElder(elder_id="mei", replies=[], healthy=True),
         },
     )
     async with app.run_test() as pilot:
         await _wait_until(
             pilot,
-            lambda: any("Gemini CLI is unavailable" in line for line in app.rendered_lines),
+            lambda: any("Kai CLI is unavailable" in line for line in app.rendered_lines),
         )
 
 
@@ -73,9 +73,9 @@ async def test_all_unhealthy_disables_input(tmp_path):
     app = _app(
         tmp_path,
         elders={
-            "claude": FakeElder(elder_id="claude", replies=[], healthy=False),
-            "gemini": FakeElder(elder_id="gemini", replies=[], healthy=False),
-            "chatgpt": FakeElder(elder_id="chatgpt", replies=[], healthy=False),
+            "ada": FakeElder(elder_id="ada", replies=[], healthy=False),
+            "kai": FakeElder(elder_id="kai", replies=[], healthy=False),
+            "mei": FakeElder(elder_id="mei", replies=[], healthy=False),
         },
     )
     async with app.run_test() as pilot:

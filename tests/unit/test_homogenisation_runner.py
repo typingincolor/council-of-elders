@@ -16,7 +16,7 @@ from council.experiments.homogenisation.runner import run_probe
 def _mk_elders() -> dict[ElderId, FakeElder]:
     """Scripted fake elders with enough replies for a 3-round debate + synth."""
     r1 = "R1 answer from {slot}"
-    r2 = "CONVERGED: no\n\nR2 answer\n\nQUESTIONS:\n@chatgpt why?"
+    r2 = "CONVERGED: no\n\nR2 answer\n\nQUESTIONS:\n@mei why?"
     r3 = "CONVERGED: yes\n\nR3 final"
     synth = "Synthesised answer."
 
@@ -35,15 +35,15 @@ def _mk_elders() -> dict[ElderId, FakeElder]:
             ],
         )
 
-    return {slot: make(slot) for slot in ("claude", "gemini", "chatgpt")}
+    return {slot: make(slot) for slot in ("ada", "kai", "mei")}
 
 
 @pytest.mark.asyncio
 async def test_run_probe_produces_manifest_with_every_pair(tmp_path: Path) -> None:
     prompts = [CorpusPrompt(id="p1", shape="headline", prompt="Q?")]
     specs = (
-        RosterSpec(name="r1", models={"claude": "a/a", "gemini": "a/a", "chatgpt": "a/a"}),
-        RosterSpec(name="r2", models={"claude": "b/b", "gemini": "b/b", "chatgpt": "b/b"}),
+        RosterSpec(name="r1", models={"ada": "a/a", "kai": "a/a", "mei": "a/a"}),
+        RosterSpec(name="r2", models={"ada": "b/b", "kai": "b/b", "mei": "b/b"}),
     )
 
     def elder_factory(_spec: RosterSpec) -> dict[ElderId, Any]:
@@ -64,14 +64,14 @@ async def test_run_probe_produces_manifest_with_every_pair(tmp_path: Path) -> No
     rosters_seen = {e["roster"] for e in manifest["entries"]}
     assert rosters_seen == {"r1", "r2"}
     assert all("debate_id" in e for e in manifest["entries"])
-    assert all(e["synthesiser"] in {"claude", "gemini", "chatgpt"} for e in manifest["entries"])
+    assert all(e["synthesiser"] in {"ada", "kai", "mei"} for e in manifest["entries"])
 
 
 @pytest.mark.asyncio
 async def test_run_probe_is_resumable(tmp_path: Path) -> None:
     """A second run with the same run_id should skip already-done pairs."""
     prompts = [CorpusPrompt(id="p1", shape="headline", prompt="Q?")]
-    specs = (RosterSpec(name="r1", models={"claude": "a/a", "gemini": "a/a", "chatgpt": "a/a"}),)
+    specs = (RosterSpec(name="r1", models={"ada": "a/a", "kai": "a/a", "mei": "a/a"}),)
 
     calls = {"n": 0}
 

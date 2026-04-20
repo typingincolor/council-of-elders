@@ -12,7 +12,7 @@ from council.domain.models import CouncilPack, Debate, ElderAnswer, Message
 @pytest.fixture
 def answer():
     return ElderAnswer(
-        elder="claude",
+        elder="ada",
         text="hi",
         error=None,
         agreed=True,
@@ -38,26 +38,26 @@ def _c(text: str) -> list[Message]:
 
 class TestFakeElder:
     async def test_ask_returns_scripted_reply_in_order(self):
-        e = FakeElder(elder_id="claude", replies=["first", "second"])
+        e = FakeElder(elder_id="ada", replies=["first", "second"])
         assert await e.ask(_c("q1")) == "first"
         assert await e.ask(_c("q2")) == "second"
 
     async def test_ask_raises_when_out_of_replies(self):
-        e = FakeElder(elder_id="claude", replies=["only"])
+        e = FakeElder(elder_id="ada", replies=["only"])
         await e.ask(_c("q"))
         with pytest.raises(AssertionError):
             await e.ask(_c("q again"))
 
     async def test_health_check_defaults_true(self):
-        e = FakeElder(elder_id="claude", replies=[])
+        e = FakeElder(elder_id="ada", replies=[])
         assert await e.health_check() is True
 
     async def test_health_check_respects_flag(self):
-        e = FakeElder(elder_id="claude", replies=[], healthy=False)
+        e = FakeElder(elder_id="ada", replies=[], healthy=False)
         assert await e.health_check() is False
 
     async def test_records_conversations(self):
-        e = FakeElder(elder_id="claude", replies=["a", "b"])
+        e = FakeElder(elder_id="ada", replies=["a", "b"])
         await e.ask(_c("P1"))
         await e.ask(_c("P2"))
         assert e.conversations == [[Message("user", "P1")], [Message("user", "P2")]]
@@ -99,6 +99,6 @@ class TestInMemoryBus:
 
         task = asyncio.create_task(consume())
         await asyncio.sleep(0)  # let subscriber start
-        await bus.publish(TurnCompleted(elder="claude", round_number=1, answer=answer))
+        await bus.publish(TurnCompleted(elder="ada", round_number=1, answer=answer))
         await task
         assert len(received) == 1

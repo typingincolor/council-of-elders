@@ -23,17 +23,17 @@ async def test_user_message_appears_in_all_elder_panes(tmp_path):
     (tmp_path / "bare").mkdir()
     # R1+R2 auto-chain runs before awaiting_decision flips to True.
     elders = {
-        "claude": FakeElder(
-            elder_id="claude",
-            replies=["R1 c", "R2 c\n\nQUESTIONS:\n@gemini Why?"],
+        "ada": FakeElder(
+            elder_id="ada",
+            replies=["R1 c", "R2 c\n\nQUESTIONS:\n@kai Why?"],
         ),
-        "gemini": FakeElder(
-            elder_id="gemini",
-            replies=["R1 g", "R2 g\n\nQUESTIONS:\n@claude Why?"],
+        "kai": FakeElder(
+            elder_id="kai",
+            replies=["R1 g", "R2 g\n\nQUESTIONS:\n@ada Why?"],
         ),
-        "chatgpt": FakeElder(
-            elder_id="chatgpt",
-            replies=["R1 x", "R2 x\n\nQUESTIONS:\n@gemini Why?"],
+        "mei": FakeElder(
+            elder_id="mei",
+            replies=["R1 x", "R2 x\n\nQUESTIONS:\n@kai Why?"],
         ),
     }
     app = CouncilApp(
@@ -55,7 +55,7 @@ async def test_user_message_appears_in_all_elder_panes(tmp_path):
         await pilot.press("enter")
         await pilot.pause()
 
-        for elder in ("claude", "gemini", "chatgpt"):
+        for elder in ("ada", "kai", "mei"):
             text = pane_lines(app, elder)
             assert "please focus on timeline" in text
             # after_round reflects the most recent completed round (R2 here).

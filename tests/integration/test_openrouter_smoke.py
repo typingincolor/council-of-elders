@@ -15,7 +15,7 @@ async def test_openrouter_round_trip():
     if not key:
         pytest.skip("OPENROUTER_API_KEY not set")
     adapter = OpenRouterAdapter(
-        elder_id="claude",
+        elder_id="ada",
         model="openai/gpt-4o-mini",  # cheap, widely available
         api_key=key,
     )
@@ -29,7 +29,7 @@ async def test_openrouter_fetch_credits():
     if not key:
         pytest.skip("OPENROUTER_API_KEY not set")
     adapter = OpenRouterAdapter(
-        elder_id="claude",
+        elder_id="ada",
         model="openai/gpt-4o-mini",
         api_key=key,
     )

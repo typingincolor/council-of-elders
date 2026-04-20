@@ -8,7 +8,7 @@ from council.domain.models import Message
 async def test_ask_kills_subprocess_when_wait_for_raises_arbitrary_error(tmp_path):
     # Use a real small subprocess: /bin/cat which will wait indefinitely on stdin
     elder = SubprocessElder(
-        elder_id="claude",
+        elder_id="ada",
         binary="/bin/cat",
         build_args=lambda p: [],
     )

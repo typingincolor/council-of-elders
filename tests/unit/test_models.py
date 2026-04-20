@@ -12,7 +12,7 @@ from council.domain.models import (
 )
 
 
-def _answer(elder="claude", agreed=None, text="hello", error=None):
+def _answer(elder="ada", agreed=None, text="hello", error=None):
     return ElderAnswer(
         elder=elder,
         text=text,
@@ -27,9 +27,9 @@ class TestRound:
         r = Round(
             number=1,
             turns=[
-                Turn(elder="claude", answer=_answer("claude", agreed=True)),
-                Turn(elder="gemini", answer=_answer("gemini", agreed=True)),
-                Turn(elder="chatgpt", answer=_answer("chatgpt", agreed=True)),
+                Turn(elder="ada", answer=_answer("ada", agreed=True)),
+                Turn(elder="kai", answer=_answer("kai", agreed=True)),
+                Turn(elder="mei", answer=_answer("mei", agreed=True)),
             ],
         )
         assert r.converged() is True
@@ -38,9 +38,9 @@ class TestRound:
         r = Round(
             number=1,
             turns=[
-                Turn(elder="claude", answer=_answer("claude", agreed=True)),
-                Turn(elder="gemini", answer=_answer("gemini", agreed=False)),
-                Turn(elder="chatgpt", answer=_answer("chatgpt", agreed=True)),
+                Turn(elder="ada", answer=_answer("ada", agreed=True)),
+                Turn(elder="kai", answer=_answer("kai", agreed=False)),
+                Turn(elder="mei", answer=_answer("mei", agreed=True)),
             ],
         )
         assert r.converged() is False
@@ -49,9 +49,9 @@ class TestRound:
         r = Round(
             number=1,
             turns=[
-                Turn(elder="claude", answer=_answer("claude", agreed=True)),
-                Turn(elder="gemini", answer=_answer("gemini", agreed=None)),
-                Turn(elder="chatgpt", answer=_answer("chatgpt", agreed=True)),
+                Turn(elder="ada", answer=_answer("ada", agreed=True)),
+                Turn(elder="kai", answer=_answer("kai", agreed=None)),
+                Turn(elder="mei", answer=_answer("mei", agreed=True)),
             ],
         )
         assert r.converged() is False
@@ -60,8 +60,8 @@ class TestRound:
         r = Round(
             number=1,
             turns=[
-                Turn(elder="claude", answer=_answer("claude", agreed=True)),
-                Turn(elder="gemini", answer=_answer("gemini", agreed=True)),
+                Turn(elder="ada", answer=_answer("ada", agreed=True)),
+                Turn(elder="kai", answer=_answer("kai", agreed=True)),
             ],
         )
         assert r.converged() is False
@@ -70,9 +70,9 @@ class TestRound:
         r = Round(
             number=1,
             turns=[
-                Turn(elder="claude", answer=_answer("claude", agreed=True)),
-                Turn(elder="claude", answer=_answer("claude", agreed=True)),
-                Turn(elder="claude", answer=_answer("claude", agreed=True)),
+                Turn(elder="ada", answer=_answer("ada", agreed=True)),
+                Turn(elder="ada", answer=_answer("ada", agreed=True)),
+                Turn(elder="ada", answer=_answer("ada", agreed=True)),
             ],
         )
         assert r.converged() is False
@@ -87,7 +87,7 @@ class TestCouncilPack:
 
 class TestElderAnswer:
     def test_can_hold_only_error(self):
-        err = ElderError(elder="claude", kind="timeout", detail="")
+        err = ElderError(elder="ada", kind="timeout", detail="")
         a = _answer(error=err, text=None)
         assert a.text is None
         assert a.error is err
@@ -113,9 +113,9 @@ class TestDebate:
         pack = CouncilPack(name="bare", shared_context=None, personas={})
         d = Debate(
             id="abc", prompt="hi", pack=pack, rounds=[], status="in_progress", synthesis=None,
-            best_r1_elder="gemini",
+            best_r1_elder="kai",
         )
-        assert d.best_r1_elder == "gemini"
+        assert d.best_r1_elder == "kai"
 
 
 class TestUserMessage:
@@ -141,16 +141,16 @@ class TestUserMessage:
 class TestElderQuestion:
     def test_construct_with_expected_fields(self):
         q = ElderQuestion(
-            from_elder="claude",
-            to_elder="gemini",
+            from_elder="ada",
+            to_elder="kai",
             text="Have you considered X?",
             round_number=1,
         )
-        assert q.from_elder == "claude"
-        assert q.to_elder == "gemini"
+        assert q.from_elder == "ada"
+        assert q.to_elder == "kai"
 
     def test_is_frozen(self):
-        q = ElderQuestion(from_elder="claude", to_elder="gemini", text="x", round_number=1)
+        q = ElderQuestion(from_elder="ada", to_elder="kai", text="x", round_number=1)
         with pytest.raises(Exception):
             q.text = "y"  # type: ignore[misc]
 
@@ -172,9 +172,9 @@ class TestDebateUserMessages:
 class TestTurnQuestions:
     def test_fresh_turn_has_empty_questions(self):
         t = Turn(
-            elder="claude",
+            elder="ada",
             answer=ElderAnswer(
-                elder="claude",
+                elder="ada",
                 text="hi",
                 error=None,
                 agreed=True,
@@ -184,11 +184,11 @@ class TestTurnQuestions:
         assert t.questions == ()
 
     def test_turn_with_questions(self):
-        q = ElderQuestion(from_elder="claude", to_elder="gemini", text="?", round_number=1)
+        q = ElderQuestion(from_elder="ada", to_elder="kai", text="?", round_number=1)
         t = Turn(
-            elder="claude",
+            elder="ada",
             answer=ElderAnswer(
-                elder="claude",
+                elder="ada",
                 text="hi",
                 error=None,
                 agreed=True,

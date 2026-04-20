@@ -24,26 +24,26 @@ async def test_full_debate_via_tui(tmp_path):
     loader = FilesystemPackLoader(root=tmp_path)
 
     elders = {
-        "claude": FakeElder(
-            elder_id="claude",
+        "ada": FakeElder(
+            elder_id="ada",
             replies=[
-                "R1 Claude",  # silent R1
-                "R2 Claude\n\nQUESTIONS:\n@gemini Timeline?",  # R2 with peer question
+                "R1 Ada",  # silent R1
+                "R2 Ada\n\nQUESTIONS:\n@kai Timeline?",  # R2 with peer question
                 "Final synthesised answer.",
             ],
         ),
-        "gemini": FakeElder(
-            elder_id="gemini",
+        "kai": FakeElder(
+            elder_id="kai",
             replies=[
-                "R1 Gemini",
-                "R2 Gemini\n\nQUESTIONS:\n@claude Reasoning?",
+                "R1 Kai",
+                "R2 Kai\n\nQUESTIONS:\n@ada Reasoning?",
             ],
         ),
-        "chatgpt": FakeElder(
-            elder_id="chatgpt",
+        "mei": FakeElder(
+            elder_id="mei",
             replies=[
-                "R1 ChatGPT",
-                "R2 ChatGPT\n\nQUESTIONS:\n@gemini Growth?",
+                "R1 Mei",
+                "R2 Mei\n\nQUESTIONS:\n@kai Growth?",
             ],
         ),
     }
@@ -64,13 +64,13 @@ async def test_full_debate_via_tui(tmp_path):
 
         await pilot.press("s")
         await _wait_until(pilot, lambda: len(app.screen_stack) > 1, timeout_s=2.0)
-        await pilot.press("1")  # pick Claude as synthesiser
+        await pilot.press("1")  # pick Ada as synthesiser
         await _wait_until(pilot, lambda: app.is_finished)
 
-        assert "R1 Claude" in pane_lines(app, "claude")
-        assert "R2 Claude" in pane_lines(app, "claude")
-        assert "R1 Gemini" in pane_lines(app, "gemini")
-        assert "R1 ChatGPT" in pane_lines(app, "chatgpt")
+        assert "R1 Ada" in pane_lines(app, "ada")
+        assert "R2 Ada" in pane_lines(app, "ada")
+        assert "R1 Kai" in pane_lines(app, "kai")
+        assert "R1 Mei" in pane_lines(app, "mei")
         assert "Final synthesised answer." in pane_lines(app, "synthesis")
 
 
@@ -79,29 +79,29 @@ async def test_auto_synth_modal_when_all_converge_in_r3(tmp_path):
     loader = FilesystemPackLoader(root=tmp_path)
 
     elders = {
-        "claude": FakeElder(
-            elder_id="claude",
+        "ada": FakeElder(
+            elder_id="ada",
             replies=[
-                "R1 Claude",
-                "R2 Claude\n\nQUESTIONS:\n@gemini Why?",
-                "R3 Claude\nCONVERGED: yes",
-                "Synthesis by Claude.",
+                "R1 Ada",
+                "R2 Ada\n\nQUESTIONS:\n@kai Why?",
+                "R3 Ada\nCONVERGED: yes",
+                "Synthesis by Ada.",
             ],
         ),
-        "gemini": FakeElder(
-            elder_id="gemini",
+        "kai": FakeElder(
+            elder_id="kai",
             replies=[
-                "R1 Gemini",
-                "R2 Gemini\n\nQUESTIONS:\n@claude Why?",
-                "R3 Gemini\nCONVERGED: yes",
+                "R1 Kai",
+                "R2 Kai\n\nQUESTIONS:\n@ada Why?",
+                "R3 Kai\nCONVERGED: yes",
             ],
         ),
-        "chatgpt": FakeElder(
-            elder_id="chatgpt",
+        "mei": FakeElder(
+            elder_id="mei",
             replies=[
-                "R1 ChatGPT",
-                "R2 ChatGPT\n\nQUESTIONS:\n@gemini Why?",
-                "R3 ChatGPT\nCONVERGED: yes",
+                "R1 Mei",
+                "R2 Mei\n\nQUESTIONS:\n@kai Why?",
+                "R3 Mei\nCONVERGED: yes",
             ],
         ),
     }
@@ -120,6 +120,6 @@ async def test_auto_synth_modal_when_all_converge_in_r3(tmp_path):
         await pilot.press("c")  # trigger R3
         # Modal pops automatically when all three converge in R3.
         await _wait_until(pilot, lambda: len(app.screen_stack) > 1, timeout_s=5.0)
-        await pilot.press("1")  # pick Claude
+        await pilot.press("1")  # pick Ada
         await _wait_until(pilot, lambda: app.is_finished)
-        assert "Synthesis by Claude." in pane_lines(app, "synthesis")
+        assert "Synthesis by Ada." in pane_lines(app, "synthesis")

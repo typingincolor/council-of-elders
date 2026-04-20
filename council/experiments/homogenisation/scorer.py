@@ -48,7 +48,7 @@ class RosterSummary:
     preference_ci_hi: float
 
 
-_ELDER_ORDER: tuple[ElderId, ElderId, ElderId] = ("claude", "gemini", "chatgpt")
+_ELDER_ORDER: tuple[ElderId, ElderId, ElderId] = ("ada", "kai", "mei")
 
 
 def _r1_texts(debate: Debate) -> dict[ElderId, str]:

@@ -23,25 +23,25 @@ async def test_two_rounds_appear_in_each_elder_pane_with_divider(tmp_path):
     # R1+R2 auto-chain produces both rounds without user interaction.
     (tmp_path / "bare").mkdir()
     elders = {
-        "claude": FakeElder(
-            elder_id="claude",
+        "ada": FakeElder(
+            elder_id="ada",
             replies=[
-                "R1 Claude text",
-                "R2 Claude text\n\nQUESTIONS:\n@gemini Why?",
+                "R1 Ada text",
+                "R2 Ada text\n\nQUESTIONS:\n@kai Why?",
             ],
         ),
-        "gemini": FakeElder(
-            elder_id="gemini",
+        "kai": FakeElder(
+            elder_id="kai",
             replies=[
-                "R1 Gemini text",
-                "R2 Gemini text\n\nQUESTIONS:\n@claude Why?",
+                "R1 Kai text",
+                "R2 Kai text\n\nQUESTIONS:\n@ada Why?",
             ],
         ),
-        "chatgpt": FakeElder(
-            elder_id="chatgpt",
+        "mei": FakeElder(
+            elder_id="mei",
             replies=[
-                "R1 ChatGPT text",
-                "R2 ChatGPT text\n\nQUESTIONS:\n@gemini Why?",
+                "R1 Mei text",
+                "R2 Mei text\n\nQUESTIONS:\n@kai Why?",
             ],
         ),
     }
@@ -60,9 +60,9 @@ async def test_two_rounds_appear_in_each_elder_pane_with_divider(tmp_path):
         await _wait_until(pilot, lambda: len(app._debate.rounds) >= 2 if app._debate else False)
 
         for elder, r1_text, r2_text in [
-            ("claude", "R1 Claude text", "R2 Claude text"),
-            ("gemini", "R1 Gemini text", "R2 Gemini text"),
-            ("chatgpt", "R1 ChatGPT text", "R2 ChatGPT text"),
+            ("ada", "R1 Ada text", "R2 Ada text"),
+            ("kai", "R1 Kai text", "R2 Kai text"),
+            ("mei", "R1 Mei text", "R2 Mei text"),
         ]:
             text = pane_lines(app, elder)
             assert r1_text in text

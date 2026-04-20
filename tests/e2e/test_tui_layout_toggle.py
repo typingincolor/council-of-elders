@@ -10,9 +10,9 @@ from council.app.tui.app import CouncilApp
 def _app(tmp_path):
     (tmp_path / "bare").mkdir()
     elders = {
-        "claude": FakeElder(elder_id="claude", replies=[]),
-        "gemini": FakeElder(elder_id="gemini", replies=[]),
-        "chatgpt": FakeElder(elder_id="chatgpt", replies=[]),
+        "ada": FakeElder(elder_id="ada", replies=[]),
+        "kai": FakeElder(elder_id="kai", replies=[]),
+        "mei": FakeElder(elder_id="mei", replies=[]),
     }
     return CouncilApp(
         elders=elders,
@@ -41,7 +41,7 @@ async def test_f_cycles_forced_modes(tmp_path):
         assert app._view.current_layout() == "tabs"
 
         # Focus on a pane so key presses reach the app
-        app._view.pane("claude").focus()
+        app._view.pane("ada").focus()
         await pilot.pause()
 
         await pilot.press("f")  # None -> "tabs"

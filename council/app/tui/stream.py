@@ -13,8 +13,8 @@ from council.domain.events import (
 )
 from council.domain.models import ElderId
 
-_LABELS: dict[ElderId, str] = {"claude": "Claude", "gemini": "Gemini", "chatgpt": "ChatGPT"}
-_COLORS: dict[ElderId, str] = {"claude": "magenta", "gemini": "cyan", "chatgpt": "green"}
+_LABELS: dict[ElderId, str] = {"ada": "Ada", "kai": "Kai", "mei": "Mei"}
+_COLORS: dict[ElderId, str] = {"ada": "magenta", "kai": "cyan", "mei": "green"}
 
 
 def format_event(event: DebateEvent) -> str:

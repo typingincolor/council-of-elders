@@ -54,8 +54,8 @@ def test_render_report_contains_all_key_sections(tmp_path: Path) -> None:
     scores_path.write_text(json.dumps(_fixture_scores()))
     corpus = [CorpusPrompt(id="p1", shape="headline", prompt="Q?")]
     rosters = (
-        RosterSpec(name="homogeneous", models={"claude": "m1", "gemini": "m1", "chatgpt": "m1"}),
-        RosterSpec(name="mixed_baseline", models={"claude": "m2", "gemini": "m3", "chatgpt": "m4"}),
+        RosterSpec(name="homogeneous", models={"ada": "m1", "kai": "m1", "mei": "m1"}),
+        RosterSpec(name="mixed_baseline", models={"ada": "m2", "kai": "m3", "mei": "m4"}),
     )
     md = render_report(
         scores_path=scores_path,
@@ -91,10 +91,10 @@ def test_render_report_interprets_small_diversity_gap() -> None:
         corpus = [CorpusPrompt(id="p1", shape="headline", prompt="Q?")]
         rosters = (
             RosterSpec(
-                name="homogeneous", models={"claude": "m1", "gemini": "m1", "chatgpt": "m1"}
+                name="homogeneous", models={"ada": "m1", "kai": "m1", "mei": "m1"}
             ),
             RosterSpec(
-                name="mixed_baseline", models={"claude": "m2", "gemini": "m3", "chatgpt": "m4"}
+                name="mixed_baseline", models={"ada": "m2", "kai": "m3", "mei": "m4"}
             ),
         )
         md = render_report(
@@ -117,8 +117,8 @@ def test_render_report_flags_unexpected_negative_preference_gap(tmp_path: Path) 
     scores_path.write_text(json.dumps(fixture))
     corpus = [CorpusPrompt(id="p1", shape="headline", prompt="Q?")]
     rosters = (
-        RosterSpec(name="homogeneous", models={"claude": "m1", "gemini": "m1", "chatgpt": "m1"}),
-        RosterSpec(name="mixed_baseline", models={"claude": "m2", "gemini": "m3", "chatgpt": "m4"}),
+        RosterSpec(name="homogeneous", models={"ada": "m1", "kai": "m1", "mei": "m1"}),
+        RosterSpec(name="mixed_baseline", models={"ada": "m2", "kai": "m3", "mei": "m4"}),
     )
     md = render_report(
         scores_path=scores_path,

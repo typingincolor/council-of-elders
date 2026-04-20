@@ -9,9 +9,9 @@ Rules:
 - Looks for the last `QUESTIONS:` header followed by at least one valid
   `@elder text` line, where the block extends to end-of-input or a blank
   line.
-- Only @claude / @gemini / @chatgpt are valid; unknown @-prefixed lines
+- Only @ada / @kai / @mei are valid; unknown @-prefixed lines
   inside the block are tolerated as noise but not emitted.
-- An elder's own self-directed question (@claude from claude) is dropped.
+- An elder's own self-directed question (@ada emitted by the Ada elder) is dropped.
 - If the block has no valid `@elder` lines, the whole input is returned
   unchanged with `()` — the header was a false positive.
 - If the block isn't at the tail (non-blank content after the last
@@ -27,9 +27,18 @@ from council.domain.models import ElderId, ElderQuestion
 
 _HEADER_RE = re.compile(r"^\s*QUESTIONS\s*:\s*$", re.IGNORECASE)
 _TAG_LINE_RE = re.compile(
-    r"^\s*@(claude|gemini|chatgpt)\s+(.+?)\s*$",
+    r"^\s*@(ada|kai|mei|claude|gemini|chatgpt)\s+(.+?)\s*$",
     re.IGNORECASE,
 )
+
+# Legacy vendor-name handles → current slot ids, so elders reading old
+# transcripts (or models that inertially emit @claude) still address the
+# right slot.
+_LEGACY_HANDLE: dict[str, str] = {
+    "claude": "ada",
+    "gemini": "kai",
+    "chatgpt": "mei",
+}
 _VALID_ELDERS: tuple[str, ...] = get_args(ElderId)
 
 
@@ -73,6 +82,7 @@ class QuestionParser:
                 # noise, but keep reading.
                 continue
             target = m.group(1).lower()
+            target = _LEGACY_HANDLE.get(target, target)
             text = m.group(2).strip()
             if target == from_elder:
                 continue  # drop self-directed

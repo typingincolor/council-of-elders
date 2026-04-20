@@ -142,9 +142,9 @@ from council.domain.events import TurnCompleted, TurnFailed  # noqa: E402
 _SYNTHESIS_PLACEHOLDER = "[dim]Synthesis runs after you press [bold]s[/] and pick an elder.[/dim]"
 
 _DISPLAY_NAMES: dict[str, str] = {
-    "claude": "Claude",
-    "gemini": "Gemini",
-    "chatgpt": "ChatGPT",
+    "ada": "Ada",
+    "kai": "Kai",
+    "mei": "Mei",
 }
 
 
