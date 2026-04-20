@@ -10,17 +10,12 @@ distant-lineage model widen diversity further?
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from council.adapters.elders.openrouter import OpenRouterAdapter
 from council.domain.models import ElderId
 from council.domain.ports import ElderPort
+from council.domain.roster import RosterSpec
 
-
-@dataclass(frozen=True)
-class RosterSpec:
-    name: str
-    models: dict[ElderId, str]
+__all__ = ["RosterSpec", "ROSTERS", "build_roster_elders"]
 
 
 ROSTERS: tuple[RosterSpec, ...] = (

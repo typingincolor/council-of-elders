@@ -398,7 +398,7 @@ def main() -> None:
         "gemini": args.gemini_model,
         "chatgpt": args.codex_model,
     }
-    elders, using_openrouter = build_elders(config, cli_models=cli_models)
+    elders, using_openrouter, _roster_spec = build_elders(config, cli_models=cli_models)
 
     from council.adapters.storage.report_file import ReportFileStore
 

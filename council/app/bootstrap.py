@@ -7,6 +7,7 @@ from council.adapters.elders.openrouter import OpenRouterAdapter
 from council.app.config import AppConfig
 from council.domain.models import ElderId
 from council.domain.ports import ElderPort
+from council.domain.roster import RosterSpec
 
 # The `gemini` slot defaults to an open-weights Llama model rather than
 # a Gemini-family model deliberately: a same-lineage trio (all three of
@@ -26,9 +27,10 @@ def build_elders(
     config: AppConfig,
     *,
     cli_models: dict[ElderId, str | None],
-) -> tuple[dict[ElderId, ElderPort], bool]:
+) -> tuple[dict[ElderId, ElderPort], bool, RosterSpec]:
     if config.openrouter_api_key:
         elders: dict[ElderId, ElderPort] = {}
+        resolved_models: dict[ElderId, str] = {}
         for eid in ("claude", "gemini", "chatgpt"):
             model = (
                 cli_models.get(eid)
@@ -40,11 +42,12 @@ def build_elders(
                 model=model,
                 api_key=config.openrouter_api_key,
             )
-        return elders, True
+            resolved_models[eid] = model
+        return elders, True, RosterSpec(name="openrouter", models=resolved_models)
 
     elders = {
         "claude": ClaudeCodeAdapter(model=cli_models.get("claude")),
         "gemini": GeminiCLIAdapter(model=cli_models.get("gemini")),
         "chatgpt": CodexCLIAdapter(model=cli_models.get("chatgpt")),
     }
-    return elders, False
+    return elders, False, RosterSpec(name="subprocess", models={})
