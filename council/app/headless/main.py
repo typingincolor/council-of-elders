@@ -151,10 +151,29 @@ async def run_headless(
     structured: SynthesisOutput | None = None
     preference: PreferenceVerdict | None = None
 
+    # Risk disclosure: under the 2026-04-19 probe and its 2026-04-20
+    # judge-swap replication, synthesis rarely beats the best individual
+    # R1 answer on low- or medium-diversity rosters. Flag that here so
+    # the reader is prompted to compare instead of trusting synthesis
+    # blindly. Omitted on high diversity, where the evidence is
+    # ambiguous rather than negative. Also omitted when we don't know
+    # the diversity (no roster_spec supplied).
+    synthesis_risk_note: str | None = None
+    if effective_policy.synthesise and roster_spec is not None and roster_spec.models:
+        div = score_roster(roster_spec)
+        if div.classification in ("low", "medium"):
+            synthesis_risk_note = (
+                f"[note] In {div.classification}-diversity runs, synthesis "
+                "historically rarely outperforms the strongest individual "
+                "answer. Both are shown — inspect both before acting."
+            )
+
     if effective_policy.synthesise:
         synth = await svc.synthesize(debate, by=synthesizer)
         structured = parse_synthesis(synth.text or "")
         print(f"\n[Synthesis by {_LABELS[synthesizer]}]\n")
+        if synthesis_risk_note:
+            print(f"{synthesis_risk_note}\n")
         print(structured.answer)
         if structured.why:
             print(f"\nWhy: {structured.why}")
@@ -180,7 +199,9 @@ async def run_headless(
 
         # Generate the debate report and print + optionally save it.
         try:
-            report_md = await svc.generate_report(debate, by=synthesizer)
+            report_md = await svc.generate_report(
+                debate, by=synthesizer, synthesis_risk_note=synthesis_risk_note
+            )
             print("\n--- Debate report ---\n")
             print(report_md)
             if report_store is not None:

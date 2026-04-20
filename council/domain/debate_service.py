@@ -244,12 +244,20 @@ class DebateService:
         await self.bus.publish(SynthesisCompleted(answer=ans))
         return ans
 
-    async def generate_report(self, debate: Debate, *, by: ElderId) -> str:
+    async def generate_report(
+        self,
+        debate: Debate,
+        *,
+        by: ElderId,
+        synthesis_risk_note: str | None = None,
+    ) -> str:
         """Produce a markdown debate report (metadata + narrative).
 
         Called after `synthesize`. Appends a narrative-request turn to the
         synthesiser's conversation and asks for a ~200-word report on how
-        the debate unfolded. Returns the assembled markdown.
+        the debate unfolded. ``synthesis_risk_note`` is forwarded to the
+        report builder to flag rosters where synthesis historically
+        underperforms best-R1 (low/medium diversity).
         """
         if debate.synthesis is None:
             raise ValueError("generate_report requires a prior successful synthesize()")
@@ -282,6 +290,7 @@ class DebateService:
             debate.synthesis,
             narrative,
             synthesiser=by,
+            synthesis_risk_note=synthesis_risk_note,
         )
 
     async def add_user_message(self, debate: Debate, text: str) -> UserMessage:

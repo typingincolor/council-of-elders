@@ -223,8 +223,15 @@ class ReportBuilder:
         narrative: str,
         *,
         synthesiser: ElderId,
+        synthesis_risk_note: str | None = None,
     ) -> str:
-        """Combine everything into the final markdown file content."""
+        """Combine everything into the final markdown file content.
+
+        ``synthesis_risk_note`` is an optional one-line caveat prepended
+        inside the "Synthesised answer" section — used to flag rosters
+        where synthesis historically underperforms best-R1 (low /
+        medium diversity). ``None`` means omit the note.
+        """
         short_prompt, prompt_truncated = _truncate_prompt(debate.prompt)
 
         parts: list[str] = []
@@ -240,6 +247,9 @@ class ReportBuilder:
         structured = parse_synthesis(synthesis.text or "")
         parts.append("## Synthesised answer")
         parts.append("")
+        if synthesis_risk_note:
+            parts.append(f"> {synthesis_risk_note}")
+            parts.append("")
         parts.append(_demote_markdown_headings(structured.answer or "_(no text)_"))
         parts.append("")
         if structured.why:
