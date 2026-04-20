@@ -11,6 +11,7 @@ Layered on the homogenisation probe's infrastructure — same corpus,
 same scorer, same judge. The only difference is the condition matrix:
 four (roster × pack) cells instead of three roster variants.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -31,10 +32,11 @@ from council.experiments.diversity_split.conditions import (  # noqa: E402
 )
 from council.experiments.diversity_split.reporter import render_report  # noqa: E402
 from council.experiments.diversity_split.runner import run_experiment  # noqa: E402
+from council.experiments.diversity_split.scorer import score_probe_multi  # noqa: E402
 from council.experiments.homogenisation.corpus import load_corpus  # noqa: E402
-from council.experiments.homogenisation.scorer import score_probe  # noqa: E402
 
-DEFAULT_JUDGE_MODEL = "google/gemini-2.5-flash"
+DEFAULT_SINGLE_JUDGE = "google/gemini-2.5-flash"
+DEFAULT_PREFERENCE_JUDGES = "google/gemini-2.5-flash,anthropic/claude-haiku-4.5"
 DEFAULT_RUNS_ROOT = Path("runs")
 DEFAULT_CORPUS = Path("scripts/homogenisation_corpus.json")
 DEFAULT_REPORTS_ROOT = Path("docs/experiments")
@@ -82,14 +84,27 @@ async def _cmd_run(args: argparse.Namespace) -> None:
 
 async def _cmd_score(args: argparse.Namespace) -> None:
     api_key = _require_key()
-    judge = OpenRouterAdapter(
-        elder_id="ada", model=args.judge_model, api_key=api_key,
+    single_judge = OpenRouterAdapter(
+        elder_id="ada",
+        model=args.judge_model,
+        api_key=api_key,
     )
-    path = await score_probe(
+    preference_judge_models = [m.strip() for m in args.preference_judges.split(",") if m.strip()]
+    preference_judges = [
+        (
+            m,
+            OpenRouterAdapter(elder_id="ada", model=m, api_key=api_key),
+        )
+        for m in preference_judge_models
+    ]
+    print(f"Single judge (jaccard/best-R1): {args.judge_model}")
+    print(f"Preference judges ({len(preference_judges)}): {preference_judge_models}")
+    path = await score_probe_multi(
         run_id=args.run_id,
         runs_root=Path(args.runs_root),
         debate_store_root=Path.home() / ".council" / "debates",
-        judge_port=judge,
+        single_judge=single_judge,
+        preference_judges=preference_judges,
         seed=args.seed,
     )
     print(f"Scoring complete. Scores: {path}")
@@ -113,11 +128,13 @@ def _cmd_report(args: argparse.Namespace) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(prog="diversity_split")
     parser.add_argument(
-        "--runs-root", default=str(DEFAULT_RUNS_ROOT),
+        "--runs-root",
+        default=str(DEFAULT_RUNS_ROOT),
         help=f"Where manifest/scores live (default: {DEFAULT_RUNS_ROOT})",
     )
     parser.add_argument(
-        "--corpus", default=str(DEFAULT_CORPUS),
+        "--corpus",
+        default=str(DEFAULT_CORPUS),
         help=f"Corpus JSON (default: {DEFAULT_CORPUS})",
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -128,7 +145,22 @@ def main() -> None:
 
     score_p = sub.add_parser("score", help="Score an existing run")
     score_p.add_argument("--run-id", required=True)
-    score_p.add_argument("--judge-model", default=DEFAULT_JUDGE_MODEL)
+    score_p.add_argument(
+        "--judge-model",
+        default=DEFAULT_SINGLE_JUDGE,
+        help=(
+            f"Single judge for claim-overlap and best-R1 rubrics. Default: {DEFAULT_SINGLE_JUDGE}."
+        ),
+    )
+    score_p.add_argument(
+        "--preference-judges",
+        default=DEFAULT_PREFERENCE_JUDGES,
+        help=(
+            "Comma-separated OpenRouter model ids for preference scoring. "
+            f"Default: {DEFAULT_PREFERENCE_JUDGES}. Multi-judge by default "
+            "to avoid judge-family bias."
+        ),
+    )
     score_p.add_argument("--seed", type=int, default=0)
 
     rep_p = sub.add_parser("report", help="Render markdown report")

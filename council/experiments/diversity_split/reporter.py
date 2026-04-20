@@ -88,10 +88,16 @@ def _twoxtwo_preference(summaries: list[dict[str, Any]]) -> str:
 def _interpret(summaries: list[dict[str, Any]]) -> list[str]:
     """Compare the four cells on synthesis-vs-best-R1 preference.
 
-    Returns a list of bullet verdicts. Each verdict fires based on a
-    pre-declared threshold so readings are testable. All thresholds
-    are deliberate hypotheses, not tuned — adjust after calibration
-    with n ≥ 30.
+    Stopping-criterion thresholds are pre-declared in the Stage 11 spec
+    (``docs/superpowers/specs/2026-04-20-stage-11-diversity-split-design.md``):
+
+    - Personas-substitute claim supported iff |C − B| ≤ 0.10.
+    - Personas-don't-substitute claim supported iff C − B > 0.15.
+    - Two-axes-compose claim supported iff D − C > 0.10.
+    - Two-axes-don't-compose claim supported iff |D − C| ≤ 0.10.
+
+    Intermediate zones (0.10 < |C − B| ≤ 0.15, for example) are reported
+    as inconclusive rather than forced into a binary decision.
     """
     by = {s["roster"]: s for s in summaries}
     bullets: list[str] = []
@@ -119,35 +125,52 @@ def _interpret(summaries: list[dict[str, Any]]) -> list[str]:
         else:
             bullets.append(f"Model diversity alone not decisive here (C−A = {gap:+.3f}).")
 
+    # Key B-vs-C decision: do personas substitute for model diversity?
     if b is not None and c is not None:
         gap = c - b
-        if gap > 0.10:
+        if gap > 0.15:
             bullets.append(
-                f"Model diversity outperforms role diversity (C−B = {gap:+.3f}) — "
-                "personas are not substitutes."
+                f"**Personas are NOT substitutes for model diversity** "
+                f"(C−B = {gap:+.3f}, threshold >0.15). Drop the "
+                f"persona-as-substitute pitch; personas become a flavour "
+                f"layer, not the mechanism."
             )
-        elif gap < -0.10:
+        elif abs(gap) <= 0.10:
             bullets.append(
-                f"Role diversity outperforms model diversity (C−B = {gap:+.3f}) — "
-                "revisit the diversity-engine positioning."
+                f"**Personas substitute for model diversity** "
+                f"(|C−B| = {abs(gap):.3f} ≤ 0.10). Positioning allows "
+                f"'three copies of one cheap model + distinct personas' "
+                f"as a valid configuration."
             )
         else:
-            bullets.append(f"Model and role diversity produce comparable gains (C−B = {gap:+.3f}).")
+            # 0.10 < |gap| ≤ 0.15: inconclusive zone.
+            bullets.append(
+                f"B-vs-C is in the inconclusive zone (C−B = {gap:+.3f}, "
+                f"between ±0.10 and ±0.15). Expand to larger n before "
+                f"drawing a conclusion on personas-as-substitute."
+            )
 
+    # D-vs-C decision: do the two axes compose?
     if d is not None and c is not None:
         gap = d - c
-        if gap > 0.05:
+        if gap > 0.10:
             bullets.append(
-                f"The two axes compose (D−C = {gap:+.3f}) — both together "
-                "beat model diversity alone."
+                f"**The two axes compose** (D−C = {gap:+.3f} > 0.10). "
+                f"Recommend combining model and persona diversity when "
+                f"both are available."
             )
-        elif gap < -0.05:
+        elif abs(gap) <= 0.10:
             bullets.append(
-                f"Adding roles to diverse models HURT (D−C = {gap:+.3f}) — "
-                "persona-model interaction is worth investigating."
+                f"**Two axes do not compose** (|D−C| = {abs(gap):.3f} ≤ "
+                f"0.10). Personas add no marginal value on top of model "
+                f"diversity; drop the default persona pack."
             )
         else:
-            bullets.append(f"Adding roles to diverse models is neutral (D−C = {gap:+.3f}).")
+            bullets.append(
+                f"Adding personas to diverse models HURT performance "
+                f"(D−C = {gap:+.3f} < −0.10) — persona-model interaction "
+                f"effect worth investigating."
+            )
 
     return bullets
 

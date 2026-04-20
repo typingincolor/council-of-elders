@@ -73,6 +73,7 @@ class TestRenderReport:
         assert "**different model**" in md
 
     def test_interpret_fires_compose_bullet_when_d_above_c(self, tmp_path: Path):
+        # D − C > 0.10 → "two axes compose" verdict.
         path = _scores_file(
             tmp_path,
             _summaries_for_each_cell(c_pref=0.55, d_pref=0.75),
@@ -83,10 +84,11 @@ class TestRenderReport:
             conditions=CONDITIONS,
             run_id="t",
         )
-        assert "two axes compose" in md.lower() or "d−c" in md.lower()
+        assert "the two axes compose" in md.lower()
 
     def test_interpret_flags_role_substitution_when_b_close_to_c(self, tmp_path: Path):
-        # Personas substituting for model diversity: B ~ C.
+        # Personas substituting for model diversity: |C − B| ≤ 0.10
+        # → the "personas substitute" verdict fires per the Stage 11 spec.
         path = _scores_file(
             tmp_path,
             _summaries_for_each_cell(b_pref=0.55, c_pref=0.60),
@@ -97,10 +99,24 @@ class TestRenderReport:
             conditions=CONDITIONS,
             run_id="t",
         )
-        # Gap C−B ≤ 0.10 → "comparable gains" verdict.
-        assert "comparable gains" in md.lower()
+        assert "personas substitute for model diversity" in md.lower()
+
+    def test_interpret_flags_inconclusive_zone(self, tmp_path: Path):
+        # 0.10 < C − B ≤ 0.15 is the inconclusive zone per Stage 11 spec.
+        path = _scores_file(
+            tmp_path,
+            _summaries_for_each_cell(b_pref=0.40, c_pref=0.52),  # gap 0.12
+        )
+        md = render_report(
+            scores_path=path,
+            corpus=[CorpusPrompt(id="p1", shape="strategy", prompt="Q?")],
+            conditions=CONDITIONS,
+            run_id="t",
+        )
+        assert "inconclusive zone" in md.lower()
 
     def test_interpret_flags_model_diversity_when_c_clearly_above_b(self, tmp_path: Path):
+        # C − B > 0.15 → "personas are NOT substitutes" verdict.
         path = _scores_file(
             tmp_path,
             _summaries_for_each_cell(b_pref=0.35, c_pref=0.65),
@@ -111,4 +127,4 @@ class TestRenderReport:
             conditions=CONDITIONS,
             run_id="t",
         )
-        assert "personas are not substitutes" in md.lower()
+        assert "personas are not substitutes for model diversity" in md.lower()

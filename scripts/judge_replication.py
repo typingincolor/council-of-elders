@@ -18,6 +18,7 @@ Reuses the existing ``council.experiments.homogenisation.scorer`` with
 a per-judge side-output path so the primary ``scores.json`` is never
 overwritten.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -127,11 +128,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="judge_replication")
     parser.add_argument("--run-id", required=True)
     parser.add_argument(
-        "--runs-root", default=str(DEFAULT_RUNS_ROOT),
+        "--runs-root",
+        default=str(DEFAULT_RUNS_ROOT),
         help=f"Root directory for run manifests (default: {DEFAULT_RUNS_ROOT})",
     )
     parser.add_argument(
-        "--judge-models", required=True,
+        "--judge-models",
+        required=True,
         help=(
             "Comma-separated OpenRouter model ids to use as alternative "
             "judges. Example: "

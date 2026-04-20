@@ -60,7 +60,9 @@ async def _cmd_run(args: argparse.Namespace) -> None:
         return build_roster_elders(spec, api_key=api_key)
 
     manifest_path = await run_probe(
-        rosters=ROSTERS, prompts=prompts, run_id=args.run_id,
+        rosters=ROSTERS,
+        prompts=prompts,
+        run_id=args.run_id,
         runs_root=Path(args.runs_root),
         debate_store_root=Path.home() / ".council" / "debates",
         elder_factory=factory,
@@ -72,13 +74,16 @@ async def _cmd_run(args: argparse.Namespace) -> None:
 async def _cmd_score(args: argparse.Namespace) -> None:
     api_key = _require_key()
     judge = OpenRouterAdapter(
-        elder_id="ada", model=args.judge_model, api_key=api_key,
+        elder_id="ada",
+        model=args.judge_model,
+        api_key=api_key,
     )
     path = await score_probe(
         run_id=args.run_id,
         runs_root=Path(args.runs_root),
         debate_store_root=Path.home() / ".council" / "debates",
-        judge_port=judge, seed=args.seed,
+        judge_port=judge,
+        seed=args.seed,
     )
     print(f"Scoring complete. Scores: {path}")
 
@@ -87,7 +92,10 @@ def _cmd_report(args: argparse.Namespace) -> None:
     prompts = load_corpus(Path(args.corpus))
     scores_path = Path(args.runs_root) / args.run_id / "scores.json"
     md = render_report(
-        scores_path=scores_path, corpus=prompts, rosters=ROSTERS, run_id=args.run_id,
+        scores_path=scores_path,
+        corpus=prompts,
+        rosters=ROSTERS,
+        run_id=args.run_id,
     )
     out = Path(args.reports_root) / f"{args.run_id}-homogenisation.md"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -98,11 +106,13 @@ def _cmd_report(args: argparse.Namespace) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(prog="homogenisation_probe")
     parser.add_argument(
-        "--runs-root", default=str(DEFAULT_RUNS_ROOT),
+        "--runs-root",
+        default=str(DEFAULT_RUNS_ROOT),
         help=f"Where manifest/scores live (default: {DEFAULT_RUNS_ROOT})",
     )
     parser.add_argument(
-        "--corpus", default=str(DEFAULT_CORPUS),
+        "--corpus",
+        default=str(DEFAULT_CORPUS),
         help=f"Corpus JSON (default: {DEFAULT_CORPUS})",
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
