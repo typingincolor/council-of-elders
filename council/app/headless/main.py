@@ -11,6 +11,7 @@ from council.adapters.packs.filesystem import FilesystemPackLoader
 from council.adapters.storage.json_file import JsonFileStore
 from council.app.bootstrap import build_elders
 from council.app.config import load_config
+from council.domain.best_r1 import LLMJudgedBestR1Selector
 from council.domain.debate_service import DebateService
 from council.domain.models import CouncilPack, Debate, ElderId
 from council.domain.ports import Clock, ElderPort, EventBus, TranscriptStore
@@ -34,6 +35,7 @@ async def run_headless(
     using_openrouter: bool = False,
     max_rounds: int = 3,
     report_store=None,  # ReportFileStore | None
+    best_r1_judge: ElderPort | None = None,
 ) -> None:
     """Headless one-shot debate.
 
@@ -79,6 +81,20 @@ async def run_headless(
                 print(f"[{label}] ERROR {t.answer.error.kind}: {t.answer.error.detail}\n")
             else:
                 print(f"[{label}] {t.answer.text}\n")
+
+    # Best-R1 baseline — mandatory comparison point against the synthesis.
+    # Only runs when a judge is wired in (OpenRouter path); subprocess mode
+    # prints a notice and skips, since we have no cheap judge available.
+    if best_r1_judge is not None:
+        pick = await LLMJudgedBestR1Selector(judge_port=best_r1_judge).select(debate)
+        if pick is not None:
+            debate.best_r1_elder = pick.elder
+            store.save(debate)
+            print(
+                f"\n[Best R1 (judge-picked): {_LABELS[pick.elder]}] {pick.reason}\n"
+            )
+    else:
+        print("\n[Best-R1 baseline unavailable (no OpenRouter judge configured).]\n")
 
     synth = await svc.synthesize(debate, by=synthesizer)
     print(f"[Synthesis by {_LABELS[synthesizer]}] {synth.text}")
@@ -177,6 +193,16 @@ def main() -> None:
     elders, using_openrouter, _roster_spec = build_elders(config, cli_models=cli_models)
     from council.adapters.storage.report_file import ReportFileStore
 
+    best_r1_judge: ElderPort | None = None
+    if using_openrouter and config.openrouter_api_key:
+        from council.adapters.elders.openrouter import OpenRouterAdapter
+
+        best_r1_judge = OpenRouterAdapter(
+            elder_id="claude",  # judge elder_id is arbitrary — the adapter is standalone
+            model="google/gemini-2.5-flash",
+            api_key=config.openrouter_api_key,
+        )
+
     asyncio.run(
         run_headless(
             prompt=args.prompt,
@@ -189,5 +215,6 @@ def main() -> None:
             using_openrouter=using_openrouter,
             max_rounds=args.max_rounds,
             report_store=ReportFileStore(root=Path(args.reports_root)),
+            best_r1_judge=best_r1_judge,
         )
     )

@@ -102,6 +102,21 @@ class TestDebate:
         assert d.rounds == []
         assert d.status == "in_progress"
 
+    def test_new_debate_has_no_best_r1_elder(self):
+        pack = CouncilPack(name="bare", shared_context=None, personas={})
+        d = Debate(
+            id="abc", prompt="hi", pack=pack, rounds=[], status="in_progress", synthesis=None
+        )
+        assert d.best_r1_elder is None
+
+    def test_best_r1_elder_can_be_set(self):
+        pack = CouncilPack(name="bare", shared_context=None, personas={})
+        d = Debate(
+            id="abc", prompt="hi", pack=pack, rounds=[], status="in_progress", synthesis=None,
+            best_r1_elder="gemini",
+        )
+        assert d.best_r1_elder == "gemini"
+
 
 class TestUserMessage:
     def test_construct_with_expected_fields(self):

@@ -92,3 +92,4 @@ class Debate:
     status: DebateStatus
     synthesis: ElderAnswer | None
     user_messages: list[UserMessage] = field(default_factory=list)
+    best_r1_elder: ElderId | None = None

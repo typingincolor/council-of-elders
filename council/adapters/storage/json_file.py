@@ -50,6 +50,7 @@ def _serialize_debate(d: Debate) -> dict[str, Any]:
         "status": d.status,
         "synthesis": _serialize_answer(d.synthesis) if d.synthesis else None,
         "user_messages": [_serialize_user_message(m) for m in d.user_messages],
+        "best_r1_elder": d.best_r1_elder,
     }
 
 
@@ -114,6 +115,7 @@ def _deserialize_debate(d: dict[str, Any]) -> Debate:
         rounds=[_deserialize_round(r) for r in d["rounds"]],
         status=d["status"],
         synthesis=_deserialize_answer(d["synthesis"]) if d["synthesis"] else None,
+        best_r1_elder=d.get("best_r1_elder"),
     )
     for m in d.get("user_messages", []):
         debate.user_messages.append(_deserialize_user_message(m))

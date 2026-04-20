@@ -146,3 +146,13 @@ def test_load_legacy_debate_without_user_messages_key(tmp_path: Path):
     store = JsonFileStore(root=tmp_path)
     loaded = store.load("d1")
     assert loaded.user_messages == []
+    assert loaded.best_r1_elder is None
+
+
+def test_round_trips_best_r1_elder(tmp_path: Path):
+    store = JsonFileStore(root=tmp_path)
+    d = _debate()
+    d.best_r1_elder = "gemini"
+    store.save(d)
+    loaded = store.load("d1")
+    assert loaded.best_r1_elder == "gemini"
