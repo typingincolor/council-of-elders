@@ -17,7 +17,7 @@
 >
 > The working configuration is **three distinct providers, bare pack, R1-only** — and it's now the **default** on both entry points.
 >
-> TUI: `council` runs R1 and stops, showing you three independent drafts. Press `s` to synthesise, `c` to run a cross-examination round, or copy what you want and quit. Pass `--mode full` to restore the legacy R1+R2 auto-chain.
+> TUI: `council` runs R1 and stops, showing you three independent drafts. Press `d` to get a structured comparison (agreements, divergences, unique points), `s` to synthesise, `c` to run a cross-examination round, or copy what you want and quit. Pass `--mode full` to restore the legacy R1+R2 auto-chain.
 >
 > Headless: `council-headless --policy r1_only "..."` runs R1 then synthesises (still useful for automation). Add `--no-synthesise` to skip synthesis too. Distinct from `--policy best_r1_only`, which picks one R1 via judge and also skips synthesis.
 >
@@ -111,7 +111,8 @@ The question appears labelled `[To Gemini]` in the asker's pane and `[From Claud
 
 | Key | Action |
 |---|---|
-| `c` | Continue another round (available after round 2, while elders haven't all converged) |
+| `c` | Continue another round (available after R1 in r1_only mode, after R2 in full mode) |
+| `d` | Compare drafts — agreements, divergences, and unique points across the three R1s |
 | `s` | Synthesise — pick who writes the final answer |
 | `a` | Abandon |
 | `o` | Override convergence |

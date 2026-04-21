@@ -22,6 +22,7 @@ from council.app.bootstrap import build_elders
 from council.app.config import load_config
 from council.app.tui.council_view import CouncilView
 from council.domain.debate_service import DebateService
+from council.domain.draft_analysis import analyze_drafts
 from council.domain.events import (
     RoundCompleted,
     SynthesisCompleted,
@@ -90,6 +91,7 @@ class CouncilApp(App):
         Binding("ctrl+c", "quit", "Quit"),
         Binding("c", "continue_round", "Continue", show=False),
         Binding("s", "synthesize", "Synthesize", show=False),
+        Binding("d", "analyze_drafts", "Compare drafts", show=False),
         Binding("a", "abandon", "Abandon", show=False),
         Binding("o", "override", "Override convergence", show=False),
         Binding("f", "toggle_layout", "Toggle layout", show=False),
@@ -243,14 +245,15 @@ class CouncilApp(App):
         """
         if self._mode == "r1_only":
             self._write_notice(
-                "[dim]R1 complete. [s] synthesise  ·  [c] run a cross-examination round  "
-                "·  [a] finish. Read the three drafts above; synthesis tends to flatten "
-                "committed specifics.[/dim]"
+                "[dim]R1 complete. [d] compare drafts (agreements/divergences)  ·  "
+                "[s] synthesise  ·  [c] cross-examination round  ·  [a] finish. "
+                "Read the three drafts above; synthesis tends to flatten committed "
+                "specifics.[/dim]"
             )
         else:
             self._write_notice(
-                "[dim]R1+R2 complete. [s] synthesise  ·  [c] continue to another round  "
-                "·  [a] abandon.[/dim]"
+                "[dim]R1+R2 complete. [d] compare drafts  ·  [s] synthesise  ·  "
+                "[c] continue to another round  ·  [a] abandon.[/dim]"
             )
 
     async def _write_cost_notice(self) -> None:
@@ -371,6 +374,32 @@ class CouncilApp(App):
         if not self.awaiting_decision or self._debate is None:
             return
         self.run_worker(self._synthesize_worker(), exclusive=True)
+
+    async def action_analyze_drafts(self) -> None:
+        """Compare R1 drafts — show agreements/divergences/unique points.
+
+        Available after R1 completes. Uses Ada as the analyzer (the same
+        default as the synthesiser rotation). Output is appended to the
+        synthesis pane; synthesis can still be run afterwards and will
+        appear below the analysis.
+        """
+        if not self.awaiting_decision or self._debate is None or not self._debate.rounds:
+            return
+        self.run_worker(self._analyze_drafts_worker(), exclusive=False)
+
+    async def _analyze_drafts_worker(self) -> None:
+        if self._debate is None:
+            return
+        analyzer_id: ElderId = "ada"
+        self._view.show_synthesis_pane()
+        self._write_notice(f"[dim]Comparing the three drafts (analyst: {analyzer_id})…[/dim]")
+        try:
+            markdown = await analyze_drafts(self._debate, analyzer=self._elders[analyzer_id])
+        except Exception as ex:
+            self._write_notice(f"[yellow]Draft analysis failed: {ex}[/yellow]")
+            return
+        self._view.pane("synthesis").append_analysis(markdown, by=analyzer_id.capitalize())
+        self._view.pane("synthesis").focus()
 
     async def _synthesize_worker(self) -> None:
         if self._debate is None:

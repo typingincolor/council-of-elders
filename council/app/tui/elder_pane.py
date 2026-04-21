@@ -329,6 +329,17 @@ class ElderPaneWidget(ElderPane, Widget):
         for line in markdown.splitlines():
             self._append_to_line(line)
 
+    def append_analysis(self, markdown: str, *, by: str) -> None:
+        """Append a draft analysis to the pane. Used in r1_only mode when
+        the user presses ``d`` to compare agreements/divergences across
+        the three R1 drafts.
+        """
+        self._append_to_line("")
+        self._append_to_line(f"[bold]--- Draft analysis by {by} ---[/bold]")
+        self._append_to_line("")
+        for line in markdown.splitlines():
+            self._append_to_line(line)
+
     def _append_to_line(self, line: str) -> None:
         self._history_buffer.append(line)
         self.query_one("#pane-history", RichLog).write(line)
