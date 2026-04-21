@@ -51,6 +51,7 @@ async def test_elder_question_surfaces_in_both_asker_and_target_panes(tmp_path):
         clock=FakeClock(now=datetime(2026, 4, 19, tzinfo=timezone.utc)),
         pack_loader=FilesystemPackLoader(root=tmp_path),
         pack_name="bare",
+        mode="full",
     )
     async with app.run_test() as pilot:
         await pilot.press(*"Go")

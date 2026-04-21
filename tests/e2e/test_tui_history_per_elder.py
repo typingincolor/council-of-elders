@@ -51,6 +51,7 @@ async def test_two_rounds_appear_in_each_elder_pane_with_divider(tmp_path):
         clock=FakeClock(now=datetime(2026, 4, 19, tzinfo=timezone.utc)),
         pack_loader=FilesystemPackLoader(root=tmp_path),
         pack_name="bare",
+        mode="full",
     )
     async with app.run_test(size=(80, 40)) as pilot:
         await pilot.press(*"Two rounds?")

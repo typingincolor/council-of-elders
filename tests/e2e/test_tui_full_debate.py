@@ -53,6 +53,7 @@ async def test_full_debate_via_tui(tmp_path):
         clock=FakeClock(now=datetime(2026, 4, 19, tzinfo=timezone.utc)),
         pack_loader=loader,
         pack_name="bare",
+        mode="full",
     )
 
     async with app.run_test() as pilot:
@@ -111,6 +112,7 @@ async def test_auto_synth_modal_when_all_converge_in_r3(tmp_path):
         clock=FakeClock(now=datetime(2026, 4, 19, tzinfo=timezone.utc)),
         pack_loader=loader,
         pack_name="bare",
+        mode="full",
     )
 
     async with app.run_test() as pilot:

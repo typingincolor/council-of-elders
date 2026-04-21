@@ -15,13 +15,11 @@
 > - **Format interventions tested — no format beats R1-only.** Replacing R2 cross-exam with a *silent-revise* R2 (elders privately re-write their own answer after reading peers, no convergence/questions pressure) and a free-form synthesis prompt were both tested against the R1-only baseline at n=16 per cell. Silent-revise was a wash (Δ = +0.031, inside noise); the free-form synthesis prompt consistently tripped the "don't describe the debate" guardrail. The debate-rounds bottleneck isn't about *how* elders engage in R2 — it's that engaging at all is the damage site.
 > - **Best-R1 is a genuine baseline.** The strongest individual R1 beats synthesis in roughly half of debates even in the best configuration. If you're only going to keep one output, keep it. But synthesis wins 5–6 times out of 32 in good configurations, and ties another third, so it's not dominated. A multi-judge "pick the best of three R1s" output is also roughly equivalent to synthesis (rate 0.562 vs 0.5 break-even at n=16, within noise) — and the two preference judges only agree on which R1 is best 56% of the time, so "best" isn't a well-defined target for about half the prompts.
 >
-> The working configuration is **three distinct providers, bare pack, R1-only synthesis** — now a first-class mode on the headless CLI:
+> The working configuration is **three distinct providers, bare pack, R1-only** — and it's now the **default** on both entry points.
 >
-> ```bash
-> council-headless --policy r1_only "Your prompt here"
-> ```
+> TUI: `council` runs R1 and stops, showing you three independent drafts. Press `s` to synthesise, `c` to run a cross-examination round, or copy what you want and quit. Pass `--mode full` to restore the legacy R1+R2 auto-chain.
 >
-> This skips R2/R3 and synthesises directly from the three R1 answers. Distinct from `--policy best_r1_only`, which also skips synthesis.
+> Headless: `council-headless --policy r1_only "..."` runs R1 then synthesises (still useful for automation). Add `--no-synthesise` to skip synthesis too. Distinct from `--policy best_r1_only`, which picks one R1 via judge and also skips synthesis.
 >
 > **Caveat:** all experiments used *automated* model-to-model debate. Human-in-the-loop multi-model consultation (a human picking which thread to pull, rephrasing, directing follow-ups) wasn't tested and may well behave differently.
 >
@@ -88,11 +86,9 @@ If no key is set, the council falls back to the existing vendor-CLI behaviour wi
 
 ### How the debate unfolds
 
-The council runs a structured three-phase debate so the elders actually engage rather than producing three parallel monologues:
+**Round 1 — Silent initial answers.** Each elder answers your question independently, without seeing the others. Under the default TUI mode (`r1_only`), the council stops here and hands control back to you: read the three drafts, press `s` to synthesise (may flatten committed specifics), `c` to run a cross-examination round, or `a` to finish. This is the shape the 2026-04 experiments found strongest; it's also the drafting-friendly default.
 
-**Round 1 — Silent initial answers.** Each elder answers your question independently, without seeing the others. No convergence, no cross-talk.
-
-**Round 2 — Cross-examination (auto-runs after round 1).** Each elder now sees the other two's round-1 answers and must ask exactly one question of one peer (`@claude`, `@gemini`, or `@chatgpt`). Convergence is still not possible — this is the dialogue step.
+**Round 2 — Cross-examination (opt-in with `c`, or auto-runs if you started with `council --mode full`).** Each elder now sees the other two's round-1 answers and must ask exactly one question of one peer (`@ada`, `@kai`, or `@mei`). Convergence is still not possible — this is the dialogue step.
 
 **Round 3 and beyond — Open debate.** Each elder either says `CONVERGED: yes` (they'd not change their view even hearing everything the others said) or `CONVERGED: no` and asks exactly one further question of a peer. You press `c` to trigger each round. When all three elders converge in the same round, you're prompted to pick a synthesiser automatically.
 

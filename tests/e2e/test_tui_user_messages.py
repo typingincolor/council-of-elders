@@ -42,6 +42,7 @@ async def test_user_message_appears_in_all_elder_panes(tmp_path):
         clock=FakeClock(now=datetime(2026, 4, 19, tzinfo=timezone.utc)),
         pack_loader=FilesystemPackLoader(root=tmp_path),
         pack_name="bare",
+        mode="full",
     )
     async with app.run_test() as pilot:
         await pilot.press(*"Initial question")

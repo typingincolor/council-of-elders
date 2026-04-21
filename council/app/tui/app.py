@@ -4,6 +4,7 @@ import asyncio
 import uuid
 from dataclasses import replace
 from pathlib import Path
+from typing import Literal
 
 from textual import on
 from textual.app import App, ComposeResult
@@ -108,6 +109,7 @@ class CouncilApp(App):
         pack_name: str,
         using_openrouter: bool = False,
         report_store=None,  # ReportFileStore | None
+        mode: Literal["r1_only", "full"] = "r1_only",
     ) -> None:
         super().__init__()
         self._elders = elders
@@ -116,6 +118,12 @@ class CouncilApp(App):
         self._pack_loader = pack_loader
         self._pack_name = pack_name
         self._using_openrouter = using_openrouter
+        # "r1_only" (default): stop after R1, await user decision. The 2026-04
+        # experiments found this is the strongest shape for diverse rosters;
+        # it's also the drafting-friendly mode (three independent drafts, no
+        # flattening). "full" runs R1+R2 back-to-back as the legacy TUI did,
+        # then awaits user decision.
+        self._mode: Literal["r1_only", "full"] = mode
         self._prev_cost_total: float = 0.0
         self._bus = InMemoryBus()
         self._service = DebateService(elders=elders, store=store, clock=clock, bus=self._bus)
@@ -164,11 +172,17 @@ class CouncilApp(App):
             elif isinstance(ev, TurnFailed):
                 self._view.pane(ev.elder).end_thinking_failed(ev.error)
             elif isinstance(ev, RoundCompleted):
-                # Opening exchange (R1+R2) runs back-to-back; only re-enable
-                # input and surface decision state after round 2 completes.
-                if ev.round.number >= 2:
+                # r1_only mode: decision point after R1 (no auto-R2).
+                # full mode: decision point after R2 (R1+R2 auto-chain).
+                decision_at = 1 if self._mode == "r1_only" else 2
+                if ev.round.number >= decision_at:
                     self.awaiting_decision = True
                     self.query_one("#input", CouncilInput).disabled = False
+                    # First time the user sees decision affordances, surface
+                    # the option summary. Keeps discoverability without
+                    # cluttering every round.
+                    if ev.round.number == decision_at:
+                        self._write_decision_hint()
                     # Auto-synth modal when all three elders converge (R3+).
                     if ev.round.number >= 3 and self._service.rules.is_converged(ev.round):
                         self.run_worker(self._synthesize_worker(), exclusive=True)
@@ -221,6 +235,23 @@ class CouncilApp(App):
     def _write_notice(self, line: str) -> None:
         self.rendered_lines.append(line)
         self.query_one("#notices", RichLog).write(line)
+
+    def _write_decision_hint(self) -> None:
+        """Surface the keybinding affordances once per debate, at the
+        first decision point. Non-intrusive but discoverable — the
+        keybindings themselves are ``show=False`` in the Footer.
+        """
+        if self._mode == "r1_only":
+            self._write_notice(
+                "[dim]R1 complete. [s] synthesise  ·  [c] run a cross-examination round  "
+                "·  [a] finish. Read the three drafts above; synthesis tends to flatten "
+                "committed specifics.[/dim]"
+            )
+        else:
+            self._write_notice(
+                "[dim]R1+R2 complete. [s] synthesise  ·  [c] continue to another round  "
+                "·  [a] abandon.[/dim]"
+            )
 
     async def _write_cost_notice(self) -> None:
         from council.adapters.elders.openrouter import (
@@ -296,18 +327,24 @@ class CouncilApp(App):
                 self._write_notice(f"[yellow]Report file write failed: {ex}[/yellow]")
 
     async def _opening_exchange(self) -> None:
-        """Run R1 (silent initial) then R2 (cross-exam) back-to-back.
+        """Run the initial rounds dictated by ``self._mode``.
 
-        Between R1 and R2, the RoundCompleted handler keeps the input
-        disabled and awaiting_decision=False (that check is gated on
-        round.number >= 2). After R2 completes the user can interact.
+        r1_only: run R1 only, then hand control back to the user. This is
+        the default — the 2026-04 experiments found R1-only-then-maybe-
+        synthesise is the strongest shape for diverse rosters, and it's
+        drafting-friendly (three independent takes, no flattening).
+
+        full: run R1 then R2 back-to-back (the legacy TUI behavior). The
+        RoundCompleted handler keeps input disabled between R1 and R2
+        because decision_at is 2 in this mode.
         """
         if self._debate is None:
             return
         await self._service.run_round(self._debate)  # R1
         if self._debate.status != "in_progress":
             return
-        await self._service.run_round(self._debate)  # R2
+        if self._mode == "full":
+            await self._service.run_round(self._debate)  # R2
 
     async def action_continue_round(self) -> None:
         if not self.awaiting_decision or self._debate is None:
@@ -386,6 +423,17 @@ def main() -> None:
         default=os.environ.get("COUNCIL_CODEX_MODEL"),
         help="Model name passed to `codex exec -m` (e.g. gpt-5-codex).",
     )
+    parser.add_argument(
+        "--mode",
+        choices=["r1_only", "full"],
+        default="r1_only",
+        help=(
+            "Debate mode. 'r1_only' (default) runs R1 then stops for you "
+            "to read the three drafts, synthesise with `s`, or continue "
+            "to a cross-examination round with `c`. 'full' runs R1+R2 "
+            "back-to-back as the legacy TUI did."
+        ),
+    )
     args = parser.parse_args()
 
     packs_root = Path(args.packs_root)
@@ -410,5 +458,6 @@ def main() -> None:
         pack_name=args.pack,
         using_openrouter=using_openrouter,
         report_store=ReportFileStore(root=Path(args.reports_root)),
+        mode=args.mode,
     )
     app.run()
