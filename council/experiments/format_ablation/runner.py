@@ -1,16 +1,19 @@
 """Format-ablation runner.
 
-Tests two independent interventions against the r1_only + current-
-synthesis-prompt baseline (established by the 2026-04-20-226f ablation):
+Tests silent-revise R2 against the r1_only + current-synthesis-prompt
+baseline (established by 2026-04-20-226f, revisited by 2026-04-21-96d5).
 
-- ``alt_synth``      — R1 only, alt (free-form) synthesis prompt.
 - ``silent_revise``  — R1 + silent-revise R2 (elders privately revise
                        their own answer after reading peers), current
                        synthesis prompt.
 
-Variants are independent comparisons against baseline; not a 2×2. The
-question answered is "which of these two format changes helps, if
-either?", not "what's the interaction effect?".
+The first format ablation (96d5) also tested ``alt_synth`` (free-form
+synthesis prompt); it was dropped because (a) its +0.125 gap was
+inside baseline noise and (b) it consistently violated the
+"don't describe the debate" validator. Infrastructure for alt_synth
+is retained — FormatVariant carries ``use_alt_synthesis_prompt`` and
+``build_alt_synthesis`` still ships — but it is not part of the
+default VARIANTS.
 
 Debates persist via ``JsonFileStore`` using the same manifest format
 as the other experiments so
@@ -58,21 +61,17 @@ class FormatVariant:
 
 
 VARIANTS: tuple[FormatVariant, ...] = (
-    # Baseline re-run so all three cells are scored with the same
-    # fixed scorer in a single manifest. We already have r1_only data
-    # from 2026-04-20-226f but running it again here costs only ~$0.10
-    # and ensures the three variants are apples-to-apples.
+    # alt_synth dropped after 2026-04-21-96d5: its +0.125 gap vs baseline
+    # was inside baseline-noise (two n=8 baseline samples differed by
+    # 0.125), and it kept violating the "don't describe the debate"
+    # validator because the free-form prompt loses that guardrail.
+    # silent_revise's +0.188 was more interesting and structurally
+    # sound; rerunning with a doubled corpus to see if it holds.
     FormatVariant(
         name="baseline_r1_only",
         rules_factory=DefaultRules,
         rounds=1,
         use_alt_synthesis_prompt=False,
-    ),
-    FormatVariant(
-        name="alt_synth",
-        rules_factory=DefaultRules,
-        rounds=1,
-        use_alt_synthesis_prompt=True,
     ),
     FormatVariant(
         name="silent_revise",

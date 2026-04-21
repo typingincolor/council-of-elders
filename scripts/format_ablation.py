@@ -129,7 +129,7 @@ def _render_report(scores_path: Path, run_id: str) -> str:
     data = json.loads(scores_path.read_text())
     rows = data.get("rows", [])
     summaries = data.get("summaries", [])
-    order = {"baseline_r1_only": 0, "alt_synth": 1, "silent_revise": 2}
+    order = {"baseline_r1_only": 0, "silent_revise": 1}
     summaries = sorted(summaries, key=lambda s: order.get(s["roster"], 99))
 
     lines = [
@@ -140,11 +140,11 @@ def _render_report(scores_path: Path, run_id: str) -> str:
         "## Question",
         "",
         "The 2026-04-20-226f depth ablation showed R1-only-then-synthesise "
-        "beating full debate for the diff_model roster. This experiment "
-        "tests whether two independent format interventions move the "
-        "needle further: a free-form synthesis prompt, and a silent-revise "
-        "R2 where each elder privately re-writes their own answer after "
-        "reading peers' R1s.",
+        "beating full debate for the diff_model roster. 2026-04-21-96d5 "
+        "suggested silent-revise R2 might further improve synthesis "
+        "preference (+0.188 over baseline at n=8), but the baseline was "
+        "noisy. This rerun uses a doubled corpus to see whether the "
+        "silent-revise effect holds.",
         "",
         "## Roster (fixed)",
         "",
@@ -158,7 +158,6 @@ def _render_report(scores_path: Path, run_id: str) -> str:
         "",
         "- `baseline_r1_only` — R1 only, current synthesis prompt "
         "(ANSWER/WHY/DISAGREEMENTS). Re-run here for apples-to-apples scoring.",
-        "- `alt_synth` — R1 only, free-form synthesis prompt.",
         "- `silent_revise` — R1 + silent-revise R2 + current synthesis prompt.",
         "",
         "## Results",
@@ -167,7 +166,7 @@ def _render_report(scores_path: Path, run_id: str) -> str:
         "|---|---:|---:|---:|---|",
     ]
     by_variant = {s["roster"]: s for s in summaries}
-    for v in ("baseline_r1_only", "alt_synth", "silent_revise"):
+    for v in ("baseline_r1_only", "silent_revise"):
         s = by_variant.get(v)
         if s is None:
             lines.append(f"| `{v}` | — | — | — | — |")
@@ -183,7 +182,6 @@ def _render_report(scores_path: Path, run_id: str) -> str:
     lines.append("## Verdict")
     lines.append("")
     base = by_variant.get("baseline_r1_only", {}).get("preference_rate")
-    alt = by_variant.get("alt_synth", {}).get("preference_rate")
     sr = by_variant.get("silent_revise", {}).get("preference_rate")
 
     def _verdict(name: str, rate: float | None) -> str:
@@ -196,7 +194,6 @@ def _render_report(scores_path: Path, run_id: str) -> str:
             return f"- **`{name}` hurts** (Δ vs baseline = {gap:+.3f})."
         return f"- `{name}` is a wash vs baseline (Δ = {gap:+.3f}, within ±0.10)."
 
-    lines.append(_verdict("alt_synth", alt))
     lines.append(_verdict("silent_revise", sr))
     lines.append("")
 

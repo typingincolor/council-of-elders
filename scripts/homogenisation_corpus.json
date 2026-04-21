@@ -6,9 +6,19 @@
       "prompt": "Write a single-sentence headline (max 12 words) for a product launch where a UK payments startup announces a fee cut for small businesses."
     },
     {
+      "id": "headline_002",
+      "shape": "headline",
+      "prompt": "Write a single-sentence headline (max 12 words) for a hospital opening a new outpatient mental-health clinic for teenagers."
+    },
+    {
       "id": "summary_001",
       "shape": "summary",
       "prompt": "In two sentences, explain to a non-technical reader what \"latency\" means in the context of a web API."
+    },
+    {
+      "id": "summary_002",
+      "shape": "summary",
+      "prompt": "In two sentences, explain to a non-technical reader what a \"hash function\" is and why passwords are usually stored as hashes rather than as plain text."
     },
     {
       "id": "strategy_001",
@@ -21,6 +31,16 @@
       "prompt": "A regional bookshop must pick one focus for the year: stronger e-commerce, or a programme of in-store author events. Recommend one, with reasoning."
     },
     {
+      "id": "strategy_003",
+      "shape": "strategy_tradeoff",
+      "prompt": "A 30-person SaaS company must pick one: spend this quarter building a native mobile app, or rebuilding the marketing site and SEO funnel. Recommend one, with reasoning."
+    },
+    {
+      "id": "strategy_004",
+      "shape": "strategy_tradeoff",
+      "prompt": "A local gym has lost 20% of members over 18 months. Should they invest in a refurbishment of the main floor or in hiring two additional full-time coaches? Recommend one, with reasoning."
+    },
+    {
       "id": "technical_001",
       "shape": "technical_decision",
       "prompt": "A Python service must process 1M small JSON files on one VM. Recommend asyncio or a process pool, with one paragraph of reasoning."
@@ -31,14 +51,34 @@
       "prompt": "An internal tool will serve ~50 users with light CRUD traffic. PostgreSQL or SQLite? One paragraph."
     },
     {
+      "id": "technical_003",
+      "shape": "technical_decision",
+      "prompt": "A small team is picking a background-job runner for a new Django app: Celery with Redis, or Postgres-backed job queue via django-q2? Recommend one, with reasoning."
+    },
+    {
+      "id": "technical_004",
+      "shape": "technical_decision",
+      "prompt": "A startup is choosing a frontend framework for a content-heavy marketing site that also needs a small authenticated dashboard: Next.js or Astro + a small React island? One paragraph."
+    },
+    {
       "id": "factual_001",
       "shape": "factual_multipart",
       "prompt": "Name three distinct primary causes of the 2008 financial crisis. One sentence on each."
     },
     {
+      "id": "factual_002",
+      "shape": "factual_multipart",
+      "prompt": "Name three distinct structural factors behind the 1970s stagflation in the US and UK. One sentence on each."
+    },
+    {
       "id": "value_001",
       "shape": "contested_value",
       "prompt": "Is it ethical for a company to use AI to monitor individual employee productivity? Take a clear position in one paragraph."
+    },
+    {
+      "id": "value_002",
+      "shape": "contested_value",
+      "prompt": "Should universities be allowed to use AI-detection tools to flag student submissions suspected of being AI-generated, given current false-positive rates? Take a clear position in one paragraph."
     }
   ]
 }
