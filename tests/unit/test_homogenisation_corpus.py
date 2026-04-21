@@ -26,9 +26,9 @@ def test_load_corpus_rejects_missing_fields(tmp_path: Path) -> None:
         load_corpus(path)
 
 
-def test_real_corpus_has_eight_prompts_with_unique_ids() -> None:
+def test_real_corpus_has_sixteen_prompts_with_unique_ids() -> None:
     path = Path(__file__).parents[2] / "scripts" / "homogenisation_corpus.json"
     prompts = load_corpus(path)
-    assert len(prompts) == 8
+    assert len(prompts) == 16
     ids = [p.id for p in prompts]
-    assert len(set(ids)) == 8
+    assert len(set(ids)) == 16
