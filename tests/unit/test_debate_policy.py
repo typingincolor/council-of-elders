@@ -53,6 +53,23 @@ class TestPolicyFor:
         p = policy_for(_score("low"), user_override=override)
         assert p is override
 
+    def test_r1_only_override_is_available(self):
+        # r1_only is user-selectable only; policy_for never auto-picks it
+        # (the auto-selection is diversity-driven and maps to the three
+        # original modes). The override path must accept it as a valid
+        # PolicyMode so the Literal type and flow logic stay consistent.
+        override = DebatePolicy(
+            mode="r1_only",
+            max_rounds=1,
+            synthesise=True,
+            always_compute_best_r1=True,
+            warning=None,
+        )
+        p = policy_for(_score("high"), user_override=override)
+        assert p.mode == "r1_only"
+        assert p.synthesise is True
+        assert p.max_rounds == 1
+
     def test_debate_policy_is_frozen(self):
         p = policy_for(_score("high"))
         with pytest.raises(dataclasses.FrozenInstanceError):

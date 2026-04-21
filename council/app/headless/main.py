@@ -110,7 +110,7 @@ async def run_headless(
     # Always run R1 — every pipeline mode needs initial answers.
     await svc.run_round(debate)
 
-    if effective_policy.mode != "best_r1_only":
+    if effective_policy.mode not in ("best_r1_only", "r1_only"):
         # R2 is the cross-examination round; every non-skip mode uses it.
         await svc.run_round(debate)
         if effective_policy.mode == "full_debate":
@@ -299,11 +299,13 @@ def _policy_override_from_args(mode: str, max_rounds: int) -> DebatePolicy | Non
     if mode == "auto":
         return None
     pm: PolicyMode = mode  # type: ignore[assignment]
+    # r1_only: R1 then synthesise, skip R2+. Experimentally the strongest
+    # shape for diverse rosters (see 2026-04-20-226f, 2026-04-21-f13d).
     return DebatePolicy(
         mode=pm,
         max_rounds=max_rounds
         if mode == "full_debate"
-        else {"best_r1_only": 1, "single_critique": 2}[mode],
+        else {"best_r1_only": 1, "r1_only": 1, "single_critique": 2}[mode],
         synthesise=mode != "best_r1_only",
         always_compute_best_r1=True,
         warning=None,
@@ -345,11 +347,15 @@ def main() -> None:
     )
     parser.add_argument(
         "--policy",
-        choices=["auto", "best_r1_only", "single_critique", "full_debate"],
+        choices=["auto", "best_r1_only", "r1_only", "single_critique", "full_debate"],
         default="auto",
         help=(
             "Pipeline mode. 'auto' (default) picks best_r1_only / "
-            "single_critique / full_debate based on roster diversity."
+            "single_critique / full_debate based on roster diversity. "
+            "'r1_only' runs R1 then synthesises with no debate rounds — "
+            "the configuration the 2026-04 experiments found strongest "
+            "for diverse rosters. Distinct from 'best_r1_only' which "
+            "skips synthesis too."
         ),
     )
     parser.add_argument(
