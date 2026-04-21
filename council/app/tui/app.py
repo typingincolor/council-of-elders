@@ -391,15 +391,15 @@ class CouncilApp(App):
         if self._debate is None:
             return
         analyzer_id: ElderId = "ada"
-        self._view.show_synthesis_pane()
+        await self._view.show_analysis_pane()
         self._write_notice(f"[dim]Comparing the three drafts (analyst: {analyzer_id})…[/dim]")
         try:
             markdown = await analyze_drafts(self._debate, analyzer=self._elders[analyzer_id])
         except Exception as ex:
             self._write_notice(f"[yellow]Draft analysis failed: {ex}[/yellow]")
             return
-        self._view.pane("synthesis").append_analysis(markdown, by=analyzer_id.capitalize())
-        self._view.pane("synthesis").focus()
+        self._view.pane("analysis").append_analysis(markdown, by=analyzer_id.capitalize())
+        self._view.pane("analysis").focus()
 
     async def _synthesize_worker(self) -> None:
         if self._debate is None:
@@ -411,9 +411,9 @@ class CouncilApp(App):
         # Disable the input so keystrokes don't get swallowed by the TextArea
         # while the user is waiting for synthesis.
         self.query_one("#input", CouncilInput).disabled = True
-        # Reveal the synthesis pane in columns mode (no-op in tabs mode) and
-        # focus it so the ticker is immediately visible to the user.
-        self._view.show_synthesis_pane()
+        # Reveal the synthesis pane (columns: display=True; tabs: dynamically
+        # adds the tab) and focus it so the ticker is immediately visible.
+        await self._view.show_synthesis_pane()
         self._view.pane("synthesis").begin_thinking(round_number=1)
         self._view.pane("synthesis").focus()
         self._spawn(self._service.synthesize(self._debate, by=choice))

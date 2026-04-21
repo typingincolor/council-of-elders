@@ -41,7 +41,16 @@ async def test_number_key_focuses_correct_pane(tmp_path):
         await pilot.press("enter")
         await _wait_until(pilot, lambda: app.awaiting_decision)
 
-        for key, elder in [("2", "kai"), ("3", "mei"), ("4", "synthesis"), ("1", "ada")]:
+        # 1/2/3 work any time — elder tabs are always present.
+        # 4 (synthesis) only works once synthesis is revealed; test it
+        # separately by showing the pane first.
+        for key, elder in [("2", "kai"), ("3", "mei"), ("1", "ada")]:
             await pilot.press(key)
             await pilot.pause()
             assert app._view.pane(elder).has_focus
+
+        await app._view.show_synthesis_pane()
+        await pilot.pause()
+        await pilot.press("4")
+        await pilot.pause()
+        assert app._view.pane("synthesis").has_focus

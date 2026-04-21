@@ -62,10 +62,14 @@ async def test_pressing_d_after_r1_surfaces_draft_analysis(tmp_path):
         assert any("compare drafts" in line for line in app.rendered_lines)
 
         await pilot.press("d")
-        # Wait for the analysis to land in the synthesis pane.
-        await _wait_until(pilot, lambda: "Draft analysis" in pane_lines(app, "synthesis"))
-        text = pane_lines(app, "synthesis")
+        # Analysis lands in its own pane, not synthesis.
+        await _wait_until(pilot, lambda: "Draft analysis" in pane_lines(app, "analysis"))
+        text = pane_lines(app, "analysis")
         assert "Draft analysis by Ada" in text
         assert "Agreements" in text
         assert "Divergences" in text
         assert "Ada commits to Oct 24" in text
+        # Synthesis pane has nothing rendered — no synthesis was triggered,
+        # so its history log is empty and it hasn't been added to the
+        # TabbedContent (tabs mode) or revealed (columns mode).
+        assert pane_lines(app, "synthesis").strip() == ""

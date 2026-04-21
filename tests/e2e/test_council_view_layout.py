@@ -24,11 +24,11 @@ def _make_view() -> CouncilView:
     )
 
 
-async def test_view_has_four_panes_one_per_elder_plus_synthesis():
+async def test_view_has_three_elder_panes_plus_analysis_and_synthesis():
     view = _make_view()
     async with _Host(view).run_test() as pilot:
         await pilot.pause()
-        assert set(view.pane_ids()) == {"ada", "kai", "mei", "synthesis"}
+        assert set(view.pane_ids()) == {"ada", "kai", "mei", "analysis", "synthesis"}
 
 
 async def test_narrow_width_selects_tabs_mode():
@@ -58,9 +58,19 @@ async def test_synthesis_pane_visible_after_show_synthesis_pane():
     async with _Host(view).run_test(size=(300, 40)) as pilot:
         await pilot.pause()
         assert view.pane("synthesis").display is False
-        view.show_synthesis_pane()
+        await view.show_synthesis_pane()
         await pilot.pause()
         assert view.pane("synthesis").display is True
+
+
+async def test_analysis_pane_hidden_until_show_analysis_pane():
+    view = _make_view()
+    async with _Host(view).run_test(size=(300, 40)) as pilot:
+        await pilot.pause()
+        assert view.pane("analysis").display is False
+        await view.show_analysis_pane()
+        await pilot.pause()
+        assert view.pane("analysis").display is True
 
 
 async def test_force_override_sticks_through_resize():
