@@ -13,7 +13,7 @@
 > - **Personas don't substitute, and compose *negatively*.** Adding per-elder personas to a same-model roster is neutral. Adding them on top of the diverse roster drops preference by ~0.13. Persona context overhead is the likely cause; the roles pack is **not** recommended.
 > - **The debate rounds are net-negative on synthesis quality.** Running R1 only, then synthesising — with no cross-examination rounds between elders — beats the full three-round debate by ~0.13 on judged preference. R2 cross-exam is the damage site; R3+ adds nothing more. The tool's current default pipeline (R1 + R2 + R3 + synthesis) is not the best configuration it can produce.
 > - **Format interventions tested — no format beats R1-only.** Replacing R2 cross-exam with a *silent-revise* R2 (elders privately re-write their own answer after reading peers, no convergence/questions pressure) and a free-form synthesis prompt were both tested against the R1-only baseline at n=16 per cell. Silent-revise was a wash (Δ = +0.031, inside noise); the free-form synthesis prompt consistently tripped the "don't describe the debate" guardrail. The debate-rounds bottleneck isn't about *how* elders engage in R2 — it's that engaging at all is the damage site.
-> - **Best-R1 is a genuine baseline.** The strongest individual R1 beats synthesis in roughly half of debates even in the best configuration. If you're only going to keep one output, keep it. But synthesis wins 5–6 times out of 32 in good configurations, and ties another third, so it's not dominated.
+> - **Best-R1 is a genuine baseline.** The strongest individual R1 beats synthesis in roughly half of debates even in the best configuration. If you're only going to keep one output, keep it. But synthesis wins 5–6 times out of 32 in good configurations, and ties another third, so it's not dominated. A multi-judge "pick the best of three R1s" output is also roughly equivalent to synthesis (rate 0.562 vs 0.5 break-even at n=16, within noise) — and the two preference judges only agree on which R1 is best 56% of the time, so "best" isn't a well-defined target for about half the prompts.
 >
 > The working configuration is **three distinct providers, bare pack, R1-only synthesis** — which the current code doesn't directly support as a mode. Adding it is a small change and tracked in the results docs below.
 >
@@ -25,6 +25,7 @@
 > - [`2026-04-20-f294-results.md`](docs/experiments/2026-04-20-f294-results.md) — 2×2 model × role experiment. Cell C (diff model, bare pack) wins.
 > - [`2026-04-20-226f-results.md`](docs/experiments/2026-04-20-226f-results.md) — debate-depth ablation. R1-only synthesis beats full debate.
 > - [`2026-04-21-f13d-format-ablation.md`](docs/experiments/2026-04-21-f13d-format-ablation.md) — silent-revise R2 tested against R1-only baseline (n=16). No help.
+> - [`2026-04-21-f13d-best-of-n.md`](docs/experiments/2026-04-21-f13d-best-of-n.md) — multi-judge best-of-N vs synthesis (n=16). Roughly equivalent. Inter-judge agreement on "best" is only 56%.
 >
 > The code still runs. The experiments tell you where the working configuration is.
 >
