@@ -139,6 +139,49 @@ async def test_r1_only_mode_runs_r1_then_synth_skipping_debate(capsys):
     assert "Final synth." in out
 
 
+async def test_no_synthesise_override_skips_synthesis_even_in_synthesising_mode(capsys):
+    # --no-synthesise: the user reads the three R1 drafts directly and
+    # skips the synthesis-flattening step. Useful for drafting.
+    roster = RosterSpec(
+        name="diff_model",
+        models={
+            "ada": "anthropic/claude-sonnet-4.5",
+            "kai": "meta-llama/llama-3.1-70b-instruct",
+            "mei": "openai/gpt-5",
+        },
+    )
+    elders = {
+        "ada": FakeElder(elder_id="ada", replies=["R1 Ada only."]),
+        "kai": FakeElder(elder_id="kai", replies=["R1 Kai only."]),
+        "mei": FakeElder(elder_id="mei", replies=["R1 Mei only."]),
+    }
+    # r1_only normally synthesises; override to skip.
+    override = DebatePolicy(
+        mode="r1_only",
+        max_rounds=1,
+        synthesise=True,
+        always_compute_best_r1=True,
+        warning=None,
+    )
+    await run_headless(
+        prompt="Q?",
+        pack=_pack(),
+        elders=elders,
+        store=InMemoryStore(),
+        clock=_clock(),
+        bus=InMemoryBus(),
+        synthesizer="ada",
+        roster_spec=roster,
+        policy=override,
+        synthesise_override=False,
+    )
+    out = capsys.readouterr().out
+    assert "R1 Ada only." in out
+    assert "Round 2" not in out
+    # No synthesis output.
+    assert "[Synthesis by" not in out
+
+
 async def test_homogeneous_roster_auto_picks_best_r1_only(capsys):
     # Three identical model strings → tier-1 heuristic classifies as low.
     roster = RosterSpec(

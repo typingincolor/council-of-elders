@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import dataclasses
 import uuid
 from pathlib import Path
 
@@ -77,6 +78,7 @@ async def run_headless(
     policy: DebatePolicy | None = None,
     roster_spec: RosterSpec | None = None,
     run_summary_root: Path | None = None,
+    synthesise_override: bool | None = None,
 ) -> None:
     """Headless one-shot debate.
 
@@ -93,6 +95,13 @@ async def run_headless(
         roster_spec=roster_spec,
         fallback_max_rounds=max_rounds,
     )
+
+    # Explicit --synthesise / --no-synthesise overrides the policy's
+    # built-in choice. Composes with every mode — e.g. full_debate
+    # --no-synthesise runs the whole debate then stops; best_r1_only
+    # --synthesise is effectively r1_only.
+    if synthesise_override is not None:
+        effective_policy = dataclasses.replace(effective_policy, synthesise=synthesise_override)
 
     if effective_policy.warning:
         print(f"[warning] {effective_policy.warning}")
@@ -359,6 +368,20 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--synthesise",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "Override whether to synthesise after the debate rounds. "
+            "Default: follow the policy's built-in choice (best_r1_only "
+            "skips; every other mode synthesises). Pass --no-synthesise "
+            "to force skip even in a mode that would normally synthesise "
+            "— useful for drafting workflows where you want to read the "
+            "three R1 drafts yourself without the tool flattening them. "
+            "Composes with --policy."
+        ),
+    )
+    parser.add_argument(
         "--reports-root",
         default=str(Path.home() / ".council" / "reports"),
         help="Directory where debate reports are saved as markdown.",
@@ -445,5 +468,6 @@ def main() -> None:
             policy=_policy_override_from_args(args.policy, args.max_rounds),
             roster_spec=roster_spec,
             run_summary_root=Path(args.summaries_root),
+            synthesise_override=args.synthesise,
         )
     )
