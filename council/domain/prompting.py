@@ -153,6 +153,42 @@ class PromptBuilder:
             "Re-send your answer with the correct structure."
         )
 
+    def build_round_2_silent_revise(self, debate: Debate, elder: ElderId) -> str:
+        """Silent-revise R2 prompt: each elder sees the others' R1 answers
+        and rewrites their own answer in their own voice, incorporating
+        or rejecting the others' points as they judge fit.
+
+        Critical: no peer-directed questions, no QUESTIONS block, no
+        CONVERGED tag. This isn't a debate turn — it's a private revision
+        step that happens to be informed by what the peers wrote.
+        """
+        parts: list[str] = []
+        others = self._other_advisors_section(debate, elder, round_num=2)
+        if others:
+            parts.append(others)
+        user_section = self._user_messages_section(debate)
+        if user_section:
+            parts.append(user_section)
+        parts.append(
+            "You have now read the other advisors' first-round answers. "
+            "Re-write your OWN answer to the original question in your own "
+            "voice, incorporating any points from the others that sharpen "
+            "your thinking and rejecting any that don't. This is a private "
+            "revision step, not a response to the others — do not address "
+            "them, do not ask them questions, do not argue with them. Think "
+            "of it as seeing peer work and then privately deciding whether "
+            "and how to revise your own position.\n\n"
+            "Begin with the first word of your revised answer. Do not "
+            "include preamble, sign-offs, meta-commentary, section "
+            "headings, or other process scaffolding.\n\n"
+            "Do not include the literal strings CONVERGED:, QUESTIONS:, "
+            "or any @advisor handle anywhere in your reply. If the others' "
+            "answers didn't change your view, the right response is to "
+            "restate your position in its strongest form — not to reply "
+            'with "I agree" or "no change".'
+        )
+        return "\n\n".join(parts)
+
     def build_synthesis(self, debate: Debate, by: ElderId) -> str:
         parts: list[str] = []
         header = self.build_system_message(debate, by)
@@ -268,3 +304,46 @@ class PromptBuilder:
                     continue
                 chunks.append(f"[{_ELDER_LABEL[t.elder]}] {t.answer.text}")
         return "\n".join(chunks)
+
+
+# Alternative synthesis prompt — free-form, no Answer/Why/Disagreements
+# structure. Used by the format ablation to test whether the structured
+# output format is the bottleneck. Same "synthesize, don't select" and
+# form-calibration disciplines; drops the label scaffolding.
+ALT_SYNTHESIS_PROMPT = (
+    "You have seen every advisor across every round. Write the final "
+    "answer the user receives.\n\n"
+    "**Form and length.** Match the shape and brevity the user's request "
+    'implies. "One sentence" means one short sentence. "Headline," '
+    '"slogan," "tagline," "tweet," "short answer" mean genuinely punchy. '
+    "If the user gave an example, match its register and length. If the "
+    "form is unspecified, default to the shortest response that fully "
+    "answers. Calibrate to the user's ask, not to the transcript length. "
+    "Add no structure beyond what the user requested.\n\n"
+    "**Synthesize, do not select.** Take the strongest formulation of "
+    "each component from whichever advisor expressed it best, and write "
+    "it in your own voice. Where advisors disagreed, decide on the "
+    "strongest argument and output only your decision.\n\n"
+    "**Output discipline.** Output only the answer itself. No preamble, "
+    "no sign-off, no labels, no section headings, no meta-commentary, no "
+    "mentions of the advisors or the debate. Begin your response with "
+    "the first word of the answer."
+)
+
+
+def build_alt_synthesis(debate: Debate, by: ElderId) -> str:
+    """Builds the alt free-form synthesis prompt. Mirrors the structure
+    of ``PromptBuilder.build_synthesis`` (system header + original
+    question + full rounds transcript) but uses ``ALT_SYNTHESIS_PROMPT``
+    as the closing instruction instead of the Answer/Why/Disagreements
+    scaffolding.
+    """
+    pb = PromptBuilder()
+    parts: list[str] = []
+    header = pb.build_system_message(debate, by)
+    if header:
+        parts.append(header)
+    parts.append(f"The user's original question was:\n\n{debate.prompt}")
+    parts.append(pb._all_rounds_section(debate))
+    parts.append(ALT_SYNTHESIS_PROMPT)
+    return "\n\n".join(parts)

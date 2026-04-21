@@ -186,9 +186,20 @@ class DebateService:
         await self.bus.publish(RoundCompleted(round=r))
         return r
 
-    async def synthesize(self, debate: Debate, by: ElderId) -> ElderAnswer:
+    async def synthesize(
+        self,
+        debate: Debate,
+        by: ElderId,
+        *,
+        synthesis_prompt_override: str | None = None,
+    ) -> ElderAnswer:
+        """Run the synthesis pass. ``synthesis_prompt_override`` lets a
+        caller supply an alternative synthesis prompt (e.g. for a
+        format ablation); defaults to the PromptBuilder's
+        Answer/Why/Disagreements structure.
+        """
         port = self.elders[by]
-        prompt = self.prompt_builder.build_synthesis(debate, by=by)
+        prompt = synthesis_prompt_override or self.prompt_builder.build_synthesis(debate, by=by)
         try:
             raw = await port.ask([Message("user", prompt)])
 
