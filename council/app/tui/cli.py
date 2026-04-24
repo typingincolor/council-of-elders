@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 from council.adapters.clock.system import SystemClock
@@ -13,17 +14,35 @@ from council.domain.models import ElderId
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    import os
-
     parser = argparse.ArgumentParser(prog="council")
     parser.add_argument("--pack", default="bare")
     parser.add_argument("--packs-root", default=str(Path.home() / ".council" / "packs"))
     parser.add_argument("--store-root", default=str(Path.home() / ".council" / "debates"))
     parser.add_argument("--reports-root", default=str(Path.home() / ".council" / "reports"))
-    parser.add_argument("--claude-model", default=os.environ.get("COUNCIL_CLAUDE_MODEL"))
-    parser.add_argument("--gemini-model", default=os.environ.get("COUNCIL_GEMINI_MODEL"))
-    parser.add_argument("--codex-model", default=os.environ.get("COUNCIL_CODEX_MODEL"))
-    parser.add_argument("--mode", choices=["r1_only", "full"], default="r1_only")
+    parser.add_argument(
+        "--claude-model",
+        default=os.environ.get("COUNCIL_CLAUDE_MODEL"),
+        help="Model alias or full name passed to `claude --model` (e.g. sonnet, opus).",
+    )
+    parser.add_argument(
+        "--gemini-model",
+        default=os.environ.get("COUNCIL_GEMINI_MODEL"),
+        help="Model name passed to `gemini -m` (e.g. gemini-2.5-flash).",
+    )
+    parser.add_argument(
+        "--codex-model",
+        default=os.environ.get("COUNCIL_CODEX_MODEL"),
+        help="Model name passed to `codex exec -m` (e.g. gpt-5-codex).",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["r1_only", "full"],
+        default="r1_only",
+        help=(
+            "Debate mode. 'r1_only' (default) runs R1 then stops for decision. "
+            "'full' runs R1+R2 back-to-back as legacy behavior."
+        ),
+    )
     return parser
 
 

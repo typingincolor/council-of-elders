@@ -6,7 +6,7 @@ from dataclasses import replace
 from typing import Literal
 
 from textual import on
-from textual.app import App
+from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Footer, Header, RichLog
 
@@ -73,6 +73,10 @@ class CouncilApp(App):
         self._pack_loader = pack_loader
         self._pack_name = pack_name
         self._using_openrouter = using_openrouter
+        # "r1_only" (default): stop after R1, await user decision. The
+        # 2026-04 experiments found this shape strongest for diverse
+        # rosters and friendlier for drafting (three independent takes).
+        # "full" runs R1+R2 back-to-back as the legacy TUI behavior.
         self._mode: Literal["r1_only", "full"] = mode
         self._prev_cost_total: float = 0.0
         self._bus = InMemoryBus()
@@ -91,7 +95,7 @@ class CouncilApp(App):
         task.add_done_callback(self._tasks.discard)
         return task
 
-    def compose(self):
+    def compose(self) -> ComposeResult:
         yield Header()
         yield RichLog(id="notices", markup=True, wrap=True, highlight=False)
         yield self._view

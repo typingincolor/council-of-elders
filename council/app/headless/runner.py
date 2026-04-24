@@ -72,9 +72,9 @@ def _print_rounds(debate: Debate) -> None:
         for turn in rnd.turns:
             label = _LABELS[turn.elder]
             if turn.answer.error:
-                print(f"[{label}] ERROR {turn.answer.error.kind}: {turn.answer.error.detail}\\n")
+                print(f"[{label}] ERROR {turn.answer.error.kind}: {turn.answer.error.detail}\n")
             else:
-                print(f"[{label}] {turn.answer.text}\\n")
+                print(f"[{label}] {turn.answer.text}\n")
 
 
 async def _select_best_r1(
@@ -108,6 +108,11 @@ def _synthesis_risk_note(
 ) -> str | None:
     if not policy.synthesise or roster_spec is None or not roster_spec.models:
         return None
+    # Risk disclosure rationale: under the 2026-04-19 probe and its
+    # 2026-04-20 judge-swap replication, synthesis rarely beat the
+    # strongest individual R1 answer on low/medium-diversity rosters.
+    # We surface this note so users compare outputs rather than trusting
+    # synthesis blindly in those conditions.
     div = score_roster(roster_spec)
     if div.classification in ("low", "medium"):
         return (
@@ -191,6 +196,10 @@ async def run_headless(
             print("\nDisagreements: none material.")
 
         if best_r1_text and structured.answer:
+            # Preference judge(s): synthesis vs best-R1 — answers the core
+            # success-signal question. Multi-judge is preferred because
+            # 2026-04-20 showed single-judge preference verdicts can be
+            # judge-family biased.
             if preference_judges:
                 preference = await judge_preference_multi(
                     question=prompt,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 from pathlib import Path
 
 from council.adapters.bus.in_memory import InMemoryBus
@@ -33,6 +34,8 @@ def _policy_override_from_args(mode: str, max_rounds: int) -> DebatePolicy | Non
     if mode == "auto":
         return None
     pm: PolicyMode = mode  # type: ignore[assignment]
+    # r1_only: R1 then synthesise, skip R2+. Experimentally the strongest
+    # shape for diverse rosters (see 2026-04-20-226f, 2026-04-21-f13d).
     return DebatePolicy(
         mode=pm,
         max_rounds=max_rounds if mode == "full_debate" else _FIXED_POLICY_ROUNDS[pm],
@@ -43,30 +46,66 @@ def _policy_override_from_args(mode: str, max_rounds: int) -> DebatePolicy | Non
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    import os
-
     parser = argparse.ArgumentParser(prog="council-headless")
     parser.add_argument("prompt")
     parser.add_argument("--pack", default="bare")
     parser.add_argument("--packs-root", default=str(Path.home() / ".council" / "packs"))
     parser.add_argument("--synthesizer", choices=["ada", "kai", "mei"], default="ada")
     parser.add_argument("--store-root", default=str(Path.home() / ".council" / "debates"))
-    parser.add_argument("--claude-model", default=os.environ.get("COUNCIL_CLAUDE_MODEL"))
-    parser.add_argument("--gemini-model", default=os.environ.get("COUNCIL_GEMINI_MODEL"))
-    parser.add_argument("--codex-model", default=os.environ.get("COUNCIL_CODEX_MODEL"))
-    parser.add_argument("--max-rounds", type=_max_rounds_type, default=6)
+    parser.add_argument(
+        "--claude-model",
+        default=os.environ.get("COUNCIL_CLAUDE_MODEL"),
+        help="Model alias or full name passed to `claude --model` (e.g. sonnet, opus).",
+    )
+    parser.add_argument(
+        "--gemini-model",
+        default=os.environ.get("COUNCIL_GEMINI_MODEL"),
+        help="Model name passed to `gemini -m` (e.g. gemini-2.5-flash — recommended).",
+    )
+    parser.add_argument(
+        "--codex-model",
+        default=os.environ.get("COUNCIL_CODEX_MODEL"),
+        help="Model name passed to `codex exec -m` (e.g. gpt-5-codex).",
+    )
+    parser.add_argument(
+        "--max-rounds",
+        type=_max_rounds_type,
+        default=6,
+        help=(
+            "Upper bound on rounds for full_debate mode. Ignored in other "
+            "policy modes. Minimum 2; default 6."
+        ),
+    )
     parser.add_argument(
         "--policy",
         choices=["auto", "best_r1_only", "r1_only", "single_critique", "full_debate"],
         default="auto",
+        help=(
+            "Pipeline mode. 'auto' (default) picks best_r1_only / "
+            "single_critique / full_debate based on roster diversity. "
+            "'r1_only' runs R1 then synthesises with no debate rounds; "
+            "'best_r1_only' skips synthesis."
+        ),
     )
     parser.add_argument(
         "--synthesise",
         action=argparse.BooleanOptionalAction,
         default=None,
+        help=(
+            "Override whether to synthesise after debate rounds. "
+            "Default follows policy choice; pass --no-synthesise to skip."
+        ),
     )
-    parser.add_argument("--reports-root", default=str(Path.home() / ".council" / "reports"))
-    parser.add_argument("--summaries-root", default=str(Path.home() / ".council" / "summaries"))
+    parser.add_argument(
+        "--reports-root",
+        default=str(Path.home() / ".council" / "reports"),
+        help="Directory where debate reports are saved as markdown.",
+    )
+    parser.add_argument(
+        "--summaries-root",
+        default=str(Path.home() / ".council" / "summaries"),
+        help="Directory where per-debate run_summary.json files are saved.",
+    )
     return parser
 
 
@@ -87,6 +126,8 @@ def _build_openrouter_judges(
 
     from council.adapters.elders.openrouter import OpenRouterAdapter
 
+    # Best-R1 uses a single cheap judge. Preference uses multi-judge
+    # because preference verdicts are more exposed to judge-family bias.
     best_r1_judge: ElderPort = OpenRouterAdapter(
         elder_id="ada",
         model="google/gemini-2.5-flash",
