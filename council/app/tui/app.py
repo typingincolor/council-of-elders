@@ -11,7 +11,11 @@ from textual.binding import Binding
 from textual.widgets import Footer, Header, RichLog
 
 from council.adapters.bus.in_memory import InMemoryBus
+from council.app.tui.cost_notifier import CostNotifier
 from council.app.tui.council_view import CouncilView
+from council.app.tui.health_check import HealthChecker
+from council.app.tui.notices import CouncilNotices
+from council.app.tui.report_writer import DebateReportWriter
 from council.app.tui.widgets import CouncilInput, SynthesizerModal
 from council.domain.debate_service import DebateService
 from council.domain.draft_analysis import analyze_drafts
@@ -68,8 +72,6 @@ class CouncilApp(App):
     ) -> None:
         super().__init__()
         self._elders = elders
-        self._store = store
-        self._clock = clock
         self._pack_loader = pack_loader
         self._pack_name = pack_name
         self._using_openrouter = using_openrouter
@@ -78,16 +80,22 @@ class CouncilApp(App):
         # rosters and friendlier for drafting (three independent takes).
         # "full" runs R1+R2 back-to-back as the legacy TUI behavior.
         self._mode: Literal["r1_only", "full"] = mode
-        self._prev_cost_total: float = 0.0
         self._bus = InMemoryBus()
         self._service = DebateService(elders=elders, store=store, clock=clock, bus=self._bus)
         self._debate: Debate | None = None
         self.awaiting_decision: bool = False
         self.is_finished: bool = False
+        # Public buffer observed by e2e tests (via ``app.rendered_lines``).
+        # CouncilNotices appends here on every write.
         self.rendered_lines: list[str] = []
         self._tasks: set[asyncio.Task] = set()
         self._view = CouncilView(clock=clock)
-        self._report_store = report_store
+        self._notices: CouncilNotices | None = None  # set in on_mount
+        self._health_checker = HealthChecker(elders=elders, labels=self._ELDER_LABELS)
+        self._cost_notifier = CostNotifier(elders=elders)
+        self._report_writer = DebateReportWriter(
+            service=self._service, view=self._view, report_store=report_store
+        )
 
     def _spawn(self, coro) -> asyncio.Task:
         task = asyncio.create_task(coro)
@@ -103,6 +111,10 @@ class CouncilApp(App):
         yield Footer()
 
     async def on_mount(self) -> None:
+        self._notices = CouncilNotices(
+            log=self.query_one("#notices", RichLog),
+            buffer=self.rendered_lines,
+        )
         self._stream_task = self._spawn(self._consume_events())
         self._input().focus()
         self._spawn(self._run_health_checks())
@@ -143,15 +155,19 @@ class CouncilApp(App):
         self._view.pane(ev.elder).end_thinking_failed(ev.error)
 
     def _on_round_completed(self, ev: RoundCompleted) -> None:
+        assert self._notices is not None
+        # r1_only mode: decision point after R1 (no auto-R2).
+        # full mode: decision point after R2 (R1+R2 auto-chain).
         decision_at = 1 if self._mode == "r1_only" else 2
         if ev.round.number >= decision_at:
             self._set_awaiting_decision(True)
             if ev.round.number == decision_at:
-                self._write_decision_hint()
+                self._notices.decision_hint(self._mode)
+            # Auto-synth modal when all three elders converge (R3+).
             if ev.round.number >= 3 and self._service.rules.is_converged(ev.round):
                 self.run_worker(self._synthesize_worker(), exclusive=True)
         if self._using_openrouter:
-            self._spawn(self._write_cost_notice())
+            self._spawn(self._cost_notifier.emit(self._notices))
 
     def _on_synthesis_completed(self, ev: SynthesisCompleted) -> None:
         self._view.pane("synthesis").end_thinking_completed(ev.answer)
@@ -159,7 +175,7 @@ class CouncilApp(App):
         self.is_finished = True
         self._set_awaiting_decision(False)
         if ev.answer.elder:
-            self._spawn(self._generate_and_write_report(ev.answer.elder))
+            self._spawn(self._write_report(ev.answer.elder))
 
     def _on_user_message_received(self, ev: UserMessageReceived) -> None:
         for pane_key in ("ada", "kai", "mei"):
@@ -170,74 +186,16 @@ class CouncilApp(App):
         self._input().disabled = not value
 
     async def _run_health_checks(self) -> None:
-        async def _probe(elder_id: ElderId) -> tuple[ElderId, bool]:
-            try:
-                ok = await self._elders[elder_id].health_check()
-            except Exception:
-                ok = False
-            return elder_id, ok
-
-        results = await asyncio.gather(*(_probe(eid) for eid in self._elders))
-        unhealthy = [eid for eid, ok in results if not ok]
-        if not unhealthy:
-            return
-        for eid in unhealthy:
-            self._write_notice(
-                f"[yellow]⚠ {self._ELDER_LABELS[eid]} CLI is unavailable or unauthenticated. "
-                f"Install it and run its `login` command before asking a question.[/yellow]"
-            )
-        if len(unhealthy) == len(self._elders):
+        assert self._notices is not None
+        all_unhealthy = await self._health_checker.run(self._notices)
+        if all_unhealthy:
             self._input().disabled = True
-            self._write_notice(
-                "[red]No elders available. Fix the vendor CLI setup above, "
-                "then restart the app.[/red]"
-            )
 
-    def _write_notice(self, line: str) -> None:
-        self.rendered_lines.append(line)
-        self.query_one("#notices", RichLog).write(line)
-
-    def _write_decision_hint(self) -> None:
-        if self._mode == "r1_only":
-            self._write_notice(
-                "[dim]R1 complete. [d] compare drafts (agreements/divergences)  ·  "
-                "[s] synthesise  ·  [c] cross-examination round  ·  [a] finish. "
-                "Read the three drafts above; synthesis tends to flatten committed "
-                "specifics.[/dim]"
-            )
-        else:
-            self._write_notice(
-                "[dim]R1+R2 complete. [d] compare drafts  ·  [s] synthesise  ·  "
-                "[c] continue to another round  ·  [a] abandon.[/dim]"
-            )
-
-    async def _write_cost_notice(self) -> None:
-        from council.adapters.elders.openrouter import (
-            OpenRouterAdapter,
-            format_cost_notice,
-        )
-
-        current = sum(
-            e.session_cost_usd for e in self._elders.values() if isinstance(e, OpenRouterAdapter)
-        )
-        delta = current - self._prev_cost_total
-        self._prev_cost_total = current
-
-        any_or = next(
-            (e for e in self._elders.values() if isinstance(e, OpenRouterAdapter)),
-            None,
-        )
-        used, limit = (0.0, None)
-        if any_or is not None:
-            used, limit = await any_or.fetch_credits()
-
-        line = format_cost_notice(
-            elders=self._elders,
-            round_cost_delta_usd=delta,
-            credits_used=used,
-            credits_limit=limit,
-        )
-        self._write_notice(f"[blue]{line}[/blue]")
+    async def _write_report(self, by: ElderId) -> None:
+        assert self._notices is not None
+        if self._debate is None:
+            return
+        await self._report_writer.write(debate=self._debate, by=by, notices=self._notices)
 
     @on(CouncilInput.Submitted)
     async def _on_input_submitted(self, event: CouncilInput.Submitted) -> None:
@@ -247,6 +205,7 @@ class CouncilApp(App):
         input_widget = self._input()
         input_widget.clear()
         if self._debate is None:
+            # First submission — use as the initial prompt.
             pack = self._pack_loader.load(self._pack_name)
             self._debate = Debate(
                 id=str(uuid.uuid4()),
@@ -260,34 +219,19 @@ class CouncilApp(App):
             self._view.focus()
             self._spawn(self._opening_exchange())
         else:
+            # Between-round user message.
             if not self.awaiting_decision:
                 return
             self._spawn(self._service.add_user_message(self._debate, text))
 
-    async def _generate_and_write_report(self, by: ElderId) -> None:
-        if self._debate is None:
-            return
-        try:
-            markdown = await self._service.generate_report(self._debate, by=by)
-        except Exception as ex:
-            self._write_notice(f"[yellow]Report generation failed: {ex}[/yellow]")
-            return
-        self._view.pane("synthesis").append_report(markdown)
-        if self._report_store is not None:
-            try:
-                path = self._report_store.save(debate_id=self._debate.id, markdown=markdown)
-                self._write_notice(f"[blue]Debate report saved to {path}[/blue]")
-            except Exception as ex:
-                self._write_notice(f"[yellow]Report file write failed: {ex}[/yellow]")
-
     async def _opening_exchange(self) -> None:
         if self._debate is None:
             return
-        await self._service.run_round(self._debate)
+        await self._service.run_round(self._debate)  # R1
         if self._debate.status != "in_progress":
             return
         if self._mode == "full":
-            await self._service.run_round(self._debate)
+            await self._service.run_round(self._debate)  # R2
 
     async def action_continue_round(self) -> None:
         if not self.awaiting_decision or self._debate is None:
@@ -320,15 +264,16 @@ class CouncilApp(App):
         self.run_worker(self._analyze_drafts_worker(), exclusive=False)
 
     async def _analyze_drafts_worker(self) -> None:
+        assert self._notices is not None
         if self._debate is None:
             return
         analyzer_id: ElderId = "ada"
         await self._view.show_analysis_pane()
-        self._write_notice(f"[dim]Comparing the three drafts (analyst: {analyzer_id})…[/dim]")
+        self._notices.write(f"[dim]Comparing the three drafts (analyst: {analyzer_id})…[/dim]")
         try:
             markdown = await analyze_drafts(self._debate, analyzer=self._elders[analyzer_id])
         except Exception as ex:
-            self._write_notice(f"[yellow]Draft analysis failed: {ex}[/yellow]")
+            self._notices.write(f"[yellow]Draft analysis failed: {ex}[/yellow]")
             return
         self._view.pane("analysis").append_analysis(markdown, by=analyzer_id.capitalize())
         self._view.pane("analysis").focus()
