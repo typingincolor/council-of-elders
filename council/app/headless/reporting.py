@@ -98,9 +98,7 @@ async def generate_and_save_report(
     report_store,  # ReportFileStore | None
 ) -> None:
     try:
-        report_md = await svc.generate_report(
-            debate, by=synthesizer, synthesis_risk_note=risk_note
-        )
+        report_md = await svc.generate_report(debate, by=synthesizer, synthesis_risk_note=risk_note)
     except Exception as ex:
         print_report_failed(ex)
         return
